@@ -1,0 +1,6 @@
+*.mp4
+target
+
+# Intellij project files
+.idea/
+*.iml
