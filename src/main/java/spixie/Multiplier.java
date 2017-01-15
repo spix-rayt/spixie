@@ -10,7 +10,7 @@ public class Multiplier extends VBox implements Element {
     final public Value count = new Value(5,0.1,"Count");
     public Multiplier() {
         super();
-        getChildren().addAll(new Label("spixie.Multiplier"));
+        getChildren().addAll(new Label("Multiplier"));
         getChildren().addAll(radius, phase, size, count);
     }
 

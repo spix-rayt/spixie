@@ -43,7 +43,7 @@ public class Graph extends BorderPane implements ValueChanger {
     private HBox control = new HBox();
     private ComboBox<Value.Item> inputComboBox;
     private ComboBox<Value.Item> outValueComboBox;
-    private Value maxOutputValue = new Value(1.0,1.0, "Max Output spixie.Value");
+    private Value maxOutputValue = new Value(1.0,1.0, "Max Output");
     public Graph(Node parrent, Value outValue) {
         super();
         setHeight(200);
@@ -183,7 +183,6 @@ public class Graph extends BorderPane implements ValueChanger {
         setCenter(canvas);
 
         setTop(control);
-        control.getChildren().addAll(new Label("Input:"));
         inputComboBox = new ComboBox<>();
         inputComboBox.getItems().addAll(Main.world.time.item());
         inputComboBox.getItems().addAll(((Element) parrent).getValues());
@@ -196,7 +195,6 @@ public class Graph extends BorderPane implements ValueChanger {
                 t1.subscribeChanger(Graph.this);
             }
         });
-        control.getChildren().addAll(new Label("Output:"));
         outValueComboBox = new ComboBox<>();
         outValueComboBox.getItems().addAll(((Element) parrent).getValues());
         outValueComboBox.getSelectionModel().select(outValue.item());
@@ -212,7 +210,7 @@ public class Graph extends BorderPane implements ValueChanger {
             }
         });
 
-        control.getChildren().addAll(inputComboBox, outValueComboBox, maxOutputValue);
+        control.getChildren().addAll(new Label("Input:"), inputComboBox, new Label("Output:"), outValueComboBox, maxOutputValue);
     }
 
     public void updateOutValue(){

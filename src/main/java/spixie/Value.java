@@ -1,31 +1,43 @@
 package spixie;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
 import org.apache.commons.math3.fraction.Fraction;
 
 import java.util.ArrayList;
 
-public class Value extends Label {
+public class Value extends HBox {
     private Fraction value = new Fraction(0);
     private Fraction startDragValue = new Fraction(0);
     private double mul = 1.0;
     private String name;
     private ArrayList<ValueChanger> subscribers = new ArrayList<>();
+    private final Label labelName = new Label();
+    private final Label labelValue = new Label();
+    private final TextField textFieldValue = new TextField();
+    private boolean dragged = false;
     public Value(double initial,double mul, String name) {
         super();
-        this.value = new Fraction(initial);
         this.mul=mul;
         this.name = name;
-        setText(name + ": " + String.valueOf(value.doubleValue()));
+        labelName.setText(name+": ");
+        set(initial);
+        labelValue.getStyleClass().add("label-value");
 
-        setOnMousePressed(new EventHandler<MouseEvent>() {
+        labelValue.setOnMousePressed(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent mouseEvent) {
                 if(mouseEvent.getButton() == MouseButton.PRIMARY){
                     startDragValue = value.add(new Fraction(Value.this.mul).multiply((int)mouseEvent.getY()));
+                    dragged = false;
                 }
                 if(mouseEvent.getButton() == MouseButton.SECONDARY){
                     Parent parent = getParent();
@@ -36,13 +48,55 @@ public class Value extends Label {
             }
         });
 
-        setOnMouseDragged(new EventHandler<MouseEvent>() {
+        labelValue.setOnMouseDragged(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent mouseEvent) {
                 if(mouseEvent.getButton() == MouseButton.PRIMARY){
                     set(startDragValue.subtract(new Fraction(Value.this.mul).multiply((int)mouseEvent.getY())));
+                    dragged = true;
                 }
             }
         });
+
+        labelValue.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) {
+                if(mouseEvent.getButton() == MouseButton.PRIMARY){
+                    if(!dragged){
+                        textFieldValue.setText(String.valueOf(Value.this.value.doubleValue()));
+                        getChildren().remove(labelValue);
+                        getChildren().addAll(textFieldValue);
+                        textFieldValue.requestFocus();
+                        textFieldValue.selectAll();
+                    }
+                }
+            }
+        });
+
+        textFieldValue.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
+                if(!t1.booleanValue()){
+                    try {
+                        set(Double.parseDouble(textFieldValue.getText()));
+                    }catch (NumberFormatException e){}
+                    getChildren().remove(textFieldValue);
+                    getChildren().addAll(labelValue);
+                }
+            }
+        });
+
+        textFieldValue.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent keyEvent) {
+                if(keyEvent.getCode() == KeyCode.ENTER){
+                    getChildren().remove(textFieldValue);
+                }
+            }
+        });
+
+
+
+        getChildren().addAll(labelName, labelValue);
     }
 
     public void set(double value){
@@ -55,7 +109,7 @@ public class Value extends Label {
         }else{
             this.value = value;
         }
-        setText(Value.this.name + ": " + String.valueOf(this.value.doubleValue()));
+        labelValue.setText(String.valueOf(this.value.doubleValue()));
         for (ValueChanger valueChanger : subscribers) {
             valueChanger.updateOutValue();
         }

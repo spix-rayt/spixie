@@ -1,3 +1,7 @@
-Value{
+Value .label-value{
     -fx-cursor: v-resize;
+}
+Value{
+    -fx-alignment: center-left;
+    -fx-pref-height: 26px;
 }

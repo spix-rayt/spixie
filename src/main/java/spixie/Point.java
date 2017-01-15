@@ -27,7 +27,7 @@ public class Point {
 
     @Override
     public String toString() {
-        return "spixie.Point{" +
+        return "Point{" +
                 "x=" + x +
                 ", y=" + y +
                 '}';
