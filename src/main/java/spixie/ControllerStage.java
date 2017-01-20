@@ -54,6 +54,7 @@ public class ControllerStage extends Stage {
         Scene scene = new Scene(borderPane, 900, 700);
         scene.getStylesheets().add("style.css");
         setScene(scene);
+        setTitle("Spixie");
 
         setOnCloseRequest(new EventHandler<WindowEvent>() {
             public void handle(WindowEvent windowEvent) {

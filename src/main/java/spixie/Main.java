@@ -28,7 +28,7 @@ public class Main extends Application {
                 imageView.setFitHeight(t1.doubleValue());
             }
         });
-        stage.setTitle("SpixMusic");
+        stage.setTitle("Render");
         stage.setScene(scene);
         stage.setMaximized(true);
         stage.show();
