@@ -27,18 +27,25 @@ public class World {
         frame.item().subscribeChanger(rootTimeChanger);
     }
 
-    public void render(final ImageView imageView){
+    public void renderStart(final ImageView imageView){
         allowRender = true;
+//        BroadcastRender.broadcastRender.start();
         currentRenderThread = new Thread(new Runnable() {
             public void run() {
                 while (true){
                     try {
                         if(allowRender && !renderingToFile){
                             allowRender = false;
-                            final WritableImage image = render((int)(imageView.getFitWidth()/2), (int)(imageView.getFitHeight()/2)).toImage();
+                            Layer layer = render((int) (imageView.getFitWidth() / 2), (int) (imageView.getFitHeight() / 2));
+                            final WritableImage image = layer.toImage();
                             Platform.runLater(new Runnable() {
                                 public void run() {
                                     imageView.setImage(image);
+                                    try {
+                                        BroadcastRender.renderedImageByteArray = layer.toJpg();
+                                    }catch (Exception e){
+                                        e.printStackTrace();
+                                    }
                                     allowRender = true;
                                 }
                             });

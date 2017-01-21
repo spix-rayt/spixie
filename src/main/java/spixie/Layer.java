@@ -3,9 +3,13 @@ package spixie;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
+import sun.java2d.pipe.BufferedTextPipe;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
+import java.io.ByteArrayOutputStream;
 
 public class Layer {
     private float[][] pixelsR;
@@ -87,6 +91,12 @@ public class Layer {
         }
 
         return result;
+    }
+
+    public byte[] toJpg() throws Exception{
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ImageIO.write(toBufferedImage(), "jpg", byteArrayOutputStream);
+        return byteArrayOutputStream.toByteArray();
     }
 
     public void drawCircle(double xPos, double yPos, double size, float r, float g, float b, float a){

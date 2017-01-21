@@ -32,7 +32,7 @@ public class Main extends Application {
         stage.setScene(scene);
         stage.setMaximized(true);
         stage.show();
-        world.render(imageView);
+        world.renderStart(imageView);
 
 
 
