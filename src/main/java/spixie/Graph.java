@@ -28,7 +28,6 @@ public class Graph extends BorderPane implements ValueChanger {
     private double unitWidthInPixels = 50.0;
     private double startX = 0;
     private double startDragX = 0;
-    private double maxOutput = 1.0;
 
     private Double mouseX = null;
     private Double mouseY = null;
@@ -50,7 +49,8 @@ public class Graph extends BorderPane implements ValueChanger {
         super();
         setHeight(200);
         canvas.setHeight(200);
-        points.add(new Point(0,0));
+        maxOutputValue.set(Math.ceil(outValue.get()*2));
+        points.add(new Point(0,outValue.get()/maxOutputValue.get()));
         sortPoints();
         canvas.parentProperty().addListener(new ChangeListener<Parent>() {
             public void changed(ObservableValue<? extends Parent> observableValue, Parent parent, Parent t1) {
@@ -66,7 +66,7 @@ public class Graph extends BorderPane implements ValueChanger {
             public void handle(MouseEvent mouseEvent) {
                 mousePressPoint = new Point(mouseEvent.getX(), mouseEvent.getY());
                 double mouseValueX = (mouseEvent.getX()+startX)/unitWidthInPixels;
-                double mouseValueY = mouseEvent.getY()/canvas.getHeight()*maxOutput;
+                double mouseValueY = mouseEvent.getY()/canvas.getHeight();
                 if(mouseEvent.getButton() == MouseButton.SECONDARY){
                     startDragX = startX + (long)mouseEvent.getX();
                 }
@@ -93,7 +93,7 @@ public class Graph extends BorderPane implements ValueChanger {
 
                         if(nearestPoint == null){
                             double value = getValue(mouseValueX);
-                            if(Math.abs(value - mouseValueY) < 0.02*maxOutput){
+                            if(Math.abs(value - mouseValueY) < 0.03){
                                 Point newPoint = new Point(mouseValueX, value);
                                 points.add(newPoint);
                                 mousePointGrub = newPoint;
@@ -141,7 +141,7 @@ public class Graph extends BorderPane implements ValueChanger {
         canvas.setOnMouseDragged(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent mouseEvent) {
                 double mouseValueX = (mouseEvent.getX()+startX)/unitWidthInPixels;
-                double mouseValueY = mouseEvent.getY()/canvas.getHeight()* maxOutput;
+                double mouseValueY = mouseEvent.getY()/canvas.getHeight();
                 if(mouseEvent.getButton() == MouseButton.SECONDARY){
                     startX = startDragX - (long)mouseEvent.getX();
                     if(startX<0){
@@ -175,8 +175,8 @@ public class Graph extends BorderPane implements ValueChanger {
 
                             if(mouseValueY < 0){
                                 mousePointGrub.setY(0);
-                            }else if(mouseValueY > maxOutput){
-                                mousePointGrub.setY(maxOutput);
+                            }else if(mouseValueY > 1.0){
+                                mousePointGrub.setY(1.0);
                             }else{
                                 mousePointGrub.setY(mouseValueY);
                             }
@@ -248,7 +248,6 @@ public class Graph extends BorderPane implements ValueChanger {
                 if(maxOutputValue.get() < 1){
                     maxOutputValue.set(1.0);
                 }
-                maxOutput = maxOutputValue.get();
                 paint();
             }
         });
@@ -276,7 +275,7 @@ public class Graph extends BorderPane implements ValueChanger {
     public void updateOutValue(){
         if(inputComboBox.getSelectionModel().getSelectedItem() != null){
             if(outValueComboBox.getSelectionModel().getSelectedItem() != null){
-                outValueComboBox.getSelectionModel().getSelectedItem().value.set(getValue(inputComboBox.getSelectionModel().getSelectedItem().value.get()));
+                outValueComboBox.getSelectionModel().getSelectedItem().value.set((1.0 - getValue(inputComboBox.getSelectionModel().getSelectedItem().value.get()))*maxOutputValue.get());
             }
         }
     }
@@ -330,7 +329,7 @@ public class Graph extends BorderPane implements ValueChanger {
         double nearestDist = Double.MAX_VALUE;
         Point nearestPoint = null;
         for (Point point : points) {
-            double dist = Math.hypot((point.getX() - x)*unitWidthInPixels/100,(point.getY()-y)/maxOutput);
+            double dist = Math.hypot((point.getX() - x)*unitWidthInPixels/100,(point.getY()-y));
             if(nearestPoint == null){
                 nearestPoint = point;
                 nearestDist = dist;
@@ -355,10 +354,10 @@ public class Graph extends BorderPane implements ValueChanger {
         Double mouseValueY = null;
         if(mouseX != null && mouseY != null){
             mouseValueX = (mouseX+startX)/unitWidthInPixels;
-            mouseValueY = mouseY/canvas.getHeight()* maxOutput;
+            mouseValueY = mouseY/canvas.getHeight();
             nearestPoint = getNearestPoint(mouseValueX, mouseValueY);
-            if(nearestPoint==null){
-                if(Math.abs(getValue(mouseValueX) - mouseValueY) < 0.02*maxOutput){
+            if(nearestPoint==null && mousePointGrub == null && gravityPoint == null){
+                if(Math.abs(getValue(mouseValueX) - mouseValueY) < 0.03){
                     g.setLineWidth(2.2);
                 }
             }
@@ -370,22 +369,22 @@ public class Graph extends BorderPane implements ValueChanger {
         for (int x = 0; x < canvas.getWidth(); x++) {
             double y1 = getValue((startX+x)/unitWidthInPixels);
             double y2 = getValue((startX+x+1)/unitWidthInPixels);
-            g.strokeLine(x,y1*(canvas.getHeight()/ maxOutput),x+1,y2*(canvas.getHeight()/ maxOutput));
+            g.strokeLine(x,y1*(canvas.getHeight()),x+1,y2*(canvas.getHeight()));
         }
         boolean gravityPointPainted = gravityPoint != null;
         for (Point point : points) {
             g.setFill(Color.BLACK);
             if(point==nearestPoint){
-                g.fillOval(point.getX()*unitWidthInPixels -4 - startX, point.getY()*(canvas.getHeight()/ maxOutput)-4,8, 8);
+                g.fillOval(point.getX()*unitWidthInPixels -4 - startX, point.getY()*(canvas.getHeight())-4,8, 8);
             }else{
-                g.fillOval(point.getX()*unitWidthInPixels -3 - startX, point.getY()*(canvas.getHeight()/ maxOutput)-3,6, 6);
+                g.fillOval(point.getX()*unitWidthInPixels -3 - startX, point.getY()*(canvas.getHeight())-3,6, 6);
             }
             if(mouseValueX!=null && !gravityPointPainted){
                 if(point.next!=null && point.next.getX() >= mouseValueX){
                     g.setFill(Color.MEDIUMPURPLE.brighter());
                     double gravityX = point.getX() + (point.next.getX() - point.getX()) * point.gravity_x;
                     double gravityY = point.getY() + (point.next.getY() - point.getY()) * point.gravity_y;
-                    g.fillOval(gravityX*unitWidthInPixels -3 - startX, gravityY*(canvas.getHeight()/ maxOutput)-3,6, 6);
+                    g.fillOval(gravityX*unitWidthInPixels -3 - startX, gravityY*(canvas.getHeight())-3,6, 6);
                     gravityPointPainted = true;
                 }
             }
@@ -394,7 +393,7 @@ public class Graph extends BorderPane implements ValueChanger {
             g.setFill(Color.MEDIUMPURPLE.brighter());
             double gravityX = gravityPoint.getX() + (gravityPoint.next.getX() - gravityPoint.getX()) * gravityPoint.gravity_x;
             double gravityY = gravityPoint.getY() + (gravityPoint.next.getY() - gravityPoint.getY()) * gravityPoint.gravity_y;
-            g.fillOval(gravityX*unitWidthInPixels -3 - startX, gravityY*(canvas.getHeight()/ maxOutput)-3,6, 6);
+            g.fillOval(gravityX*unitWidthInPixels -3 - startX, gravityY*(canvas.getHeight())-3,6, 6);
         }
     }
 

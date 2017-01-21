@@ -10,7 +10,9 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
 public class ControllerStage extends Stage {
@@ -45,7 +47,19 @@ public class ControllerStage extends Stage {
         renderButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent mouseEvent) {
-                Main.world.renderToFile();
+                borderPane.setDisable(true);
+                Main.world.renderToFile(new World.FrameRenderedToFileEvent() {
+                    @Override
+                    public void handle(int currentFrame, int framesCount) {
+                        renderButton.setText(currentFrame + " / " + framesCount);
+                    }
+                }, new World.RenderToFileCompleted() {
+                    @Override
+                    public void handle() {
+                        renderButton.setText("Render");
+                        borderPane.setDisable(false);
+                    }
+                });
             }
         });
         menuBar.getChildren().addAll(renderButton,Main.world.frame);

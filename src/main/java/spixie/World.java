@@ -4,7 +4,10 @@ import com.xuggle.mediatool.IMediaWriter;
 import com.xuggle.mediatool.ToolFactory;
 import com.xuggle.xuggler.ICodec;
 import javafx.application.Platform;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 
@@ -16,6 +19,7 @@ public class World {
     final public Value frame = new Value(0.0,1.0,"Frame");
     final public Value time = new Value(0.0,1.0, "Root Time");
     public volatile boolean allowRender = true;
+    public volatile boolean renderingToFile = false;
     private volatile Thread currentRenderThread=null;
 
     public World() {
@@ -29,7 +33,7 @@ public class World {
             public void run() {
                 while (true){
                     try {
-                        if(allowRender){
+                        if(allowRender && !renderingToFile){
                             allowRender = false;
                             final WritableImage image = render((int)(imageView.getFitWidth()/2), (int)(imageView.getFitHeight()/2)).toImage();
                             Platform.runLater(new Runnable() {
@@ -41,6 +45,7 @@ public class World {
                         }
                         Thread.sleep(40);
                     }catch (ConcurrentModificationException e){
+                        allowRender = true;
                         continue;
                     }catch (InterruptedException e){
                         return;
@@ -80,17 +85,44 @@ public class World {
         return layer;
     }
 
-    public void renderToFile(){
-        IMediaWriter iMediaWriter = ToolFactory.makeWriter("out.mp4");
-        iMediaWriter.addVideoStream(0,0, ICodec.ID.CODEC_ID_MPEG4, 1920, 1024);
+    public void renderToFile(FrameRenderedToFileEvent frameRenderedToFileEventHandler, RenderToFileCompleted renderToFileCompleted){
+        renderingToFile = true;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                IMediaWriter iMediaWriter = ToolFactory.makeWriter("out.mp4");
+                iMediaWriter.addVideoStream(0,0, ICodec.ID.CODEC_ID_MPEG4, 1920, 1024);
 
-        int lastFrame = (int)frame.get() + 1;
-        for (int frame = 0; frame < lastFrame; frame++) {
-            this.frame.set(frame);
-            iMediaWriter.encodeVideo(0, render(1920, 1024).toBufferedImage(), Math.round(frame*(1000.0/60.0)), TimeUnit.MILLISECONDS);
-            System.out.println(frame + " / " + lastFrame);
-        }
+                int countFrames = (int)frame.get() + 1;
+                for (int frame = 0; frame < countFrames; frame++) {
+                    iMediaWriter.encodeVideo(0, render(1920, 1024).toBufferedImage(), Math.round(frame*(1000.0/60.0)), TimeUnit.MILLISECONDS);
+                    final Integer f =frame;
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            frameRenderedToFileEventHandler.handle(f+1 ,countFrames);
+                        }
+                    });
 
-        iMediaWriter.close();
+                }
+
+                iMediaWriter.close();
+                renderingToFile = false;
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        renderToFileCompleted.handle();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    public interface FrameRenderedToFileEvent{
+        public void handle(int currentFrame, int framesCount);
+    }
+
+    public interface RenderToFileCompleted{
+        public void handle();
     }
 }
