@@ -5,6 +5,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
@@ -27,7 +28,9 @@ public class ComponentBody extends ScrollPane {
 
         addElementButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent mouseEvent) {
-                elements.getChildren().addAll(new Multiplier());
+                if(mouseEvent.getButton() == MouseButton.PRIMARY){
+                    elements.getChildren().addAll(new Multiplier());
+                }
             }
         });
     }

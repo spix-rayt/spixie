@@ -123,23 +123,62 @@ public class Value extends HBox {
         return value;
     }
 
+    final private Item itemForCheckbox = new Item(this);
     public Item item(){
-        return new Item(this);
+        return itemForCheckbox;
     }
 
     public static class Item {
-        public Value value;
+        final public Value value;
 
         public Item(Value value) {
             this.value = value;
         }
 
         public void subscribeChanger(ValueChanger valueChanger){
-            value.subscribers.add(valueChanger);
+            if(!value.subscribers.contains(valueChanger)){
+                value.subscribers.add(valueChanger);
+            }
         }
 
         public void unsubscribeChanger(ValueChanger valueChanger){
             value.subscribers.remove(valueChanger);
+        }
+
+        public boolean checkCycle(ValueChanger valueChanger){
+            return valueChanger.getValueToBeChanged().checkCycleInternal(new Item[] {this}, null, null);
+        }
+
+        public boolean checkCycle(ValueChanger fakeValueChanger, Item fakeItem){
+            return checkCycleInternal(new Item[] {}, fakeValueChanger, fakeItem);
+        }
+
+        private boolean checkCycleInternal(Item[] values, ValueChanger fakeValueChanger, Item fakeItem){
+            for (Item item : values) {
+                if(item == this){
+                    return false;
+                }
+            }
+            Item[] newValues = new Item[values.length + 1];
+            for (int i = 0; i < values.length; i++) {
+                newValues[i] = values[i];
+            }
+            newValues[newValues.length-1] = this;
+            for (ValueChanger subscriber : value.subscribers) {
+                Item valueToBeChanged;
+                if(subscriber == fakeValueChanger){
+                    valueToBeChanged = fakeItem;
+                }else {
+                    valueToBeChanged = subscriber.getValueToBeChanged();
+                }
+                if(valueToBeChanged!=null){
+                    if(!valueToBeChanged.checkCycleInternal(newValues, fakeValueChanger, fakeItem)){
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         @Override

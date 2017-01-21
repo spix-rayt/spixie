@@ -227,20 +227,54 @@ public class Graph extends BorderPane implements ValueChanger {
 
         setTop(control);
         inputComboBox = new ComboBox<>();
-        inputComboBox.getItems().addAll(Main.world.time.item());
-        inputComboBox.getItems().addAll(((Element) parrent).getValues());
+        inputComboBox.setMinWidth(250);
+        inputComboBox.setMaxWidth(250);
+        inputComboBox.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) {
+                Value.Item selectedItem = inputComboBox.getSelectionModel().getSelectedItem();
+                inputComboBox.getItems().clear();
+                inputComboBox.getItems().addAll(Main.world.time.item());
+                Value.Item[] values = ((Element) parrent).getValues();
+                for (Value.Item value : values) {
+                    if(value.checkCycle(Graph.this)){
+                        inputComboBox.getItems().add(value);
+                    }
+                }
+                inputComboBox.getSelectionModel().select(selectedItem);
+
+            }
+        });
         inputComboBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Value.Item>() {
             @Override
             public void changed(ObservableValue<? extends Value.Item> observableValue, Value.Item item, Value.Item t1) {
                 if(item!=null){
                     item.unsubscribeChanger(Graph.this);
                 }
-                t1.subscribeChanger(Graph.this);
+                if(t1 != null){
+                    t1.subscribeChanger(Graph.this);
+                }
             }
         });
         outValueComboBox = new ComboBox<>();
+        outValueComboBox.setMaxWidth(250);
+        outValueComboBox.setMinWidth(250);
         outValueComboBox.getItems().addAll(((Element) parrent).getValues());
         outValueComboBox.getSelectionModel().select(outValue.item());
+        outValueComboBox.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) {
+                Value.Item selectedItem = outValueComboBox.getSelectionModel().getSelectedItem();
+                outValueComboBox.getItems().clear();
+                Value.Item[] values = ((Element) parrent).getValues();
+                for (Value.Item value : values) {
+                    if(value.checkCycle(Graph.this, value)){
+                        outValueComboBox.getItems().add(value);
+                    }
+                }
+                outValueComboBox.getSelectionModel().select(selectedItem);
+            }
+        });
 
         maxOutputValue.item().subscribeChanger(new ValueChanger() {
             @Override
@@ -249,6 +283,11 @@ public class Graph extends BorderPane implements ValueChanger {
                     maxOutputValue.set(1.0);
                 }
                 paint();
+            }
+
+            @Override
+            public Value.Item getValueToBeChanged() {
+                return outValueComboBox.getSelectionModel().getSelectedItem();
             }
         });
 
@@ -278,6 +317,11 @@ public class Graph extends BorderPane implements ValueChanger {
                 outValueComboBox.getSelectionModel().getSelectedItem().value.set((1.0 - getValue(inputComboBox.getSelectionModel().getSelectedItem().value.get()))*maxOutputValue.get());
             }
         }
+    }
+
+    @Override
+    public Value.Item getValueToBeChanged() {
+        return outValueComboBox.getSelectionModel().getSelectedItem();
     }
 
     private void paint(){

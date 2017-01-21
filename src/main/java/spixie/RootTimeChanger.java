@@ -15,4 +15,9 @@ public class RootTimeChanger implements ValueChanger {
     public void updateOutValue() {
         time.set(bpm.getFraction().divide(3600).multiply(frame.getFraction()));
     }
+
+    @Override
+    public Value.Item getValueToBeChanged() {
+        return null;
+    }
 }
