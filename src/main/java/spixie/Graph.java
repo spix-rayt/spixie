@@ -92,15 +92,16 @@ public class Graph extends BorderPane implements ValueChanger {
 
 
                         if(nearestPoint == null){
-                            double value = getValue(mouseValueX);
+                            double magnetValueX = magnetX(mouseValueX);
+                            double value = getValue(magnetValueX);
                             if(Math.abs(value - mouseValueY) < 0.03){
-                                Point newPoint = new Point(mouseValueX, value);
+                                Point newPoint = new Point(magnetValueX, value);
                                 points.add(newPoint);
                                 mousePointGrub = newPoint;
                                 mousePointGrubCreatedNow=true;
                                 sortPoints();
                                 if(newPoint.prev != null && newPoint.next != null){
-                                    Pair<Point,Double> gravityPointByX = findGravityPointByX(newPoint.prev, newPoint.next, mouseValueX);
+                                    Pair<Point,Double> gravityPointByX = findGravityPointByX(newPoint.prev, newPoint.next, magnetValueX);
                                     double oldGravityX = newPoint.prev.getX() + (newPoint.next.getX() - newPoint.prev.getX()) * newPoint.prev.gravity_x;
                                     double oldGravityY = newPoint.prev.getY() + (newPoint.next.getY() - newPoint.prev.getY()) * newPoint.prev.gravity_y;
                                     Point gravityPoint = findGravityPoint(newPoint.prev, new Point(oldGravityX, oldGravityY), newPoint.next,newPoint.prev, newPoint ,gravityPointByX.getValue(), false);
@@ -167,10 +168,11 @@ public class Graph extends BorderPane implements ValueChanger {
                 }else{
                     if(mouseEvent.getButton() == MouseButton.PRIMARY){
                         if(mousePointGrub != null){
-                            if(mouseValueX<0){
+                            double magnetValueX = magnetX(mouseValueX);
+                            if(magnetValueX<0){
                                 mousePointGrub.setX(0);
                             }else{
-                                mousePointGrub.setX(mouseValueX);
+                                mousePointGrub.setX(magnetValueX);
                             }
 
                             if(mouseValueY < 0){
@@ -367,6 +369,7 @@ public class Graph extends BorderPane implements ValueChanger {
             }
             beat+=beatStep;
         }
+        System.out.println(beatStep);
     }
 
     private Point getNearestPoint(double x, double y){
@@ -546,5 +549,10 @@ public class Graph extends BorderPane implements ValueChanger {
             }
         }
         return result;
+    }
+
+    private double magnetX(double x){
+        double fourthBeatStep = beatStep*0.25;
+        return Math.round(x/fourthBeatStep)*fourthBeatStep;
     }
 }
