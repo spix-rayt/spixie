@@ -1,40 +1,29 @@
 package spixie;
 
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 public class Main extends Application {
     public static World world;
     public void start(Stage stage) throws Exception {
         world = new World();
-        BorderPane root = new BorderPane();
+        StackPane root = new StackPane();
         final ImageView imageView = new ImageView();
+        imageView.setSmooth(true);
+        imageView.setPreserveRatio(false);
+        root.getChildren().addAll(imageView);
 
-        root.setCenter(imageView);
-
-        Scene scene = new Scene(root, 800, 600);
-        scene.widthProperty().addListener(new ChangeListener<Number>() {
-            public void changed(ObservableValue<? extends Number> observableValue, Number number, Number t1) {
-                imageView.setFitWidth(t1.doubleValue());
-            }
-        });
-        scene.heightProperty().addListener(new ChangeListener<Number>() {
-            public void changed(ObservableValue<? extends Number> observableValue, Number number, Number t1) {
-                imageView.setFitHeight(t1.doubleValue());
-            }
-        });
+        Scene scene = new Scene(root);
+        imageView.fitWidthProperty().bind(root.widthProperty());
+        imageView.fitHeightProperty().bind(root.heightProperty());
         stage.setTitle("Render");
         stage.setScene(scene);
         stage.setMaximized(true);
         stage.show();
         world.renderStart(imageView);
-
-
 
         new ControllerStage().show();
     }

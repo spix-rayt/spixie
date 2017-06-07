@@ -35,7 +35,7 @@ public class BroadcastRender extends Thread {
                         public void channelRead(ChannelHandlerContext ctx, Object o) throws Exception {
                             if(o instanceof FullHttpRequest){
                                 FullHttpRequest request = (FullHttpRequest) o;
-                                URI uri = new URI(request.getUri());
+                                URI uri = new URI(request.uri());
                                 uri = uri.normalize();
                                 byte[] content = null;
                                 if(uri.getPath().equals("/")){

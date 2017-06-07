@@ -369,7 +369,6 @@ public class Graph extends BorderPane implements ValueChanger {
             }
             beat+=beatStep;
         }
-        System.out.println(beatStep);
     }
 
     private Point getNearestPoint(double x, double y){

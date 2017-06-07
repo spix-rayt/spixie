@@ -1,17 +1,21 @@
 package spixie;
 
+import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLDrawableFactory;
+import com.jogamp.opengl.GLOffscreenAutoDrawable;
+import com.jogamp.opengl.GLProfile;
+import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
 import com.xuggle.mediatool.IMediaWriter;
 import com.xuggle.mediatool.ToolFactory;
 import com.xuggle.xuggler.ICodec;
 import javafx.application.Platform;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.scene.Node;
-import javafx.scene.control.Button;
+import javafx.embed.swing.SwingFXUtils;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
 
+import java.awt.image.BufferedImage;
 import java.util.ConcurrentModificationException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class World {
@@ -27,30 +31,54 @@ public class World {
         frame.item().subscribeChanger(rootTimeChanger);
     }
 
+    private GLProfile glProfile;
+    private GLCapabilities glCapabilities;
+    private GLDrawableFactory factory;
+    private GLOffscreenAutoDrawable drawable;
+
+    public void initGLDrawable(){
+        glProfile = GLProfile.getDefault();
+        glCapabilities = new GLCapabilities(glProfile);
+        glCapabilities.setOnscreen(false);
+        glCapabilities.setPBuffer(true);
+        glCapabilities.setSampleBuffers(true);
+        glCapabilities.setNumSamples(1);
+        factory = GLDrawableFactory.getFactory(glProfile);
+        drawable = factory.createOffscreenAutoDrawable(null, glCapabilities, null, 1, 1);
+        drawable.addGLEventListener(new OffscreenGL());
+    }
+
+    public void resizeIfNotCorrect(int width, int height){
+        if(drawable.getSurfaceWidth() != width || drawable.getSurfaceHeight() != height){
+            drawable.setSurfaceSize(width,height);
+        }
+    }
+
     public void renderStart(final ImageView imageView){
         allowRender = true;
 //        BroadcastRender.broadcastRender.start();
         currentRenderThread = new Thread(new Runnable() {
             public void run() {
+                initGLDrawable();
                 while (true){
                     try {
                         if(allowRender && !renderingToFile){
                             allowRender = false;
-                            Layer layer = render((int) (imageView.getFitWidth() / 2), (int) (imageView.getFitHeight() / 2));
-                            final WritableImage image = layer.toImage();
+                            resizeIfNotCorrect((int)imageView.getFitWidth(), (int)imageView.getFitHeight());
+                            Image image = SwingFXUtils.toFXImage(openglRender(drawable),null);
                             Platform.runLater(new Runnable() {
                                 public void run() {
                                     imageView.setImage(image);
-                                    try {
+                                    /*try {
                                         BroadcastRender.renderedImageByteArray = layer.toJpg();
                                     }catch (Exception e){
                                         e.printStackTrace();
-                                    }
+                                    }*/
                                     allowRender = true;
                                 }
                             });
                         }
-                        Thread.sleep(40);
+                        Thread.sleep(20);
                     }catch (ConcurrentModificationException e){
                         allowRender = true;
                         continue;
@@ -67,29 +95,9 @@ public class World {
         return currentRenderThread;
     }
 
-    private Layer render(int w, int h){
-        Layer layer = new Layer(w, h);
-        double ratio = ((double)h / (double)w);
-        double mulX = w/1000.0*ratio;
-        double mulY = h/1000.0;
-        double globalSize = h/1000.0;
-        for (Node node : root.componentBody.elements.getChildren()) {
-            if(node instanceof Multiplier){
-                double radius = ((Multiplier) node).radius.get();
-                double phase = ((Multiplier) node).phase.get();
-                double size = ((Multiplier) node).size.get();
-                double count = ((Multiplier) node).count.get();
-                for (int i = 0; i < count; i++) {
-                    layer.drawCircle(
-                            (500/ratio + Math.cos(Math.PI*2/count*i + phase*Math.PI*2)*radius)*mulX,
-                            (500 + Math.sin(Math.PI*2/count*i + phase*Math.PI*2)*radius)*mulY,
-                            size*globalSize,
-                            1.0f, 0.0f, 1.0f, 0.7f
-                    );
-                }
-            }
-        }
-        return layer;
+    private BufferedImage openglRender(GLOffscreenAutoDrawable drawable){
+        drawable.display();
+        return new AWTGLReadBufferUtil(drawable.getGLProfile(), true).readPixelsToBufferedImage(drawable.getGL(), true);
     }
 
     public void renderToFile(FrameRenderedToFileEvent frameRenderedToFileEventHandler, RenderToFileCompleted renderToFileCompleted){
@@ -97,20 +105,45 @@ public class World {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                GLProfile glp = GLProfile.getDefault();
+                GLCapabilities glc = new GLCapabilities(glp);
+                glc.setOnscreen(false);
+                glc.setPBuffer(true);
+                glc.setSampleBuffers(true);
+                glc.setNumSamples(16);
+                GLDrawableFactory fc = GLDrawableFactory.getFactory(glp);
+                GLOffscreenAutoDrawable offscreenAutoDrawable = fc.createOffscreenAutoDrawable(null, glc, null, 1920, 1024);
+                offscreenAutoDrawable.addGLEventListener(new OffscreenGL());
+
                 IMediaWriter iMediaWriter = ToolFactory.makeWriter("out.mp4");
                 iMediaWriter.addVideoStream(0,0, ICodec.ID.CODEC_ID_MPEG4, 1920, 1024);
 
                 int countFrames = (int)frame.get() + 1;
                 for (int frame = 0; frame < countFrames; frame++) {
-                    iMediaWriter.encodeVideo(0, render(1920, 1024).toBufferedImage(), Math.round(frame*(1000.0/60.0)), TimeUnit.MILLISECONDS);
-                    final Integer f =frame;
+                    int finalFrame = frame;
+                    final CountDownLatch latch = new CountDownLatch(1);
                     Platform.runLater(new Runnable() {
                         @Override
                         public void run() {
-                            frameRenderedToFileEventHandler.handle(f+1 ,countFrames);
+                            World.this.frame.set(finalFrame);
+                            latch.countDown();
                         }
                     });
-
+                    try {
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    BufferedImage bufferedImage = openglRender(offscreenAutoDrawable);
+                    BufferedImage bufferedImage1 = new BufferedImage(bufferedImage.getWidth(), bufferedImage.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+                    bufferedImage1.getGraphics().drawImage(bufferedImage,0,0,null);
+                    iMediaWriter.encodeVideo(0, bufferedImage1, Math.round(frame*(1000.0/60.0)), TimeUnit.MILLISECONDS);
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            frameRenderedToFileEventHandler.handle(finalFrame+1 ,countFrames);
+                        }
+                    });
                 }
 
                 iMediaWriter.close();
