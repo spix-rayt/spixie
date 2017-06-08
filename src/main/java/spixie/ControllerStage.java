@@ -1,26 +1,23 @@
 package spixie;
 
-import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.ToolBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 
-public class ControllerStage extends Stage {
+public class ControllerStage extends BorderPane {
     public ControllerStage() {
         super();
-        BorderPane borderPane = new BorderPane();
         SplitPane splitPane = new SplitPane();
+
         final ListView<Component> componentListView = new ListView<>();
+        splitPane.setResizableWithParent(componentListView, false);
         splitPane.setOrientation(Orientation.HORIZONTAL);
 
         final BorderPane componentBodyContainer = new BorderPane();
@@ -39,15 +36,14 @@ public class ControllerStage extends Stage {
         splitPane.getItems().addAll(componentListView, componentBodyContainer);
         splitPane.setDividerPosition(0,0.15);
 
-        borderPane.setCenter(splitPane);
+        setCenter(splitPane);
 
-
-        HBox menuBar = new HBox();
+        ToolBar menuBar = new ToolBar();
         Button renderButton = new Button("Render");
         renderButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent mouseEvent) {
-                borderPane.setDisable(true);
+                ControllerStage.this.setDisable(true);
                 Main.world.renderToFile(new World.FrameRenderedToFileEvent() {
                     @Override
                     public void handle(int currentFrame, int framesCount) {
@@ -57,24 +53,12 @@ public class ControllerStage extends Stage {
                     @Override
                     public void handle() {
                         renderButton.setText("Render");
-                        borderPane.setDisable(false);
+                        ControllerStage.this.setDisable(false);
                     }
                 });
             }
         });
-        menuBar.getChildren().addAll(renderButton,Main.world.frame);
-        borderPane.setTop(menuBar);
-
-        Scene scene = new Scene(borderPane, 900, 700);
-        scene.getStylesheets().add("style.css");
-        setScene(scene);
-        setTitle("Spixie");
-
-        setOnCloseRequest(new EventHandler<WindowEvent>() {
-            public void handle(WindowEvent windowEvent) {
-                Main.world.getCurrentRenderThread().interrupt();
-                Platform.exit();
-            }
-        });
+        menuBar.getItems().addAll(renderButton,Main.world.frame);
+        setTop(menuBar);
     }
 }
