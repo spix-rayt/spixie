@@ -10,6 +10,10 @@ ControllerStage{
     -fx-cursor: default;
 }
 
+Graph{
+    -fx-background-color: white;
+}
+
 .window {
     -fx-skin: "jfxtras.internal.scene.control.skin.window.DefaultWindowSkin";
     -fx-glass-color: rgba(255, 255, 255, 1.0);

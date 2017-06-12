@@ -1,22 +1,21 @@
 package spixie
 
 import javafx.event.EventHandler
-import javafx.scene.Node
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
-import javafx.scene.control.ComboBox
-import javafx.scene.control.Label
+import javafx.scene.control.ScrollPane
+import javafx.scene.control.ToolBar
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.BorderPane
-import javafx.scene.layout.HBox
 import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import javafx.util.Pair
 import java.util.*
+import kotlin.collections.HashMap
 
-class Graph(parrent: Node, outValue: Value) : BorderPane(), ValueChanger {
+class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
     private val canvas = Canvas()
     private val g: GraphicsContext
     private var unitWidthInPixels = 50.0
@@ -34,23 +33,28 @@ class Graph(parrent: Node, outValue: Value) : BorderPane(), ValueChanger {
     private val points = ArrayList<Point>()
 
 
-    private val control = HBox()
-    private val inputComboBox: ComboBox<Value.Item>
-    private val outValueComboBox: ComboBox<Value.Item>
-    private val maxOutputValue = Value(1.0, 1.0, "Max Output")
+    private val control = ToolBar()
+    private var _inputValue: Value = Value.EMPTY
+
+    var inputValue: Value
+    get() = _inputValue
+    set(value) {
+        _inputValue.item().unsubscribeChanger(this)
+        _inputValue = value
+        _inputValue.item().subscribeChanger(this)
+    }
+    private val maxOutputValue = Value(1.0, 1.0, "Max Output", false)
 
     init {
         height = 200.0
         canvas.height = 200.0
-        maxOutputValue.set(Math.ceil(outValue.get() * 2))
-        points.add(Point(0.0, outValue.get() / maxOutputValue.get()))
-        sortPoints()
-        canvas.parentProperty().addListener { _, _, t1 ->
-            t1.boundsInParentProperty().addListener { _, _, t1 ->
-                canvas.width = t1.width
-                paint()
-            }
+        if(outputValue.get()<1.0){
+            maxOutputValue.set(2.0)
+        }else{
+            maxOutputValue.set(Math.ceil(outputValue.get() * 2))
         }
+        points.add(Point(0.0, 0.5))
+        sortPoints()
         canvas.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             mousePressPoint = Point(mouseEvent.x, mouseEvent.y)
             val mouseValueX = (mouseEvent.x + startX) / unitWidthInPixels
@@ -202,45 +206,18 @@ class Graph(parrent: Node, outValue: Value) : BorderPane(), ValueChanger {
             paint()
         }
         g = canvas.graphicsContext2D
-        center = canvas
+        val canvasScrollPane = ScrollPane()
+        canvasScrollPane.content = canvas
+        canvasScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+        center = canvasScrollPane
+        Main.controllerStage.prefWidthProperty().addListener { _, _, newValue ->
+            canvas.width = newValue.toDouble() - 2
+            paint()
+        }
+        canvas.width = Main.controllerStage.prefWidth -2
+        paint()
 
         top = control
-        inputComboBox = ComboBox<Value.Item>()
-        inputComboBox.setMinWidth(250.0)
-        inputComboBox.setMaxWidth(250.0)
-        inputComboBox.setOnMousePressed {
-            val selectedItem = inputComboBox.getSelectionModel().selectedItem
-            inputComboBox.getItems().clear()
-            inputComboBox.getItems().addAll(Main.world.time.item())
-            val values = (parrent as Element).values
-            for (value in values) {
-                if (value.checkCycle(this@Graph)) {
-                    inputComboBox.getItems().add(value)
-                }
-            }
-            inputComboBox.getSelectionModel().select(selectedItem)
-        }
-        inputComboBox.getSelectionModel().selectedItemProperty().addListener { _, item, t1 ->
-            item?.unsubscribeChanger(this@Graph)
-            t1?.subscribeChanger(this@Graph)
-        }
-        outValueComboBox = ComboBox<Value.Item>()
-        outValueComboBox.setMaxWidth(250.0)
-        outValueComboBox.setMinWidth(250.0)
-        outValueComboBox.getItems().addAll(*(parrent as Element).values)
-        outValueComboBox.getSelectionModel().select(outValue.item())
-        outValueComboBox.setOnMousePressed {
-            val selectedItem = outValueComboBox.getSelectionModel().selectedItem
-            outValueComboBox.getItems().clear()
-            val values = parrent.values
-            for (value in values) {
-                if (value.checkCycle(this@Graph, value)) {
-                    outValueComboBox.getItems().add(value)
-                }
-            }
-            outValueComboBox.getSelectionModel().select(selectedItem)
-        }
-
         maxOutputValue.item().subscribeChanger(object : ValueChanger {
             override fun updateOutValue() {
                 if (maxOutputValue.get() < 1) {
@@ -248,12 +225,9 @@ class Graph(parrent: Node, outValue: Value) : BorderPane(), ValueChanger {
                 }
                 paint()
             }
-
-            override val valueToBeChanged: Value.Item
-                get() = outValueComboBox.getSelectionModel().selectedItem
+            override val valueToBeChanged = Value.EMPTY.item()
         })
-
-        control.children.addAll(Label("Input:"), inputComboBox, Label("Output:"), outValueComboBox, maxOutputValue)
+        control.items.addAll(maxOutputValue)
     }
 
     private fun sortPoints() {
@@ -270,15 +244,12 @@ class Graph(parrent: Node, outValue: Value) : BorderPane(), ValueChanger {
     }
 
     override fun updateOutValue() {
-        if (inputComboBox.selectionModel.selectedItem != null) {
-            if (outValueComboBox.selectionModel.selectedItem != null) {
-                outValueComboBox.selectionModel.selectedItem.value.set((1.0 - getValue(inputComboBox.selectionModel.selectedItem.value.get())) * maxOutputValue.get())
-            }
+        if(_inputValue != Value.EMPTY){
+            outputValue.set((1.0 - getValue(_inputValue.get())) * maxOutputValue.get())
         }
     }
 
-    override val valueToBeChanged: Value.Item
-        get() = outValueComboBox.selectionModel.selectedItem
+    override val valueToBeChanged = outputValue.item()
 
     private fun paint() {
         g.clearRect(0.0, 0.0, canvas.width, canvas.height)
@@ -518,5 +489,9 @@ class Graph(parrent: Node, outValue: Value) : BorderPane(), ValueChanger {
     private fun magnetX(x: Double): Double {
         val fourthBeatStep = beatStep * 0.25
         return Math.round(x / fourthBeatStep) * fourthBeatStep
+    }
+
+    companion object{
+        val graphMap = HashMap<Value, Graph>()
     }
 }

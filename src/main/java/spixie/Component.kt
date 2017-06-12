@@ -1,9 +1,9 @@
 package spixie
 
-class Component(private val name: String) {
-    var componentBody = ComponentBody()
+import javafx.scene.control.ScrollPane
 
-    override fun toString(): String {
-        return name
-    }
+interface Component: ComponentsListItem {
+    val componentProperties:ComponentProperties
+    fun genPropsPane():ScrollPane
+    fun renderObject(componentObject: ComponentObject, particlesBuilder: ParticlesBuilder)
 }

@@ -77,21 +77,11 @@ class OffscreenGL : GLEventListener {
 
         val particlesBuilder = ParticlesBuilder()
 
-        for (node in Main.world.root.componentBody.elements.children) {
-            if (node is Multiplier) {
-                val radius = node.radius.get()
-                val phase = node.phase.get()
-                val size = node.size.get()
-                val count = node.count.get()
-                var i = 0
-                while (i < count) {
-                    particlesBuilder.addParticle(
-                            (Math.cos(Math.PI * 2 / count * i + phase * Math.PI * 2.0) * radius).toFloat(),
-                            (Math.sin(Math.PI * 2 / count * i + phase * Math.PI * 2.0) * radius).toFloat(),
-                            size.toFloat()
-                    )
-                    i++
-                }
+
+        for (child in Main.world.root.children) {
+            val value = child.value
+            if(value is ComponentObject){
+                value.render(particlesBuilder)
             }
         }
         val buffer = particlesBuilder.toFloatBuffer()

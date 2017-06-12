@@ -1,7 +1,9 @@
 package spixie
 
 import javafx.event.EventHandler
+import javafx.scene.control.ContextMenu
 import javafx.scene.control.Label
+import javafx.scene.control.MenuItem
 import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
@@ -10,7 +12,7 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
 import org.apache.commons.math3.fraction.Fraction
 
-class Value(initial: Double, mul: Double, private val name: String) : HBox() {
+class Value(initial: Double, mul: Double, private val name: String, val canDependsOnAnotherValue: Boolean) : HBox() {
     var fraction = Fraction(0)
         private set
     private var startDragValue = Fraction(0)
@@ -32,13 +34,40 @@ class Value(initial: Double, mul: Double, private val name: String) : HBox() {
                 startDragValue = fraction.add(Fraction(this@Value.mul).multiply(mouseEvent.y.toInt()))
                 dragged = false
             }
-            if (mouseEvent.button == MouseButton.SECONDARY) {
-                val parent = parent
-                if (parent is Multiplier) {
-                    parent.addGraph(this@Value)
+        }
+
+        val valueContextMenu = ContextMenu()
+        val menuItem1 = MenuItem("Graph output")
+        val menuItem2 = MenuItem("Graph input")
+        valueContextMenu.items.addAll(menuItem1, menuItem2)
+
+        if(canDependsOnAnotherValue){
+            menuItem1.setOnAction { event ->
+                val graph = Graph.graphMap[this]
+                if(graph==null){
+                    val newGraph = Graph(this)
+                    Graph.graphMap[this] = newGraph
+                    Main.controllerStage.bottom = newGraph
+                }else{
+                    Main.controllerStage.bottom = graph
                 }
             }
+        }else{
+            menuItem1.isDisable = true
         }
+        menuItem2.setOnAction { event ->
+            val graph = Main.controllerStage.bottom as Graph?
+            if(graph!=null){
+                graph.inputValue = this
+            }
+        }
+        valueContextMenu.setOnShowing { event ->
+            val graph = Main.controllerStage.bottom as Graph?
+            if(graph!=null){
+                menuItem2.isDisable = !item().checkCycle(graph)
+            }
+        }
+        labelValue.contextMenu = valueContextMenu
 
         labelValue.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
@@ -107,6 +136,10 @@ class Value(initial: Double, mul: Double, private val name: String) : HBox() {
         return itemForCheckbox
     }
 
+    override fun toString(): String {
+        return name
+    }
+
     class Item(val value: Value) {
 
         fun subscribeChanger(valueChanger: ValueChanger) {
@@ -160,7 +193,9 @@ class Value(initial: Double, mul: Double, private val name: String) : HBox() {
         }
     }
 
+
+
     companion object{
-        val EMPTY:Value = Value(0.0,0.0,"")
+        val EMPTY:Value = Value(0.0,0.0,"", false)
     }
 }

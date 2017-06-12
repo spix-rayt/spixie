@@ -9,16 +9,18 @@ import com.xuggle.mediatool.ToolFactory
 import com.xuggle.xuggler.ICodec
 import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
+import javafx.scene.control.TreeItem
 import javafx.scene.image.ImageView
+import spixie.components.Root
 import java.awt.image.BufferedImage
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class World {
-    val root = Component("Root")
-    val frame = Value(0.0, 1.0, "Frame")
-    val time = Value(0.0, 1.0, "Root Time")
+    val root = TreeItem<ComponentsListItem>(Root())
+    val frame = Value(0.0, 1.0, "Frame", false)
+    val time = Value(0.0, 1.0, "Root Time", false)
     @Volatile var allowRender = true
     @Volatile var renderingToFile = false
     @Volatile var imageView:ImageView = ImageView()
@@ -47,7 +49,7 @@ class World {
     })
 
     init {
-        val rootTimeChanger = RootTimeChanger(frame, Value(140.0, 1.0, "BPM"), time)
+        val rootTimeChanger = RootTimeChanger(frame, Value(140.0, 1.0, "BPM", false), time)
         frame.item().subscribeChanger(rootTimeChanger)
     }
 

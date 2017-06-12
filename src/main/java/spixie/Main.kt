@@ -31,12 +31,10 @@ class Main : Application() {
         stage.show()
         world.renderStart(imageView)
 
-        val controllerStage = ControllerStage()
-
         val window = Window("")
         window.contentPane.children.addAll(controllerStage)
-        window.setPrefSize(800.0, 600.0)
-        window.setMinSize(400.0, 300.0)
+        window.setPrefSize(800.0, 800.0)
+        window.setMinSize(400.0, 500.0)
         controllerStage.prefWidthProperty().bind(window.contentPane.widthProperty())
         controllerStage.prefHeightProperty().bind(window.contentPane.heightProperty())
         window.isResizableWindow = true
@@ -45,7 +43,6 @@ class Main : Application() {
         root.children.addAll(window)
 
         val windowOpacity = arrayOf(1.0f)
-
 
         root.onKeyPressed = EventHandler<KeyEvent> { event ->
             if (event.code == KeyCode.DIGIT1 && event.isControlDown) windowOpacity[0] = 1.0f
@@ -75,6 +72,7 @@ class Main : Application() {
 
     companion object {
         var world: World = World()
+        val controllerStage = ControllerStage()
 
         @JvmStatic fun main(args: Array<String>) {
             launch(Main::class.java)
