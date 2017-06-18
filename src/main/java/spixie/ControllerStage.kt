@@ -46,7 +46,7 @@ class ControllerStage : BorderPane() {
                         val component = Multiplier()
                         selectedTreeItem.children.addAll(
                                 TreeItem<ComponentsListItem>(
-                                        ComponentObject(component, component.genPropsPane())
+                                        ComponentObject(component, component.createPropsPane())
                                 )
                         )
                     }

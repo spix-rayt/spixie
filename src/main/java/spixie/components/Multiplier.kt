@@ -9,7 +9,7 @@ import spixie.ParticlesBuilder
 class Multiplier : Component {
     override val componentProperties: ComponentProperties = ComponentProperties()
 
-    override fun genPropsPane(): ScrollPane {
+    override fun createPropsPane(): MultiplierProps {
         return MultiplierProps()
     }
 
@@ -25,7 +25,7 @@ class Multiplier : Component {
         val props = componentObject.props
         if(props is MultiplierProps){
             val radius = props.radius.get()
-            val phase = props.phase.get()
+            val phase = props.rotate.get()
             val size = props.size.get()
             val count = props.count.get()
             var i = 0

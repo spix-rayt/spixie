@@ -4,6 +4,6 @@ import javafx.scene.control.ScrollPane
 
 interface Component: ComponentsListItem {
     val componentProperties:ComponentProperties
-    fun genPropsPane():ScrollPane
+    fun createPropsPane():ScrollPane
     fun renderObject(componentObject: ComponentObject, particlesBuilder: ParticlesBuilder)
 }

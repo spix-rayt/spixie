@@ -21,7 +21,8 @@ class OffscreenGL : GLEventListener {
         val gl = drawable.gl.gL4ES3
         gl.glEnable(GL.GL_MULTISAMPLE)
         gl.glEnable(GL.GL_BLEND)
-        gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glBlendEquation(GL.GL_FUNC_ADD)
+        gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE)
 
 
         val buffer = IntArray(2)
@@ -44,7 +45,7 @@ class OffscreenGL : GLEventListener {
         gl.glVertexAttribDivisor(pointSize_attribute, 1)
 
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, squareParticleMeshVBO)
-        val vertices = FloatBuffer.wrap(floatArrayOf(-0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f))
+        val vertices = FloatBuffer.wrap(floatArrayOf(-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f))
         gl.glBufferData(GL.GL_ARRAY_BUFFER, (vertices.capacity() * 4).toLong(), vertices, GL.GL_STATIC_DRAW)
         gl.glVertexAttribPointer(position_attribute, 2, GL.GL_FLOAT, false, 0, 0)
 

@@ -8,7 +8,7 @@ import spixie.ParticlesBuilder
 
 class Root: Component {
     override val componentProperties: ComponentProperties = ComponentProperties()
-    override fun genPropsPane(): ScrollPane {
+    override fun createPropsPane(): ScrollPane {
         return ScrollPane()
     }
 
