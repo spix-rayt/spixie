@@ -6,18 +6,19 @@ import spixie.ComponentObject
 import spixie.ComponentProperties
 import spixie.RenderBufferBuilder
 
-class Root: Component {
-    override val componentProperties: ComponentProperties = ComponentProperties()
-    override fun createPropsPane(): ScrollPane {
-        return ScrollPane()
-    }
-
+class ParticleSpray :Component {
     override fun getPropsPane(): ScrollPane {
         return componentProperties
     }
 
+    override val componentProperties: ComponentProperties = ComponentProperties()
+
     override fun toString(): String {
-        return "Root"
+        return "ParticleSpray"
+    }
+
+    override fun createPropsPane(): ScrollPane {
+        return ParticleSprayProps()
     }
 
     override fun renderObject(componentObject: ComponentObject, renderBufferBuilder: RenderBufferBuilder) {

@@ -4,7 +4,7 @@ import javafx.scene.control.ScrollPane
 import spixie.Component
 import spixie.ComponentObject
 import spixie.ComponentProperties
-import spixie.ParticlesBuilder
+import spixie.RenderBufferBuilder
 
 class Multiplier : Component {
     override val componentProperties: ComponentProperties = ComponentProperties()
@@ -21,7 +21,7 @@ class Multiplier : Component {
         return "Multiplier"
     }
 
-    override fun renderObject(componentObject: ComponentObject, particlesBuilder: ParticlesBuilder) {
+    override fun renderObject(componentObject: ComponentObject, renderBufferBuilder: RenderBufferBuilder) {
         val props = componentObject.props
         if(props is MultiplierProps){
             val radius = props.radius.get()
@@ -30,10 +30,14 @@ class Multiplier : Component {
             val count = props.count.get()
             var i = 0
             while (i < count) {
-                particlesBuilder.addParticle(
+                renderBufferBuilder.addParticle(
                         (Math.cos(Math.PI * 2 / count * i + phase * Math.PI * 2.0) * radius).toFloat(),
                         (Math.sin(Math.PI * 2 / count * i + phase * Math.PI * 2.0) * radius).toFloat(),
-                        size.toFloat()
+                        size.toFloat(),
+                        0.0f,
+                        1.0f,
+                        0.0f,
+                        1.0f
                 )
                 i++
             }

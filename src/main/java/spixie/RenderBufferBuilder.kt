@@ -3,14 +3,18 @@ package spixie
 import java.nio.FloatBuffer
 import java.util.*
 
-class ParticlesBuilder {
+class RenderBufferBuilder {
 
     private val floats = ArrayList<Float>()
 
-    fun addParticle(x: Float, y: Float, size: Float) {
+    fun addParticle(x: Float, y: Float, size: Float, red:Float, green:Float, blue:Float, alpha:Float) {
         floats.add(x)
         floats.add(y)
         floats.add(size)
+        floats.add(red)
+        floats.add(green)
+        floats.add(blue)
+        floats.add(alpha)
     }
 
     fun particlesCount(): Int {
@@ -27,6 +31,6 @@ class ParticlesBuilder {
     }
 
     companion object {
-        val PARTICLE_FLOAT_SIZE = 3
+        val PARTICLE_FLOAT_SIZE = 7
     }
 }

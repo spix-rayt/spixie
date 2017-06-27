@@ -11,7 +11,7 @@ class ComponentObject(val component: Component, val props:ScrollPane): Component
         return component.toString()
     }
 
-    fun render(particlesBuilder: ParticlesBuilder){
-        component.renderObject(this, particlesBuilder)
+    fun render(renderBufferBuilder: RenderBufferBuilder){
+        component.renderObject(this, renderBufferBuilder)
     }
 }

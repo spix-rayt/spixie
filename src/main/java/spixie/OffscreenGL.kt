@@ -7,6 +7,7 @@ import com.jogamp.opengl.GLEventListener
 import com.jogamp.opengl.glu.GLU
 import org.apache.commons.io.IOUtils
 import org.joml.Matrix4f
+import spixie.components.ParticleSprayProps
 import java.io.IOException
 import java.nio.FloatBuffer
 import java.nio.charset.StandardCharsets
@@ -34,15 +35,18 @@ class OffscreenGL : GLEventListener {
         position_attribute = gl.glGetAttribLocation(shaderProgram, "position")
         center_attribute = gl.glGetAttribLocation(shaderProgram, "center")
         pointSize_attribute = gl.glGetAttribLocation(shaderProgram, "pointSize")
+        color_attribute = gl.glGetAttribLocation(shaderProgram, "color")
 
         uniformCameraMatrix = gl.glGetUniformLocation(shaderProgram, "cameraMatrix")
 
         gl.glEnableVertexAttribArray(position_attribute)
         gl.glEnableVertexAttribArray(center_attribute)
         gl.glEnableVertexAttribArray(pointSize_attribute)
+        gl.glEnableVertexAttribArray(color_attribute)
         gl.glVertexAttribDivisor(position_attribute, 0)
         gl.glVertexAttribDivisor(center_attribute, 1)
         gl.glVertexAttribDivisor(pointSize_attribute, 1)
+        gl.glVertexAttribDivisor(color_attribute, 1)
 
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, squareParticleMeshVBO)
         val vertices = FloatBuffer.wrap(floatArrayOf(-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f))
@@ -51,8 +55,9 @@ class OffscreenGL : GLEventListener {
 
 
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, particlesVBO)
-        gl.glVertexAttribPointer(center_attribute, 2, GL.GL_FLOAT, false, ParticlesBuilder.PARTICLE_FLOAT_SIZE * 4, 0)
-        gl.glVertexAttribPointer(pointSize_attribute, 1, GL.GL_FLOAT, false, ParticlesBuilder.PARTICLE_FLOAT_SIZE * 4, 8)
+        gl.glVertexAttribPointer(center_attribute, 2, GL.GL_FLOAT, false, RenderBufferBuilder.PARTICLE_FLOAT_SIZE * 4, 0)
+        gl.glVertexAttribPointer(pointSize_attribute, 1, GL.GL_FLOAT, false, RenderBufferBuilder.PARTICLE_FLOAT_SIZE * 4, 8)
+        gl.glVertexAttribPointer(color_attribute, 4, GL.GL_FLOAT, false, RenderBufferBuilder.PARTICLE_FLOAT_SIZE * 4, 12)
     }
 
     override fun dispose(drawable: GLAutoDrawable) {
@@ -65,6 +70,7 @@ class OffscreenGL : GLEventListener {
     private var position_attribute: Int = 0
     private var center_attribute: Int = 0
     private var pointSize_attribute: Int = 0
+    private var color_attribute: Int = 0
 
     private var uniformCameraMatrix: Int = 0
 
@@ -76,22 +82,52 @@ class OffscreenGL : GLEventListener {
 
         gl.glClear(GL.GL_COLOR_BUFFER_BIT or GL.GL_DEPTH_BUFFER_BIT)
 
-        val particlesBuilder = ParticlesBuilder()
+        for (child in Main.world.root.children) {
+            val value = child.value
+            if(value is ComponentObject){
+                if(value.props is ParticleSprayProps){
+                    value.props.clearParticles()
+                }
+            }
+        }
 
+        for(particleFrame in 0..Main.world.frame.get().toInt()){
+            for (child in Main.world.root.children) {
+                val value = child.value
+                if(value is ComponentObject){
+                    if(value.props is ParticleSprayProps){
+                        value.props.stepParticles()
+                    }
+                }
+            }
+        }
+
+        val renderBufferBuilder = RenderBufferBuilder()
 
         for (child in Main.world.root.children) {
             val value = child.value
             if(value is ComponentObject){
-                value.render(particlesBuilder)
+                if(value.props is ParticleSprayProps){
+                    for (particle in value.props.particles) {
+                        renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
+                    }
+                }
             }
         }
-        val buffer = particlesBuilder.toFloatBuffer()
+
+        for (child in Main.world.root.children) {
+            val value = child.value
+            if(value is ComponentObject){
+                value.render(renderBufferBuilder)
+            }
+        }
+        val buffer = renderBufferBuilder.toFloatBuffer()
 
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, particlesVBO)
         gl.glBufferData(GL.GL_ARRAY_BUFFER, (buffer.capacity() * 4).toLong(), buffer, GL2ES2.GL_STATIC_DRAW)
 
         gl.glBindBuffer(GL.GL_ARRAY_BUFFER, squareParticleMeshVBO)
-        gl.glDrawArraysInstanced(GL.GL_TRIANGLE_STRIP, 0, 4, particlesBuilder.particlesCount())
+        gl.glDrawArraysInstanced(GL.GL_TRIANGLE_STRIP, 0, 4, renderBufferBuilder.particlesCount())
         gl.glFlush()
         gl.glFinish()
         val errorCode = gl.glGetError()

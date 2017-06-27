@@ -21,6 +21,7 @@ class World {
     val root = TreeItem<ComponentsListItem>(Root())
     val frame = Value(0.0, 1.0, "Frame", false)
     val time = Value(0.0, 1.0, "Root Time", false)
+    var bpm = Value(140.0, 1.0, "BPM", false)
     @Volatile var allowRender = true
     @Volatile var renderingToFile = false
     @Volatile var imageView:ImageView = ImageView()
@@ -49,7 +50,7 @@ class World {
     })
 
     init {
-        val rootTimeChanger = RootTimeChanger(frame, Value(140.0, 1.0, "BPM", false), time)
+        val rootTimeChanger = RootTimeChanger(frame, bpm, time)
         frame.item().subscribeChanger(rootTimeChanger)
     }
 

@@ -8,11 +8,12 @@ import javafx.scene.Scene
 import javafx.scene.control.TreeItem
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyCombination
 import javafx.scene.input.KeyEvent
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import jfxtras.scene.control.window.Window
-import spixie.components.Multiplier
+import spixie.components.ParticleSpray
 
 class Main : Application() {
     @Throws(Exception::class)
@@ -30,7 +31,10 @@ class Main : Application() {
         stage.title = "Render"
         stage.scene = scene
         stage.isMaximized = true
+        stage.fullScreenExitKeyCombination = KeyCombination.NO_MATCH
         stage.show()
+        stage.isFullScreen = true
+
         world.renderStart(imageView)
 
         val window = Window("")
@@ -76,15 +80,13 @@ class Main : Application() {
     }
 
     fun loadTestData(){
-        val component = Multiplier()
+        val component = ParticleSpray()
         val props = component.createPropsPane()
         world.root.children.addAll(
                 TreeItem<ComponentsListItem>(
                         ComponentObject(component, props)
                 )
         )
-        props.size.set(140.0)
-        props.radius.set(200.0)
     }
 
     companion object {
