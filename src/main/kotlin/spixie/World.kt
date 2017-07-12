@@ -31,7 +31,6 @@ class World {
                     val image = SwingFXUtils.toFXImage(openclRender(), null)
                     Platform.runLater {
                         imageView.image = image
-                        //BroadcastRender.renderedImageByteArray = ...
                         allowRender = true
                     }
                 }
@@ -58,7 +57,6 @@ class World {
 
     fun renderStart(imageView: ImageView) {
         allowRender = true
-//        BroadcastRender.broadcastRender.start()
         this.imageView = imageView
         currentRenderThread.start()
     }
