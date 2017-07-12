@@ -39,8 +39,10 @@ class ParticleSprayProps: ScrollPane() {
         for (particle in particles) {
             particle.vx*=coefDeceleration.get().toFloat()
             particle.vy*=coefDeceleration.get().toFloat()
-            particle.vx += (rand(0,0,0,frameParticles.toLong(),i,3) *brownianMotion.get()-brownianMotion.get()/2).toFloat()
-            particle.vy += (rand(0,0,0,frameParticles.toLong(),i,4) *brownianMotion.get()-brownianMotion.get()/2).toFloat()
+            val angle = rand(0,0,0,frameParticles.toLong(),i,5)*Math.PI*2
+            val speed = rand(0,0,0,frameParticles.toLong(),i,6)*brownianMotion.get()
+            particle.vx += (Math.cos(angle) * speed).toFloat()
+            particle.vy += (Math.sin(angle) * speed).toFloat()
             particle.step(delta)
             i++
         }

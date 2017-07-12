@@ -10,6 +10,7 @@ import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCombination
 import javafx.scene.input.KeyEvent
+import javafx.scene.layout.Pane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import jfxtras.scene.control.window.Window
@@ -20,9 +21,13 @@ class Main : Application() {
     override fun start(stage: Stage) {
         val root = Group()
         val imageView = ImageView()
+        val imagePane = Pane()
+        imageView.style="-fx-background:transparent;"
         imageView.isSmooth = true
         imageView.isPreserveRatio = false
-        root.children.addAll(imageView)
+        imagePane.children.addAll(imageView)
+        root.children.addAll(imagePane)
+        imagePane.style = "-fx-background-color: #000000;"
 
         val scene = Scene(root)
         scene.stylesheets.add("style.css")
@@ -62,6 +67,15 @@ class Main : Application() {
                 window.style = "-fx-opacity: 0.0"
             } else {
                 window.style = "-fx-opacity: " + windowOpacity[0]
+            }
+
+            if(event.code == KeyCode.A){
+                val frame = world.frame.get()
+                if(frame>0) world.frame.set(frame-1)
+            }
+            if(event.code == KeyCode.D){
+                val frame = world.frame.get()
+                world.frame.set(frame+1)
             }
         }
 
