@@ -1,17 +1,22 @@
 package spixie
 
-import com.xuggle.mediatool.ToolFactory
-import com.xuggle.xuggler.ICodec
+import io.humble.video.*
+import io.humble.video.awt.MediaPictureConverter
+import io.humble.video.awt.MediaPictureConverterFactory
 import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.control.TreeItem
+import javafx.scene.image.Image
 import javafx.scene.image.ImageView
+import org.apache.commons.collections4.map.ReferenceMap
 import spixie.components.ParticleSprayProps
 import spixie.components.Root
 import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import javax.imageio.ImageIO
 
 class World {
     val root = TreeItem<ComponentsListItem>(Root())
@@ -22,19 +27,58 @@ class World {
     @Volatile var renderingToFile = false
     @Volatile var imageView:ImageView = ImageView()
     val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
+    val cache = ReferenceMap<Int, ByteArray>()
+    var frameHashShown = -1
+    var autoRenderNextFrame = false
+
+    var scaleDown:Int = 2
+        get() = field
+        set(value) {
+            field = value
+            cache.clear()
+            frameHashShown = - 1
+        }
+
     var currentRenderThread: Thread = Thread(Runnable {
         while (true) {
             try {
                 if (allowRender && !renderingToFile) {
-                    allowRender = false
-                    resizeIfNotCorrect(imageView.fitWidth.toInt(), imageView.fitHeight.toInt())
-                    val image = SwingFXUtils.toFXImage(openclRender(), null)
-                    Platform.runLater {
-                        imageView.image = image
-                        allowRender = true
+                    if(frameHashShown == frame.get().toInt()){
+                        if(autoRenderNextFrame){
+                            runInUIAndWait {
+                                frame.set(frame.get()+1.0)
+                            }
+                        }else{
+                            Thread.sleep(1)
+                        }
+                    }else{
+                        allowRender = false
+                        val imageCached = cache.get(frame.get().toInt())
+                        if(imageCached == null){
+                            resizeIfNotCorrect(imageView.fitWidth.toInt()/scaleDown, imageView.fitHeight.toInt()/scaleDown)
+                            val frameBeforeRender = frame.get().toInt()
+                            val bufferedImage = openclRender()
+                            val image = SwingFXUtils.toFXImage(bufferedImage, null)
+                            if(frameBeforeRender == frame.get().toInt()){
+                                cache.put(frame.get().toInt(), imageToPngByteArray(bufferedImage))
+                                frameHashShown = frame.get().toInt()
+                                runInUIAndWait {
+                                    imageView.image = image
+                                    allowRender = true
+                                }
+                            }else{
+                                allowRender = true
+                            }
+                        }else{
+                            frameHashShown = frame.get().toInt()
+                            val toFXImage = Image(ByteArrayInputStream(imageCached))
+                            runInUIAndWait {
+                                imageView.image = toFXImage
+                                allowRender = true
+                            }
+                        }
                     }
                 }
-                Thread.sleep(20)
             } catch (e: ConcurrentModificationException) {
                 allowRender = true
                 continue
@@ -47,6 +91,12 @@ class World {
     init {
         val rootTimeChanger = RootTimeChanger(frame, bpm, time)
         frame.item().subscribeChanger(rootTimeChanger)
+    }
+
+    fun imageToPngByteArray(bufferedImage: BufferedImage):ByteArray{
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        ImageIO.write(bufferedImage, "png", byteArrayOutputStream)
+        return byteArrayOutputStream.toByteArray()
     }
 
     fun resizeIfNotCorrect(width: Int, height: Int) {
@@ -109,34 +159,71 @@ class World {
         renderingToFile = true
         Thread(Runnable {
             openCLRenderer.setSize(1920, 1080)
-            val iMediaWriter = ToolFactory.makeWriter("out.mkv")
-            iMediaWriter.addVideoStream(0, 0, ICodec.ID.CODEC_ID_FFVHUFF, 1920, 1080)
+            val frameRate = Rational.make(1, 60)
+            val muxer = Muxer.make("out.mkv", null, "matroska")
+            val codec = Codec.findEncodingCodecByName("ffv1")
+            val encoder = Encoder.make(codec)
+            encoder.width = 1920
+            encoder.height = 1080
+            encoder.pixelFormat = PixelFormat.Type.PIX_FMT_YUV420P
+            encoder.timeBase = frameRate
+            encoder.setFlag(Coder.Flag.FLAG_GLOBAL_HEADER, true)
+
+            encoder.open(null, null)
+            muxer.addNewStream(encoder)
+            muxer.open(null, null)
+
+            var converter: MediaPictureConverter? = null
+            val picture = MediaPicture.make(encoder.width, encoder.height, encoder.pixelFormat)
+            picture.timeBase = frameRate
+
+            val packet = MediaPacket.make()
 
             val countFrames = frame.get().toInt() + 1
             for (frame in 0..countFrames - 1) {
                 val finalFrame = frame
-                val latch = CountDownLatch(1)
-                Platform.runLater {
+                runInUIAndWait {
                     this@World.frame.set(finalFrame.toDouble())
-                    latch.countDown()
-                }
-                try {
-                    latch.await()
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
                 }
 
                 val bufferedImage = openclRender()
                 val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
                 bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
-                iMediaWriter.encodeVideo(0, bufferedImage1, Math.round(frame * (1000.0 / 60.0)), TimeUnit.MILLISECONDS)
+
+                if(converter == null){
+                    converter = MediaPictureConverterFactory.createConverter(bufferedImage1, picture)
+                }
+                converter!!.toPicture(picture, bufferedImage1, frame.toLong())
+
+                do{
+                    encoder.encode(packet, picture)
+                    if(packet.isComplete){
+                        muxer.write(packet, false)
+                    }
+                }while (packet.isComplete)
+
+
                 Platform.runLater { frameRenderedToFileEventHandler.handle(finalFrame + 1, countFrames) }
             }
-
-            iMediaWriter.close()
+            do{
+                encoder.encode(packet, picture)
+                if(packet.isComplete){
+                    muxer.write(packet, false)
+                }
+            }while (packet.isComplete)
+            muxer.close()
             renderingToFile = false
             Platform.runLater { renderToFileCompleted.handle() }
         }).start()
+    }
+
+    fun runInUIAndWait(work: () -> Unit){
+        val latch = CountDownLatch(1)
+        Platform.runLater {
+            work()
+            latch.countDown()
+        }
+        latch.await()
     }
 
     interface FrameRenderedToFileEvent {

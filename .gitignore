@@ -1,4 +1,9 @@
 *.mp4
+*.mkv
+*.jpg
+*.avi
+*.webm
+*.png
 target
 *.bak
 

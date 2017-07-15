@@ -76,7 +76,15 @@ class ControllerStage : BorderPane() {
                 }
             })
         }
-        menuBar.items.addAll(renderButton, Main.world.frame)
+        val slider = Slider(1.0,6.0,2.0)
+        slider.isShowTickMarks = true
+        slider.majorTickUnit = 1.0
+        slider.minorTickCount = 0
+        slider.isSnapToTicks = true
+        slider.valueProperty().addListener { observable, oldValue, newValue ->
+            Main.world.scaleDown = newValue.toInt()
+        }
+        menuBar.items.addAll(renderButton, Main.world.frame, slider)
         top = menuBar
     }
 }

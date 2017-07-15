@@ -13,18 +13,11 @@
         <kotlin.version>1.1.2-4</kotlin.version>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>xuggle repo</id>
-            <url>https://files.liferay.com/mirrors/xuggle.googlecode.com/svn/trunk/repo/share/java/</url>
-        </repository>
-    </repositories>
-
     <dependencies>
         <dependency>
-            <groupId>xuggle</groupId>
-            <artifactId>xuggle-xuggler</artifactId>
-            <version>5.4</version>
+            <groupId>io.humble</groupId>
+            <artifactId>humble-video-all</artifactId>
+            <version>0.2.1</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -35,6 +28,11 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
             <version>3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.1</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>

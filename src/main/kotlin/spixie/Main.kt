@@ -3,6 +3,7 @@ package spixie
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.event.EventHandler
+import javafx.scene.CacheHint
 import javafx.scene.Group
 import javafx.scene.Scene
 import javafx.scene.control.TreeItem
@@ -15,6 +16,7 @@ import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import jfxtras.scene.control.window.Window
 import spixie.components.ParticleSpray
+import spixie.dialogs.DialogManager
 
 class Main : Application() {
     @Throws(Exception::class)
@@ -25,6 +27,10 @@ class Main : Application() {
         imageView.style="-fx-background:transparent;"
         imageView.isSmooth = true
         imageView.isPreserveRatio = false
+        imageView.isCache = false
+        imageView.cacheHint = CacheHint.SPEED
+
+
         imagePane.children.addAll(imageView)
         root.children.addAll(imagePane)
         imagePane.style = "-fx-background-color: #000000;"
@@ -39,8 +45,7 @@ class Main : Application() {
         stage.fullScreenExitKeyCombination = KeyCombination.NO_MATCH
         stage.show()
         stage.isFullScreen = true
-
-        world.renderStart(imageView)
+        mainStage = stage
 
         val window = Window("")
         window.contentPane.children.addAll(controllerStage)
@@ -63,7 +68,7 @@ class Main : Application() {
             if (event.code == KeyCode.DIGIT4 && event.isControlDown) windowOpacity[0] = 0.4f
             if (event.code == KeyCode.DIGIT5 && event.isControlDown) windowOpacity[0] = 0.2f
             if (event.code == KeyCode.DIGIT6 && event.isControlDown) windowOpacity[0] = 0.0f
-            if (event.code == KeyCode.TAB) {
+            if (event.code == KeyCode.H) {
                 window.style = "-fx-opacity: 0.0"
             } else {
                 window.style = "-fx-opacity: " + windowOpacity[0]
@@ -77,11 +82,17 @@ class Main : Application() {
                 val frame = world.frame.get()
                 world.frame.set(frame+1)
             }
+            if(event.code == KeyCode.P){
+                world.autoRenderNextFrame = true
+            }
         }
 
         root.onKeyReleased = EventHandler<KeyEvent> { event ->
-            if (event.code == KeyCode.TAB) {
+            if (event.code == KeyCode.H) {
                 window.style = "-fx-opacity: " + windowOpacity[0]
+            }
+            if(event.code == KeyCode.P){
+                world.autoRenderNextFrame = false
             }
         }
 
@@ -91,6 +102,8 @@ class Main : Application() {
         }
 
         loadTestData()
+
+        world.renderStart(imageView)
     }
 
     fun loadTestData(){
@@ -104,6 +117,8 @@ class Main : Application() {
     }
 
     companion object {
+        var dialogManager:DialogManager? = null
+        var mainStage:Stage? = null
         var world: World = World()
         val controllerStage = ControllerStage()
 

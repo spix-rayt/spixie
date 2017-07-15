@@ -9,8 +9,8 @@ class OpenCLRenderer {
     var device:CLDevice? = null
     var program:CLProgram? = null
     var clImageOut:CLBuffer<FloatBuffer>? = null
-    var width = 1920
-    var height = 1080
+    var width = 1
+    var height = 1
 
     init {
         context = CLContext.create()
