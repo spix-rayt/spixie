@@ -6,7 +6,6 @@ import javafx.event.EventHandler
 import javafx.scene.CacheHint
 import javafx.scene.Group
 import javafx.scene.Scene
-import javafx.scene.control.TreeItem
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCombination
@@ -14,8 +13,6 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.layout.Pane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
-import jfxtras.scene.control.window.Window
-import spixie.components.ParticleSpray
 import spixie.dialogs.DialogManager
 
 class Main : Application() {
@@ -47,40 +44,48 @@ class Main : Application() {
         stage.isFullScreen = true
         mainStage = stage
 
-        val window = Window("")
-        window.contentPane.children.addAll(controllerStage)
-        window.setPrefSize(600.0, 600.0)
-        window.setMinSize(300.0, 300.0)
-        controllerStage.prefWidthProperty().bind(window.contentPane.widthProperty())
-        controllerStage.prefHeightProperty().bind(window.contentPane.heightProperty())
-        window.isResizableWindow = true
-        window.isMovable = true
-        window.resizableBorderWidth = 4.0
-        root.children.addAll(window)
+        workingWindow.prefWidthProperty().bind(scene.widthProperty())
+        workingWindow.prefHeightProperty().bind(scene.heightProperty())
+        root.children.addAll(workingWindow)
 
-        val windowOpacity = arrayOf(0.6f)
-        window.style = "-fx-opacity: " + windowOpacity[0]
+        val windowOpacity = arrayOf(1.0f)
+        workingWindow.style = "-fx-opacity: " + windowOpacity[0]
 
         root.onKeyPressed = EventHandler<KeyEvent> { event ->
-            if (event.code == KeyCode.DIGIT1 && event.isControlDown) windowOpacity[0] = 1.0f
-            if (event.code == KeyCode.DIGIT2 && event.isControlDown) windowOpacity[0] = 0.8f
-            if (event.code == KeyCode.DIGIT3 && event.isControlDown) windowOpacity[0] = 0.6f
-            if (event.code == KeyCode.DIGIT4 && event.isControlDown) windowOpacity[0] = 0.4f
-            if (event.code == KeyCode.DIGIT5 && event.isControlDown) windowOpacity[0] = 0.2f
-            if (event.code == KeyCode.DIGIT6 && event.isControlDown) windowOpacity[0] = 0.0f
-            if (event.code == KeyCode.H) {
-                window.style = "-fx-opacity: 0.0"
-            } else {
-                window.style = "-fx-opacity: " + windowOpacity[0]
+            if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
+                windowOpacity[0] = 1.0f
+                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+            }
+            if (event.code == KeyCode.DIGIT2 && event.isControlDown) {
+                windowOpacity[0] = 0.8f
+                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+            }
+            if (event.code == KeyCode.DIGIT3 && event.isControlDown) {
+                windowOpacity[0] = 0.6f
+                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+            }
+            if (event.code == KeyCode.DIGIT4 && event.isControlDown) {
+                windowOpacity[0] = 0.4f
+                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+            }
+            if (event.code == KeyCode.DIGIT5 && event.isControlDown) {
+                windowOpacity[0] = 0.2f
+                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+            }
+            if (event.code == KeyCode.DIGIT6 && event.isControlDown) {
+                windowOpacity[0] = 0.0f
+                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+            }
+            if (event.code == KeyCode.TAB) {
+                workingWindow.style = "-fx-opacity: 0.0"
             }
 
             if(event.code == KeyCode.A){
-                val frame = world.frame.get()
-                if(frame>0) world.frame.set(frame-1)
+                val frame = world.time.frame
+                if(frame>0) world.time.frame -= 1
             }
             if(event.code == KeyCode.D){
-                val frame = world.frame.get()
-                world.frame.set(frame+1)
+                world.time.frame += 1
             }
             if(event.code == KeyCode.P){
                 world.autoRenderNextFrame = true
@@ -88,8 +93,8 @@ class Main : Application() {
         }
 
         root.onKeyReleased = EventHandler<KeyEvent> { event ->
-            if (event.code == KeyCode.H) {
-                window.style = "-fx-opacity: " + windowOpacity[0]
+            if (event.code == KeyCode.TAB) {
+                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
             }
             if(event.code == KeyCode.P){
                 world.autoRenderNextFrame = false
@@ -101,26 +106,14 @@ class Main : Application() {
             Platform.exit()
         }
 
-        loadTestData()
-
         world.renderStart(imageView)
-    }
-
-    fun loadTestData(){
-        val component = ParticleSpray()
-        val props = component.createPropsPane()
-        world.root.children.addAll(
-                TreeItem<ComponentsListItem>(
-                        ComponentObject(component, props)
-                )
-        )
     }
 
     companion object {
         var dialogManager:DialogManager? = null
         var mainStage:Stage? = null
         var world: World = World()
-        val controllerStage = ControllerStage()
+        val workingWindow = WorkingWindow()
 
         @JvmStatic fun main(args: Array<String>) {
             launch(Main::class.java)

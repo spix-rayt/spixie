@@ -42,27 +42,27 @@ class Value(initial: Double, mul: Double, private val name: String, val canDepen
         valueContextMenu.items.addAll(menuItem1, menuItem2)
 
         if(canDependsOnAnotherValue){
-            menuItem1.setOnAction { event ->
+            menuItem1.setOnAction {
                 val graph = Graph.graphMap[this]
                 if(graph==null){
                     val newGraph = Graph(this)
                     Graph.graphMap[this] = newGraph
-                    Main.controllerStage.bottom = newGraph
+                    Main.workingWindow.bottom = newGraph
                 }else{
-                    Main.controllerStage.bottom = graph
+                    Main.workingWindow.bottom = graph
                 }
             }
         }else{
             menuItem1.isDisable = true
         }
-        menuItem2.setOnAction { event ->
-            val graph = Main.controllerStage.bottom as Graph?
+        menuItem2.setOnAction {
+            val graph = Main.workingWindow.bottom as Graph?
             if(graph!=null){
                 graph.inputValue = this
             }
         }
-        valueContextMenu.setOnShowing { event ->
-            val graph = Main.controllerStage.bottom as Graph?
+        valueContextMenu.setOnShowing {
+            val graph = Main.workingWindow.bottom as Graph?
             if(graph!=null){
                 menuItem2.isDisable = !item().checkCycle(graph)
             }
@@ -105,9 +105,6 @@ class Value(initial: Double, mul: Double, private val name: String, val canDepen
                 children.remove(textFieldValue)
             }
         }
-
-
-
         children.addAll(labelName, labelValue)
     }
 
@@ -192,8 +189,6 @@ class Value(initial: Double, mul: Double, private val name: String, val canDepen
             return value.name
         }
     }
-
-
 
     companion object{
         val EMPTY:Value = Value(0.0,0.0,"", false)

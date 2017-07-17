@@ -4,7 +4,6 @@ import java.nio.FloatBuffer
 import java.util.*
 
 class RenderBufferBuilder {
-
     private val floats = ArrayList<Float>()
 
     fun addParticle(x: Float, y: Float, size: Float, red:Float, green:Float, blue:Float, alpha:Float) {
@@ -24,7 +23,7 @@ class RenderBufferBuilder {
     fun toFloatBuffer(): FloatBuffer {
         val buffer = FloatBuffer.allocate(floats.size)
         for (aFloat in floats) {
-            buffer.put(aFloat!!)
+            buffer.put(aFloat)
         }
         buffer.rewind()
         return buffer

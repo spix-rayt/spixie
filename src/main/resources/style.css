@@ -14,28 +14,6 @@ Graph{
     -fx-background-color: white;
 }
 
-.window {
-    -fx-skin: "jfxtras.internal.scene.control.skin.window.DefaultWindowSkin";
-    -fx-glass-color: rgba(255, 255, 255, 1.0);
-    -fx-alignment: center;
-    -fx-background-color: linear-gradient(to bottom, derive(-fx-glass-color, 50%), -fx-glass-color);
-    -fx-border-color: derive(-fx-glass-color, -60%);
-    -fx-border-width: 4;
-    -fx-background-insets: 1;
-    -fx-border-radius: 3;
-    -fx-background-radius: 3;
-    -fx-font-size: 10;
-}
-
-.window-titlebar {
-    -fx-glass-color: rgba(42, 42, 42, 1.0);
-    -fx-alignment: center;
-    -fx-background-color: linear-gradient(to bottom, derive(-fx-glass-color, 30%), -fx-glass-color);
-    -fx-border-color: derive(-fx-glass-color, -60%);
-    -fx-border-width: 2;
-    -fx-background-insets: 1;
-    -fx-border-radius: 3;
-    -fx-background-radius: 3;
-    -fx-stroke: rgba(255,255,255,50);
-    -fx-fill: rgba(255,255,255,50);
+ArrangementBlock{
+    -fx-background-color: #E30B5C44;
 }

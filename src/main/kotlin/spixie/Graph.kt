@@ -210,11 +210,11 @@ class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
         canvasScrollPane.content = canvas
         canvasScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
         center = canvasScrollPane
-        Main.controllerStage.prefWidthProperty().addListener { _, _, newValue ->
+        Main.workingWindow.prefWidthProperty().addListener { _, _, newValue ->
             canvas.width = newValue.toDouble() - 2
             paint()
         }
-        canvas.width = Main.controllerStage.prefWidth -2
+        canvas.width = Main.workingWindow.prefWidth -2
         paint()
 
         top = control

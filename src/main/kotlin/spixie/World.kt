@@ -5,12 +5,11 @@ import io.humble.video.awt.MediaPictureConverter
 import io.humble.video.awt.MediaPictureConverterFactory
 import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
-import javafx.scene.control.TreeItem
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
-import spixie.components.ParticleSprayProps
-import spixie.components.Root
+import spixie.components.Circle
+import spixie.components.ParticleSpray
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -19,49 +18,52 @@ import java.util.concurrent.CountDownLatch
 import javax.imageio.ImageIO
 
 class World {
-    val root = TreeItem<ComponentsListItem>(Root())
-    val frame = Value(0.0, 1.0, "Frame", false)
-    val time = Value(0.0, 1.0, "Root Time", false)
+    val time = TimeProperty(140.0)
     var bpm = Value(140.0, 1.0, "BPM", false)
     @Volatile var allowRender = true
     @Volatile var renderingToFile = false
     @Volatile var imageView:ImageView = ImageView()
     val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
-    val cache = ReferenceMap<Int, ByteArray>()
-    var frameHashShown = -1
+    private val cache = ReferenceMap<Int, ByteArray>()
+    private var frameHashShown = 0
     var autoRenderNextFrame = false
 
     var scaleDown:Int = 2
         get() = field
         set(value) {
             field = value
-            cache.clear()
-            frameHashShown = - 1
+            clearCache()
         }
 
     var currentRenderThread: Thread = Thread(Runnable {
         while (true) {
             try {
                 if (allowRender && !renderingToFile) {
-                    if(frameHashShown == frame.get().toInt()){
+                    if(needClearCache){
+                        cache.clear()
+                        frameHashShown=0
+                        needClearCache=false
+                    }
+                    val spixieHash = calcSpixieHash()
+                    if(frameHashShown == spixieHash){
                         if(autoRenderNextFrame){
                             runInUIAndWait {
-                                frame.set(frame.get()+1.0)
+                                time.frame += 1
                             }
                         }else{
                             Thread.sleep(1)
                         }
                     }else{
                         allowRender = false
-                        val imageCached = cache.get(frame.get().toInt())
+                        val imageCached = cache.get(spixieHash)
                         if(imageCached == null){
                             resizeIfNotCorrect(imageView.fitWidth.toInt()/scaleDown, imageView.fitHeight.toInt()/scaleDown)
-                            val frameBeforeRender = frame.get().toInt()
+                            val frameBeforeRender = time.frame
                             val bufferedImage = openclRender()
                             val image = SwingFXUtils.toFXImage(bufferedImage, null)
-                            if(frameBeforeRender == frame.get().toInt()){
-                                cache.put(frame.get().toInt(), imageToPngByteArray(bufferedImage))
-                                frameHashShown = frame.get().toInt()
+                            if(frameBeforeRender == time.frame){
+                                cache.put(spixieHash, imageToPngByteArray(bufferedImage))
+                                frameHashShown = spixieHash
                                 runInUIAndWait {
                                     imageView.image = image
                                     allowRender = true
@@ -70,7 +72,7 @@ class World {
                                 allowRender = true
                             }
                         }else{
-                            frameHashShown = frame.get().toInt()
+                            frameHashShown = spixieHash
                             val toFXImage = Image(ByteArrayInputStream(imageCached))
                             runInUIAndWait {
                                 imageView.image = toFXImage
@@ -87,11 +89,6 @@ class World {
             }
         }
     })
-
-    init {
-        val rootTimeChanger = RootTimeChanger(frame, bpm, time)
-        frame.item().subscribeChanger(rootTimeChanger)
-    }
 
     fun imageToPngByteArray(bufferedImage: BufferedImage):ByteArray{
         val byteArrayOutputStream = ByteArrayOutputStream()
@@ -112,45 +109,43 @@ class World {
     }
 
     private fun openclRender():BufferedImage {
-        for (child in Main.world.root.children) {
-            val value = child.value
-            if(value is ComponentObject){
-                if(value.props is ParticleSprayProps){
-                    value.props.clearParticles()
-                }
-            }
-        }
-
-        for(particleFrame in 0..Main.world.frame.get().toInt()){
-            for (child in Main.world.root.children) {
-                val value = child.value
-                if(value is ComponentObject){
-                    if(value.props is ParticleSprayProps){
-                        value.props.stepParticles()
-                    }
-                }
-            }
-        }
-
         val renderBufferBuilder = RenderBufferBuilder()
-
-        for (child in Main.world.root.children) {
-            val value = child.value
-            if(value is ComponentObject){
-                if(value.props is ParticleSprayProps){
-                    for (particle in value.props.particles) {
-                        renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
+        for (block in Main.workingWindow.arrangementWindow.blocks.children) {
+            if(block is ArrangementBlock){
+                for (component in block.visualEditor.components.children) {
+                    if(component is ParticleSpray){
+                        component.clearParticles()
+                    }
+                }
+            }
+        }
+        for(particleFrame in 0..Main.world.time.frame){
+            for (block in Main.workingWindow.arrangementWindow.blocks.children) {
+                if(block is ArrangementBlock){
+                    for (component in block.visualEditor.components.children) {
+                        if(component is ParticleSpray){
+                            component.stepParticles()
+                        }
                     }
                 }
             }
         }
 
-        for (child in Main.world.root.children) {
-            val value = child.value
-            if(value is ComponentObject){
-                value.render(renderBufferBuilder)
+        for (block in Main.workingWindow.arrangementWindow.blocks.children) {
+            if(block is ArrangementBlock){
+                for (component in block.visualEditor.components.children) {
+                    if(component is ParticleSpray){
+                        for (particle in component.particles) {
+                            renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
+                        }
+                    }
+                    if(component is Circle){
+                        component.render(renderBufferBuilder)
+                    }
+                }
             }
         }
+
         val particlesArray = renderBufferBuilder.toFloatBuffer().array()
         return openCLRenderer.render(particlesArray)
     }
@@ -179,11 +174,11 @@ class World {
 
             val packet = MediaPacket.make()
 
-            val countFrames = frame.get().toInt() + 1
+            val countFrames = time.frame + 1
             for (frame in 0..countFrames - 1) {
                 val finalFrame = frame
                 runInUIAndWait {
-                    this@World.frame.set(finalFrame.toDouble())
+                    this@World.time.frame = finalFrame
                 }
 
                 val bufferedImage = openclRender()
@@ -224,6 +219,19 @@ class World {
             latch.countDown()
         }
         latch.await()
+    }
+
+    private var needClearCache = false
+    fun clearCache(){
+        needClearCache = true
+    }
+
+    private val stringBuilderForHash = StringBuilder()
+    fun calcSpixieHash():Int {
+        stringBuilderForHash.setLength(0)
+        val hash = Main.workingWindow.arrangementWindow.appendSpixieHash(stringBuilderForHash)
+        hash.append("|", time.time)
+        return hash.toString().hashCode()
     }
 
     interface FrameRenderedToFileEvent {
