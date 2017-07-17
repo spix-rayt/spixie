@@ -12,7 +12,7 @@ open class VisualEditorComponent(x:Double, y:Double):Region(), SpixieHashable {
         layoutY = y
     }
 
-    override fun appendSpixieHash(hash: StringBuilder):StringBuilder {
-        return hash
+    override fun spixieHash(): Long {
+        return magic.toLong()
     }
 }

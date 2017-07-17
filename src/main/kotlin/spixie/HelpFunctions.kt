@@ -40,3 +40,16 @@ fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
 fun frameToTime(frame:Int, bpm:Double): Double {
     return bpm/3600*frame
 }
+
+val magic = 0x5bd1e995
+infix fun Long.mix(n:Long):Long{
+    var q1 = this * magic
+    q1 = q1 xor (q1 ushr 48)
+    q1 *= magic
+    var q2 = n * magic
+    return q1 xor q2
+}
+
+fun Double.raw():Long{
+    return java.lang.Double.doubleToRawLongBits(this)
+}

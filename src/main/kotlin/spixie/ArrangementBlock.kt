@@ -95,14 +95,7 @@ class ArrangementBlock(): Region(), SpixieHashable {
         setOnMouseExited { scene.cursor = Cursor.DEFAULT }
     }
 
-    override fun appendSpixieHash(hash: StringBuilder): StringBuilder {
-        hash.append("(")
-        return visualEditor.appendSpixieHash(hash)
-                .append("|")
-                .append(strictWidth)
-                .append("|")
-                .append(layoutX)
-                .append("|")
-                .append(")")
+    override fun spixieHash(): Long {
+        return visualEditor.spixieHash() mix strictWidth.raw() mix layoutX.raw()
     }
 }

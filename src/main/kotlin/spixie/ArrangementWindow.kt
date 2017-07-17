@@ -104,10 +104,11 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         return group
     }
 
-    override fun appendSpixieHash(hash: StringBuilder): StringBuilder {
+    override fun spixieHash(): Long {
+        var hash = magic.toLong()
         for (block in blocks.children) {
             if(block is ArrangementBlock){
-                block.appendSpixieHash(hash)
+                hash = hash mix block.spixieHash()
             }
         }
         return hash

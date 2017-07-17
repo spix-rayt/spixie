@@ -1,10 +1,7 @@
 package spixie.components
 
 import javafx.scene.layout.VBox
-import spixie.RenderBufferBuilder
-import spixie.SpixieHashable
-import spixie.Value
-import spixie.VisualEditorComponent
+import spixie.*
 
 class Circle(x:Double, y:Double): VisualEditorComponent(x, y), SpixieHashable {
     val radius = Value(30.0, 1.0, "Radius", true)
@@ -38,12 +35,10 @@ class Circle(x:Double, y:Double): VisualEditorComponent(x, y), SpixieHashable {
         }
     }
 
-    override fun appendSpixieHash(hash: StringBuilder):StringBuilder {
-        return hash.append("(")
-                .append(radius.get())
-                .append(rotate.get())
-                .append(size.get())
-                .append(count.get())
-                .append(")")
+    override fun spixieHash(): Long {
+        return radius.get().raw() mix
+                rotate.get().raw() mix
+                size.get().raw() mix
+                count.get().raw()
     }
 }

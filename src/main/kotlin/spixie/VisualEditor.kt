@@ -71,14 +71,13 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         })
     }
 
-    override fun appendSpixieHash(hash: StringBuilder):StringBuilder {
-        hash.append("(")
+    override fun spixieHash(): Long {
+        var hash = magic.toLong()
         for (component in components.children) {
             if(component is VisualEditorComponent){
-                component.appendSpixieHash(hash)
+                hash = hash mix component.spixieHash()
             }
         }
-        hash.append(")")
         return hash
     }
 }

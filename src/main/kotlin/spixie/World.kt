@@ -20,12 +20,11 @@ import javax.imageio.ImageIO
 class World {
     val time = TimeProperty(140.0)
     var bpm = Value(140.0, 1.0, "BPM", false)
-    @Volatile var allowRender = true
     @Volatile var renderingToFile = false
-    @Volatile var imageView:ImageView = ImageView()
+    var imageView:ImageView = ImageView()
     val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
-    private val cache = ReferenceMap<Int, ByteArray>()
-    private var frameHashShown = 0
+    private val cache = ReferenceMap<Long, ByteArray>()
+    private var frameHashShown = 0L
     var autoRenderNextFrame = false
 
     var scaleDown:Int = 2
@@ -38,7 +37,7 @@ class World {
     var currentRenderThread: Thread = Thread(Runnable {
         while (true) {
             try {
-                if (allowRender && !renderingToFile) {
+                if (!renderingToFile) {
                     if(needClearCache){
                         cache.clear()
                         frameHashShown=0
@@ -54,7 +53,6 @@ class World {
                             Thread.sleep(1)
                         }
                     }else{
-                        allowRender = false
                         val imageCached = cache.get(spixieHash)
                         if(imageCached == null){
                             resizeIfNotCorrect(imageView.fitWidth.toInt()/scaleDown, imageView.fitHeight.toInt()/scaleDown)
@@ -64,25 +62,20 @@ class World {
                             if(frameBeforeRender == time.frame){
                                 cache.put(spixieHash, imageToPngByteArray(bufferedImage))
                                 frameHashShown = spixieHash
-                                runInUIAndWait {
-                                    imageView.image = image
-                                    allowRender = true
-                                }
-                            }else{
-                                allowRender = true
+                            }
+                            runInUIAndWait {
+                                imageView.image = image
                             }
                         }else{
                             frameHashShown = spixieHash
                             val toFXImage = Image(ByteArrayInputStream(imageCached))
                             runInUIAndWait {
                                 imageView.image = toFXImage
-                                allowRender = true
                             }
                         }
                     }
                 }
             } catch (e: ConcurrentModificationException) {
-                allowRender = true
                 continue
             } catch (e: InterruptedException) {
                 return@Runnable
@@ -103,7 +96,6 @@ class World {
     }
 
     fun renderStart(imageView: ImageView) {
-        allowRender = true
         this.imageView = imageView
         currentRenderThread.start()
     }
@@ -226,12 +218,8 @@ class World {
         needClearCache = true
     }
 
-    private val stringBuilderForHash = StringBuilder()
-    fun calcSpixieHash():Int {
-        stringBuilderForHash.setLength(0)
-        val hash = Main.workingWindow.arrangementWindow.appendSpixieHash(stringBuilderForHash)
-        hash.append("|", time.time)
-        return hash.toString().hashCode()
+    fun calcSpixieHash():Long {
+        return Main.workingWindow.arrangementWindow.spixieHash() mix time.time.raw()
     }
 
     interface FrameRenderedToFileEvent {

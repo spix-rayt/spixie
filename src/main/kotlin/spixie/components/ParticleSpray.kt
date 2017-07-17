@@ -65,19 +65,17 @@ class ParticleSpray(x:Double, y:Double) : VisualEditorComponent(x, y), SpixieHas
         }
     }
 
-    override fun appendSpixieHash(hash: StringBuilder):StringBuilder {
-        return hash.append("(")
-                .append(red.get())
-                .append(green.get())
-                .append(blue.get())
-                .append(alpha.get())
-                .append(size.get())
-                .append(beamParticlesCount)
-                .append(beamRate.get())
-                .append(startSpeedMin.get())
-                .append(startSpeedMax.get())
-                .append(coefDeceleration.get())
-                .append(brownianMotion.get())
-                .append(")")
+    override fun spixieHash(): Long {
+        return red.get().raw() mix
+                green.get().raw() mix
+                blue.get().raw() mix
+                alpha.get().raw() mix
+                size.get().raw() mix
+                beamParticlesCount.get().raw() mix
+                beamRate.get().raw() mix
+                startSpeedMin.get().raw() mix
+                startSpeedMax.get().raw() mix
+                coefDeceleration.get().raw() mix
+                brownianMotion.get().raw()
     }
 }
