@@ -13,7 +13,6 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.layout.Pane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
-import spixie.dialogs.DialogManager
 
 class Main : Application() {
     @Throws(Exception::class)
@@ -110,7 +109,6 @@ class Main : Application() {
     }
 
     companion object {
-        var dialogManager:DialogManager? = null
         var mainStage:Stage? = null
         var world: World = World()
         val workingWindow = WorkingWindow()
