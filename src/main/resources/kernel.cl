@@ -1,10 +1,7 @@
-kernel void RenderParticles(global float *particles, int width, int height, int particlesCount, global float *outImage) {
+kernel void RenderParticles(global float *particles, int width, int height, int blocksize, int blockX, int blockY, int particlesCount, global float *outImage) {
     int px = get_global_id(0);
-    if(px>=width*height){
-        return;
-    }
-    int imgx = px%width;
-    int imgy = px/width;
+    int imgx = px%blocksize + blockX;
+    int imgy = px/blocksize + blockY;
 
     float2 pixelPos = (float2)( ((imgx/(width-1.0f))-0.5f)*1000.0f*width/height , ((imgy/(height-1.0f))-0.5f)*1000.0f );
 

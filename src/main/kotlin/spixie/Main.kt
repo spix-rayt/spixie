@@ -31,7 +31,7 @@ class Main : Application() {
         root.children.addAll(imagePane)
         imagePane.style = "-fx-background-color: #000000;"
 
-        val scene = Scene(root)
+        val scene = Scene(root, 100.0, 100.0)
         scene.stylesheets.add("style.css")
         imageView.fitWidthProperty().bind(scene.widthProperty())
         imageView.fitHeightProperty().bind(scene.heightProperty())

@@ -28,7 +28,6 @@ class World {
     var autoRenderNextFrame = false
 
     var scaleDown:Int = 2
-        get() = field
         set(value) {
             field = value
             clearCache()
@@ -138,8 +137,7 @@ class World {
             }
         }
 
-        val particlesArray = renderBufferBuilder.toFloatBuffer().array()
-        return openCLRenderer.render(particlesArray)
+        return openCLRenderer.render(renderBufferBuilder)
     }
 
     fun renderToFile(frameRenderedToFileEventHandler: FrameRenderedToFileEvent, renderToFileCompleted: RenderToFileCompleted) {
@@ -167,10 +165,9 @@ class World {
             val packet = MediaPacket.make()
 
             val countFrames = time.frame + 1
-            for (frame in 0..countFrames - 1) {
-                val finalFrame = frame
+            for (frame in 0 until countFrames) {
                 runInUIAndWait {
-                    this@World.time.frame = finalFrame
+                    this@World.time.frame = frame
                 }
 
                 val bufferedImage = openclRender()
@@ -190,7 +187,7 @@ class World {
                 }while (packet.isComplete)
 
 
-                Platform.runLater { frameRenderedToFileEventHandler.handle(finalFrame + 1, countFrames) }
+                Platform.runLater { frameRenderedToFileEventHandler.handle(frame + 1, countFrames) }
             }
             do{
                 encoder.encode(packet, picture)
@@ -219,7 +216,7 @@ class World {
     }
 
     fun calcSpixieHash():Long {
-        return Main.workingWindow.arrangementWindow.spixieHash() mix time.time.raw()
+        return Main.workingWindow.arrangementWindow.spixieHash() mix time.frame.toDouble().raw()
     }
 
     interface FrameRenderedToFileEvent {
