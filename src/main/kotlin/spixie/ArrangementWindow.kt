@@ -5,22 +5,25 @@ import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Pane
 import javafx.scene.shape.Line
+import org.apache.commons.math3.fraction.Fraction
 
 class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     val content = Group()
     val blocks = Group()
     val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
+    val zoom = FractionImmutablePointer(Fraction(64))
+    val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
+
     init {
         style = "-fx-background-color: #FFFFFFFF;"
 
         initCustomPanning()
 
 
-        val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
+
         timePointer.strokeWidth = 4.0
-        Main.world.time.onTimeChanged { time ->
-            timePointer.startX = Math.round(time*400.0).toDouble()
-            timePointer.endX = Math.round(time*400.0).toDouble()
+        Main.world.time.onTimeChanged {
+            updateTimePointer()
         }
 
         setOnMouseMoved { event ->
@@ -30,15 +33,42 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
             updateCursor(event)
             if(event.isControlDown){
-                Main.world.time.time = (cursor.startX-0.5)/400.0
+                val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
+                Main.world.time.time = screenToLocal.x*64/100.0/zoom.value.toDouble()
             }
         })
 
         addEventHandler(MouseEvent.MOUSE_PRESSED, { event ->
             if(event.button == MouseButton.PRIMARY){
-                Main.world.time.time = (cursor.startX-0.5)/400.0
+                Main.world.time.time = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
             }
         })
+
+        setOnScroll { event ->
+            if(event.deltaY<0){
+                if(zoom.value.compareTo(Fraction.ONE) != 0){
+                    zoom.value = zoom.value.divide(2)
+                    for (child in blocks.children) {
+                        if(child is ArrangementBlock){
+                            child.updateZoom()
+                        }
+                    }
+                    updateTimePointer()
+                }
+            }
+            if(event.deltaY>0){
+                if(zoom.value.compareTo(Fraction(4096)) != 0){
+                    zoom.value = zoom.value.multiply(2)
+                    for (child in blocks.children) {
+                        if(child is ArrangementBlock){
+                            child.updateZoom()
+                        }
+                    }
+                    updateTimePointer()
+                }
+            }
+            event.consume()
+        }
 
         val grid = initGrid()
 
@@ -49,7 +79,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
 
 
 
-        blocks.children.add(ArrangementBlock())
+        blocks.children.add(ArrangementBlock(zoom))
     }
 
     private fun updateCursor(event:MouseEvent){
@@ -57,6 +87,12 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         val x = Math.round(sceneToLocal.x/25)*25 + 0.5
         cursor.startX = x
         cursor.endX = x
+    }
+
+    private fun updateTimePointer(){
+        val x = Math.round(zoom.value.toDouble() / 64.0 * Main.world.time.time * 100.0).toDouble()
+        timePointer.startX = x
+        timePointer.endX = x
     }
 
     private fun initCustomPanning(){

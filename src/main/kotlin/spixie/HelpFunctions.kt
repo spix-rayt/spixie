@@ -1,5 +1,7 @@
 package spixie
 
+import javafx.scene.input.DataFormat
+
 fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     val nozerop0 = (p0 and  0x7FFFFFFFFFFFFFFF) + 1
     val nozerop1 = (p1 and  0x7FFFFFFFFFFFFFFF) + 1
@@ -52,4 +54,8 @@ infix fun Long.mix(n:Long):Long{
 
 fun Double.raw():Long{
     return java.lang.Double.doubleToRawLongBits(this)
+}
+
+object DragAndDropType {
+    val INTERNALOBJECT = DataFormat("INTERNALOBJECT")
 }

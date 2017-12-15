@@ -15,51 +15,36 @@ import javafx.util.Pair
 import java.util.*
 import kotlin.collections.HashMap
 
-class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
+class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
     private val canvas = Canvas()
     private val g: GraphicsContext
     private var unitWidthInPixels = 50.0
     private var startX = 0.0
     private var startDragX = 0.0
-
     private var mouseX: Double? = null
     private var mouseY: Double? = null
     private var mousePointGrub: Point? = null
     private var mousePointGrubCreatedNow = false
     private var mousePressPoint: Point? = null
     private var gravityPoint: Point? = null
-
-
     private val points = ArrayList<Point>()
-
-
     private val control = ToolBar()
-    private var _inputValue: Value = Value.EMPTY
+    private val maxOutputValue = ValueControl(1.0, 1.0, "Max Output")
 
-    var inputValue: Value
-    get() = _inputValue
-    set(value) {
-        _inputValue.item().unsubscribeChanger(this)
-        _inputValue = value
-        _inputValue.item().subscribeChanger(this)
-    }
-    private val maxOutputValue = Value(1.0, 1.0, "Max Output", false)
+    val value = Value<Double>(0.5)
 
     init {
-        height = 200.0
-        canvas.height = 200.0
-        if(outputValue.get()<1.0){
-            maxOutputValue.set(2.0)
-        }else{
-            maxOutputValue.set(Math.ceil(outputValue.get() * 2))
+        value.calcNewValue = { inputNewValue ->
+            (1.0 - getValue(inputNewValue)) * maxOutputValue.value.value
         }
+        maxOutputValue.set(1.0)
         points.add(Point(0.0, 0.5))
         sortPoints()
         canvas.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             mousePressPoint = Point(mouseEvent.x, mouseEvent.y)
             val mouseValueX = (mouseEvent.x + startX) / unitWidthInPixels
             val mouseValueY = mouseEvent.y / canvas.height
-            if (mouseEvent.button == MouseButton.SECONDARY) {
+            if (mouseEvent.button == MouseButton.MIDDLE) {
                 startDragX = startX + mouseEvent.x.toLong()
             }
             if (mouseEvent.isControlDown) {
@@ -131,7 +116,7 @@ class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
         canvas.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
             val mouseValueX = (mouseEvent.x + startX) / unitWidthInPixels
             val mouseValueY = mouseEvent.y / canvas.height
-            if (mouseEvent.button == MouseButton.SECONDARY) {
+            if (mouseEvent.button == MouseButton.MIDDLE) {
                 startX = startDragX - mouseEvent.x.toLong()
                 if (startX < 0) {
                     startX = 0.0
@@ -191,6 +176,7 @@ class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
             paint()
         }
         canvas.onScroll = EventHandler<ScrollEvent> { scrollEvent ->
+            scrollEvent.consume()
             if (scrollEvent.deltaY > 0) {
                 if (unitWidthInPixels < 0x10000L) {
                     unitWidthInPixels *= 2.0
@@ -210,23 +196,19 @@ class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
         canvasScrollPane.content = canvas
         canvasScrollPane.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
         center = canvasScrollPane
-        Main.workingWindow.prefWidthProperty().addListener { _, _, newValue ->
+        canvasScrollPane.widthProperty().addListener { _, _, newValue ->
             canvas.width = newValue.toDouble() - 2
             paint()
         }
+        canvasScrollPane.heightProperty().addListener { _, _, newValue ->
+            canvas.height = newValue.toDouble() - 2
+            paint()
+        }
         canvas.width = Main.workingWindow.prefWidth -2
+        canvas.height = Main.workingWindow.prefHeight - 2
         paint()
 
         top = control
-        maxOutputValue.item().subscribeChanger(object : ValueChanger {
-            override fun updateOutValue() {
-                if (maxOutputValue.get() < 1) {
-                    maxOutputValue.set(1.0)
-                }
-                paint()
-            }
-            override val valueToBeChanged = Value.EMPTY.item()
-        })
         control.items.addAll(maxOutputValue)
     }
 
@@ -243,20 +225,12 @@ class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
         last!!.next = null
     }
 
-    override fun updateOutValue() {
-        if(_inputValue != Value.EMPTY){
-            outputValue.set((1.0 - getValue(_inputValue.get())) * maxOutputValue.get())
-        }
-    }
-
-    override val valueToBeChanged = outputValue.item()
-
     private fun paint() {
         g.clearRect(0.0, 0.0, canvas.width, canvas.height)
         g.lineWidth = 1.0
         paintRule()
         paintLines()
-        updateOutValue()
+        value.update()
     }
 
     private var beatStep = 1.0
@@ -489,9 +463,5 @@ class Graph(val outputValue: Value) : BorderPane(), ValueChanger {
     private fun magnetX(x: Double): Double {
         val fourthBeatStep = beatStep * 0.25
         return Math.round(x / fourthBeatStep) * fourthBeatStep
-    }
-
-    companion object{
-        val graphMap = HashMap<Value, Graph>()
     }
 }

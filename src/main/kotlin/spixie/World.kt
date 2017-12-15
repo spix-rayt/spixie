@@ -19,7 +19,7 @@ import javax.imageio.ImageIO
 
 class World {
     val time = TimeProperty(140.0)
-    var bpm = Value(140.0, 1.0, "BPM", false)
+    var bpm = ValueControl(140.0, 1.0, "BPM")
     @Volatile var renderingToFile = false
     var imageView:ImageView = ImageView()
     val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
@@ -39,7 +39,7 @@ class World {
                 if (!renderingToFile) {
                     if(needClearCache){
                         cache.clear()
-                        frameHashShown=0
+                        frameHashShown=0L
                         needClearCache=false
                     }
                     val spixieHash = calcSpixieHash()
@@ -101,39 +101,10 @@ class World {
 
     private fun openclRender():BufferedImage {
         val renderBufferBuilder = RenderBufferBuilder()
-        for (block in Main.workingWindow.arrangementWindow.blocks.children) {
-            if(block is ArrangementBlock){
-                for (component in block.visualEditor.components.children) {
-                    if(component is ParticleSpray){
-                        component.clearParticles()
-                    }
-                }
-            }
-        }
-        for(particleFrame in 0..Main.world.time.frame){
-            for (block in Main.workingWindow.arrangementWindow.blocks.children) {
-                if(block is ArrangementBlock){
-                    for (component in block.visualEditor.components.children) {
-                        if(component is ParticleSpray){
-                            component.stepParticles()
-                        }
-                    }
-                }
-            }
-        }
 
         for (block in Main.workingWindow.arrangementWindow.blocks.children) {
             if(block is ArrangementBlock){
-                for (component in block.visualEditor.components.children) {
-                    if(component is ParticleSpray){
-                        for (particle in component.particles) {
-                            renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
-                        }
-                    }
-                    if(component is Circle){
-                        component.render(renderBufferBuilder)
-                    }
-                }
+                block.render(renderBufferBuilder)
             }
         }
 
@@ -216,7 +187,7 @@ class World {
     }
 
     fun calcSpixieHash():Long {
-        return Main.workingWindow.arrangementWindow.spixieHash() mix time.frame.toDouble().raw()
+        return Main.workingWindow.arrangementWindow.spixieHash() mix time.frame.toLong()
     }
 
     interface FrameRenderedToFileEvent {

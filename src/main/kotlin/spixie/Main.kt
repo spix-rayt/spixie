@@ -113,6 +113,8 @@ class Main : Application() {
         var world: World = World()
         val workingWindow = WorkingWindow()
 
+        var internalObject: Any = Any()
+
         @JvmStatic fun main(args: Array<String>) {
             launch(Main::class.java)
         }

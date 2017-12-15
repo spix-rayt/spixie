@@ -1,17 +1,23 @@
 package spixie
 
 import javafx.scene.Group
+import javafx.scene.Node
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.MenuItem
+import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Pane
+import javafx.scene.paint.Paint
+import javafx.scene.shape.CubicCurve
 import spixie.components.Circle
+import spixie.components.Graph
 import spixie.components.ParticleSpray
 
 class VisualEditor: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     val content = Group()
     val components = Group()
+    val connects = Group()
 
     init {
         style = "-fx-background-color: #FFFFFFFF;"
@@ -23,7 +29,8 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         val contextMenu = ContextMenu()
         val menuItemParticleSpray = MenuItem("Particle Spray")
         var menuItemCircle = MenuItem("Circle")
-        contextMenu.items.addAll(menuItemCircle, menuItemParticleSpray)
+        var menuItemGraph = MenuItem("GraphWindow")
+        contextMenu.items.addAll(menuItemCircle, menuItemParticleSpray, menuItemGraph)
 
         menuItemParticleSpray.setOnAction {
             val screenToLocal = content.screenToLocal(contextMenu.anchorX, contextMenu.anchorY)
@@ -33,7 +40,25 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent, SpixieHashable {
 
         menuItemCircle.setOnAction {
             val screenToLocal = content.screenToLocal(contextMenu.anchorX, contextMenu.anchorY)
-            components.children.addAll(Circle(screenToLocal.x, screenToLocal.y))
+            val circle = Circle(screenToLocal.x, screenToLocal.y)
+            circle.onValueInputOutputConnected = { a, b ->
+                if(a is Node && b is Node){
+                    connectInputOutput(a,b)
+                }
+            }
+            components.children.addAll(circle)
+            Main.world.clearCache()
+        }
+
+        menuItemGraph.setOnAction {
+            val screenToLocal = content.screenToLocal(contextMenu.anchorX, contextMenu.anchorY)
+            val graph = Graph(screenToLocal.x, screenToLocal.y)
+            graph.onValueInputOutputConnected = { a,b ->
+                if(a is Node && b is Node){
+                    connectInputOutput(a,b)
+                }
+            }
+            components.children.addAll(graph)
             Main.world.clearCache()
         }
 
@@ -45,7 +70,33 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent, SpixieHashable {
             contextMenu.hide()
         }
 
-        content.children.addAll(components)
+        setOnKeyReleased { event ->
+            if(event.code == KeyCode.HOME){
+                content.layoutX = 0.0
+                content.layoutY = 0.0
+                event.consume()
+            }
+        }
+
+        content.children.addAll(components, connects)
+    }
+
+    fun connectInputOutput(input:Node, output:Node){
+        val cubicCurve = CubicCurve()
+        val aBounds = connects.screenToLocal(input.localToScreen(input.layoutBounds))
+        val bBounds = connects.screenToLocal(output.localToScreen(output.layoutBounds))
+        cubicCurve.startX = (aBounds.minX + aBounds.maxX) / 2
+        cubicCurve.startY = (aBounds.minY + aBounds.maxY) / 2
+        cubicCurve.endX = (bBounds.minX + bBounds.maxX) / 2
+        cubicCurve.endY = (bBounds.minY + bBounds.maxY) / 2
+        cubicCurve.controlX1 = cubicCurve.startX
+        cubicCurve.controlY1 = cubicCurve.startY
+        cubicCurve.controlX2 = cubicCurve.endX
+        cubicCurve.controlY2 = cubicCurve.endY
+        cubicCurve.fill = Paint.valueOf("TRANSPARENT")
+        cubicCurve.strokeWidth = 1.0
+        cubicCurve.stroke = Paint.valueOf("BLACK")
+        connects.children.add(cubicCurve)
     }
 
     private fun initCustomPanning(){

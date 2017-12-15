@@ -11,8 +11,6 @@ import java.util.*
 class WorkingWindow : BorderPane() {
     val arrangementWindow = ArrangementWindow()
     init {
-        center = arrangementWindow
-
         val menuBar = ToolBar()
         val renderButton = Button("Render")
         renderButton.onMouseClicked = EventHandler<MouseEvent> {
@@ -28,6 +26,7 @@ class WorkingWindow : BorderPane() {
                 }
             })
         }
+        renderButton.isFocusTraversable = false
         val slider = Slider(1.0,6.0,2.0)
         slider.isShowTickMarks = true
         slider.majorTickUnit = 1.0
@@ -36,12 +35,19 @@ class WorkingWindow : BorderPane() {
         slider.valueProperty().addListener { _, _, newValue ->
             Main.world.scaleDown = newValue.toInt()
         }
+        slider.isFocusTraversable = false
 
         val clearCacheButton = Button("Clear cache")
         clearCacheButton.setOnAction {
             Main.world.clearCache()
         }
-        menuBar.items.addAll(renderButton, slider, clearCacheButton)
+        clearCacheButton.isFocusTraversable = false
+
+        val timeLabel = ValueLabel("Time")
+        Main.world.time.onTimeChanged { time ->
+            timeLabel.value.value = time
+        }
+        menuBar.items.addAll(renderButton, slider, clearCacheButton, timeLabel)
         top = menuBar
 
 
@@ -51,14 +57,22 @@ class WorkingWindow : BorderPane() {
                     val last = centerStack.removeLast()
                     center = last as Node
                 }
+                event.consume()
             }
         }
+
+        isFocusTraversable = true
+        isFocused = true
+        nextOpen(arrangementWindow)
     }
 
     val centerStack = LinkedList<WorkingWindowOpenableContent>()
 
     fun nextOpen(workingWindowOpenableContent: WorkingWindowOpenableContent){
-        centerStack.add(center as WorkingWindowOpenableContent)
+        if(center != null){
+            centerStack.add(center as WorkingWindowOpenableContent)
+        }
         center = workingWindowOpenableContent as Node
+        center.requestFocus()
     }
 }

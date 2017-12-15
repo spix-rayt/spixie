@@ -1,10 +1,16 @@
 package spixie
 
+import javafx.application.Platform
 import javafx.scene.Cursor
+import javafx.scene.Node
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.Region
+import org.apache.commons.math3.fraction.Fraction
+import spixie.components.ArrangementBlockInput
+import spixie.components.Circle
+import spixie.components.ParticleSpray
 
-class ArrangementBlock(): Region(), SpixieHashable {
+class ArrangementBlock(val zoom:FractionImmutablePointer): Region(), SpixieHashable {
     val visualEditor = VisualEditor()
 
     var strictWidth:Double
@@ -21,10 +27,25 @@ class ArrangementBlock(): Region(), SpixieHashable {
             maxHeight = value
         }
 
+    var timeStart = Fraction(0)
+        get() = field
+        set(value) {
+            field = value
+            updateZoom()
+        }
+    var timeEnd = Fraction(4)
+        get() = field
+        set(value) {
+            field = value
+            updateZoom()
+        }
+
+    val arrangementBlockInput = ArrangementBlockInput(50.0, 50.0)
+
     enum class Drag { BEGIN, END, NONE }
 
     init {
-        strictWidth = 400.0
+        updateZoom()
         strictHeight = 100.0
 
         setOnMouseMoved { event ->
@@ -37,48 +58,62 @@ class ArrangementBlock(): Region(), SpixieHashable {
         }
 
         var mouseXOnStartDrag = 0.0
-        var layoutXOnStartDrag = 0.0
-        var strictWidthOnStartDrag = 0.0
+        var timeStartOnStartDrag = Fraction.ZERO
+        var timeEndOnStartDrag = Fraction.ZERO
         var dragByThe = Drag.NONE
 
         setOnMousePressed { event ->
             if(event.button == MouseButton.PRIMARY){
                 val mouseCoords = sceneToLocal(event.sceneX, event.sceneY)
-                if(mouseCoords.x>strictWidth-10){
-                    mouseXOnStartDrag = event.screenX
-                    layoutXOnStartDrag = layoutX
-                    strictWidthOnStartDrag = strictWidth
-                    dragByThe = Drag.END
-                    event.consume()
-                }
-                if(mouseCoords.x<10){
-                    mouseXOnStartDrag = event.screenX
-                    layoutXOnStartDrag = layoutX
-                    strictWidthOnStartDrag = strictWidth
-                    dragByThe = Drag.BEGIN
-                    event.consume()
+                if(mouseCoords.x>strictWidth-10 && mouseCoords.x<10){
+                    if(mouseCoords.x < strictWidth-mouseCoords.x){
+                        mouseXOnStartDrag = event.screenX
+                        timeStartOnStartDrag = timeStart
+                        timeEndOnStartDrag = timeEnd
+                        dragByThe = Drag.BEGIN
+                        event.consume()
+                    }else{
+                        mouseXOnStartDrag = event.screenX
+                        timeStartOnStartDrag = timeStart
+                        timeEndOnStartDrag = timeEnd
+                        dragByThe = Drag.END
+                        event.consume()
+                    }
+                }else{
+                    if(mouseCoords.x>strictWidth-10){
+                        mouseXOnStartDrag = event.screenX
+                        timeStartOnStartDrag = timeStart
+                        timeEndOnStartDrag = timeEnd
+                        dragByThe = Drag.END
+                        event.consume()
+                    }
+                    if(mouseCoords.x<10){
+                        mouseXOnStartDrag = event.screenX
+                        timeStartOnStartDrag = timeStart
+                        timeEndOnStartDrag = timeEnd
+                        dragByThe = Drag.BEGIN
+                        event.consume()
+                    }
                 }
             }
         }
 
         setOnMouseDragged { event ->
             if(event.isPrimaryButtonDown){
-                var deltaX = Math.round((event.screenX - mouseXOnStartDrag)/25.0)*25.0
+                var deltaX = Math.round((event.screenX - mouseXOnStartDrag)/25.0).toInt()
                 if(dragByThe == Drag.BEGIN){
-                    if(strictWidthOnStartDrag - deltaX < 25){
-                        deltaX = strictWidthOnStartDrag - 25
+                    val newTimeStart = timeStartOnStartDrag.add(Fraction(deltaX*16).divide(zoom.value))
+                    if(timeEnd.subtract(newTimeStart).compareTo(Fraction(16).divide(zoom.value)) >=0 ){
+                        timeStart = newTimeStart
+                        updateZoom()
                     }
-                    if(layoutXOnStartDrag + deltaX < 0){
-                        deltaX = -layoutXOnStartDrag
-                    }
-                    layoutX = layoutXOnStartDrag + deltaX
-                    strictWidth = strictWidthOnStartDrag - deltaX
                 }
                 if(dragByThe == Drag.END){
-                    if(strictWidthOnStartDrag + deltaX < 25){
-                        deltaX = -strictWidthOnStartDrag + 25
+                    val newTimeEnd = timeEndOnStartDrag.add(Fraction(deltaX*16).divide(zoom.value))
+                    if(newTimeEnd.subtract(timeStart).compareTo(Fraction(16).divide(zoom.value)) >=0 ){
+                        timeEnd = newTimeEnd
+                        updateZoom()
                     }
-                    strictWidth = strictWidthOnStartDrag + deltaX
                 }
             }
         }
@@ -88,14 +123,65 @@ class ArrangementBlock(): Region(), SpixieHashable {
                 dragByThe = Drag.NONE
             }
             if(event.button == MouseButton.SECONDARY){
-                Main.workingWindow.nextOpen(visualEditor)
+                Platform.runLater {
+                    Main.workingWindow.nextOpen(visualEditor)
+                }
             }
         }
 
         setOnMouseExited { scene.cursor = Cursor.DEFAULT }
+
+
+        arrangementBlockInput.onValueInputOutputConnected = { a, b ->
+            if(a is Node && b is Node){
+                visualEditor.connectInputOutput(a,b)
+            }
+        }
+        visualEditor.components.children.addAll(arrangementBlockInput)
+
+        Main.world.time.onTimeChanged { time ->
+            arrangementBlockInput.time.value.value = Math.max(0.0, Math.min(time - timeStart.toDouble(), timeEnd.subtract(timeStart).toDouble()))
+        }
+    }
+
+    fun updateZoom(){
+        strictWidth = Fraction(100, 64).multiply(timeEnd.subtract(timeStart)).multiply(zoom.value).toDouble()
+        layoutX = Fraction(100, 64).multiply(timeStart).multiply(zoom.value).toDouble()
+    }
+
+    fun inTimeRange() = timeStart.toDouble() <= Main.world.time.time && timeEnd.toDouble() >= Main.world.time.time
+
+    fun render(renderBufferBuilder: RenderBufferBuilder){
+        if(inTimeRange()){
+            for (component in visualEditor.components.children) {
+                if(component is ParticleSpray){
+                    component.clearParticles()
+                }
+            }
+            var t = 0.0
+            while(t<arrangementBlockInput.time.value.value){
+                for (component in visualEditor.components.children) {
+                    if (component is ParticleSpray) {
+                        component.stepParticles()
+                    }
+                }
+                t+=0.01
+            }
+
+            for (component in visualEditor.components.children) {
+                if(component is ParticleSpray){
+                    for (particle in component.particles) {
+                        renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
+                    }
+                }
+                if(component is Circle){
+                    component.render(renderBufferBuilder)
+                }
+            }
+        }
     }
 
     override fun spixieHash(): Long {
-        return visualEditor.spixieHash() mix strictWidth.raw() mix layoutX.raw()
+        return visualEditor.spixieHash() mix timeStart.toDouble().raw() mix timeEnd.toDouble().raw()
     }
 }
