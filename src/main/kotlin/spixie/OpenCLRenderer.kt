@@ -19,6 +19,10 @@ class OpenCLRenderer {
         device = context.maxFlopsDevice
         program = context.createProgram(javaClass.getResourceAsStream("/kernel.cl")).build()
         clImageOut = context.createFloatBuffer(BLOCKSIZE*BLOCKSIZE*4, CLMemory.Mem.WRITE_ONLY)
+
+        if(BLOCKSIZE<20){
+            throw Exception("Too low BLOCKSIZE")
+        }
     }
 
     fun render(renderBufferBuilder:RenderBufferBuilder): BufferedImage {
@@ -32,7 +36,8 @@ class OpenCLRenderer {
                 val blockX = x * BLOCKSIZE
                 val blockY = y * BLOCKSIZE
 
-                val particlesArray = renderBufferBuilder.toFloatBuffer(blockX, blockY, BLOCKSIZE, width, height).array()
+
+                val particlesArray = renderBufferBuilder.toFloatBuffer(x, y).array()
                 val particlesCount = particlesArray.size/RenderBufferBuilder.PARTICLE_FLOAT_SIZE
                 if(particlesCount==0){
                     continue

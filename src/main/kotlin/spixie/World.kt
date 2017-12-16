@@ -8,8 +8,6 @@ import javafx.embed.swing.SwingFXUtils
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
-import spixie.components.Circle
-import spixie.components.ParticleSpray
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -23,7 +21,7 @@ class World {
     @Volatile var renderingToFile = false
     var imageView:ImageView = ImageView()
     val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
-    private val cache = ReferenceMap<Long, ByteArray>()
+    private val cache = ReferenceMap<Long, DefferedPng>()
     private var frameHashShown = 0L
     var autoRenderNextFrame = false
 
@@ -52,14 +50,14 @@ class World {
                             Thread.sleep(1)
                         }
                     }else{
-                        val imageCached = cache.get(spixieHash)
+                        val imageCached = cache.get(spixieHash)?.get()
                         if(imageCached == null){
                             resizeIfNotCorrect(imageView.fitWidth.toInt()/scaleDown, imageView.fitHeight.toInt()/scaleDown)
                             val frameBeforeRender = time.frame
                             val bufferedImage = openclRender()
                             val image = SwingFXUtils.toFXImage(bufferedImage, null)
                             if(frameBeforeRender == time.frame){
-                                cache.put(spixieHash, imageToPngByteArray(bufferedImage))
+                                cache.put(spixieHash, DefferedPng(bufferedImage))
                                 frameHashShown = spixieHash
                             }
                             runInUIAndWait {
@@ -82,12 +80,6 @@ class World {
         }
     })
 
-    fun imageToPngByteArray(bufferedImage: BufferedImage):ByteArray{
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        ImageIO.write(bufferedImage, "png", byteArrayOutputStream)
-        return byteArrayOutputStream.toByteArray()
-    }
-
     fun resizeIfNotCorrect(width: Int, height: Int) {
         if (openCLRenderer.width != width || openCLRenderer.height != height) {
             openCLRenderer.setSize(width,height)
@@ -100,7 +92,7 @@ class World {
     }
 
     private fun openclRender():BufferedImage {
-        val renderBufferBuilder = RenderBufferBuilder()
+        val renderBufferBuilder = RenderBufferBuilder(openCLRenderer.width, openCLRenderer.height, openCLRenderer.BLOCKSIZE)
 
         for (block in Main.workingWindow.arrangementWindow.blocks.children) {
             if(block is ArrangementBlock){
