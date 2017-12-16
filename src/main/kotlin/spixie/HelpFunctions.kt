@@ -1,6 +1,9 @@
 package spixie
 
 import javafx.scene.input.DataFormat
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import javax.imageio.ImageIO
 
 fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     val nozerop0 = (p0 and  0x7FFFFFFFFFFFFFFF) + 1
@@ -54,6 +57,12 @@ infix fun Long.mix(n:Long):Long{
 
 fun Double.raw():Long{
     return java.lang.Double.doubleToRawLongBits(this)
+}
+
+fun BufferedImage.toPNGByteArray():ByteArray {
+    val byteArrayOutputStream = ByteArrayOutputStream()
+    ImageIO.write(this, "png", byteArrayOutputStream)
+    return byteArrayOutputStream.toByteArray()
 }
 
 object DragAndDropType {

@@ -10,10 +10,8 @@ import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.CountDownLatch
-import javax.imageio.ImageIO
 
 class World {
     val time = TimeProperty(140.0)
@@ -21,7 +19,7 @@ class World {
     @Volatile var renderingToFile = false
     var imageView:ImageView = ImageView()
     val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
-    private val cache = ReferenceMap<Long, DefferedPng>()
+    private val cache = ReferenceMap<Long, DeferredPng>()
     private var frameHashShown = 0L
     var autoRenderNextFrame = false
 
@@ -57,7 +55,7 @@ class World {
                             val bufferedImage = openclRender()
                             val image = SwingFXUtils.toFXImage(bufferedImage, null)
                             if(frameBeforeRender == time.frame){
-                                cache.put(spixieHash, DefferedPng(bufferedImage))
+                                cache.put(spixieHash, DeferredPng(bufferedImage))
                                 frameHashShown = spixieHash
                             }
                             runInUIAndWait {
