@@ -11,7 +11,7 @@ class ParticleSpray(x:Double, y:Double) : VisualEditorComponent(x, y), SpixieHas
     val alpha = ValueControl(1.0, 0.001, "Aplha")
     val size = ValueControl(1.0,0.1, "Size")
     val beamParticlesCount = ValueControl(10.0, 1.0, "Beam particles count")
-    val beamRate = ValueControl(1.0, 1.0, "Beam rate")
+    val beamRate = ValueControl(1.0, 1.0, "Beam rate").limitMin(1.0)
     val startSpeedMin = ValueControl(0.0, 1.0, "Start speed MIN")
     val startSpeedMax = ValueControl(0.0, 1.0, "Start speed MAX")
     val coefDeceleration = ValueControl(1.0, 0.0001, "Deceleration coefficient")
@@ -35,29 +35,42 @@ class ParticleSpray(x:Double, y:Double) : VisualEditorComponent(x, y), SpixieHas
         brownianMotion.onInputOutputConnected = { a, b -> onValueInputOutputConnected(a, b) }
     }
 
-    var frameParticles = 0
+    private var timeParticles = -1
     var particles = ArrayList<Particle>()
 
     fun clearParticles(){
-        frameParticles = -1
+        timeParticles = -1
         particles.clear()
+    }
+    private var lastHash = spixieHash()
+    fun autoStepParticles(time:Int){
+        val newHash = spixieHash()
+        if(timeParticles > time || newHash != lastHash){
+            clearParticles()
+        }
+        lastHash = newHash
+        while (timeParticles < time){
+            stepParticles()
+        }
     }
 
     fun stepParticles(){
-        frameParticles++
-        val delta = frameToTime(1, Main.world.bpm.value.value)
+        timeParticles++
         var i=0L
         for (particle in particles) {
             particle.vx*=coefDeceleration.value.value.toFloat()
             particle.vy*=coefDeceleration.value.value.toFloat()
-            val angle = rand(0,0,0,frameParticles.toLong(),i,5)*Math.PI*2
-            val speed = rand(0,0,0,frameParticles.toLong(),i,6)*brownianMotion.value.value
+            val angle = rand(0,0,0, timeParticles.toLong(),i,5)*Math.PI*2
+            val speed = rand(0,0,0, timeParticles.toLong(),i,6)*brownianMotion.value.value
             particle.vx += (Math.cos(angle) * speed).toFloat()
             particle.vy += (Math.sin(angle) * speed).toFloat()
-            particle.step(delta)
+            particle.step(0.1)
             i++
         }
-        if(frameParticles % beamRate.value.value.toInt() == 0){
+        if(timeParticles%100==0){
+            particles.removeIf { it.x > 3000 || it.y > 3000 || it.x < -3000 || it.y < -3000 }
+        }
+        if(timeParticles % beamRate.value.value.toInt() == 0){
             for(q in 0..(beamParticlesCount.value.value.toLong()-1)){
                 val particle = Particle()
                 particle.red = red.value.value.toFloat()
@@ -66,8 +79,8 @@ class ParticleSpray(x:Double, y:Double) : VisualEditorComponent(x, y), SpixieHas
                 particle.alpha = alpha.value.value.toFloat()
 
                 particle.size = size.value.value.toFloat()
-                val angle = rand(0,0,0,frameParticles.toLong(),q,0)*Math.PI*2
-                val speed = rand(0,0,0,frameParticles.toLong(),q,1)*(startSpeedMax.value.value - startSpeedMin.value.value) + startSpeedMin.value.value
+                val angle = rand(0,0,0, timeParticles.toLong(),q,0)*Math.PI*2
+                val speed = rand(0,0,0, timeParticles.toLong(),q,1)*(startSpeedMax.value.value - startSpeedMin.value.value) + startSpeedMin.value.value
                 particle.vx = (Math.cos(angle) * speed).toFloat()
                 particle.vy = (Math.sin(angle) * speed).toFloat()
                 particle.x = 0.0f

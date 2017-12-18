@@ -1,11 +1,13 @@
 *.mp4
 *.mkv
+*.aiff
 *.jpg
 *.avi
 *.webm
 *.png
 target
 *.bak
+/settings.json
 
 # Intellij project files
 .idea/

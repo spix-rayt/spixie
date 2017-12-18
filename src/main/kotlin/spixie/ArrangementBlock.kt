@@ -28,16 +28,20 @@ class ArrangementBlock(val zoom:FractionImmutablePointer): Region(), SpixieHasha
         }
 
     var timeStart = Fraction(0)
-        get() = field
         set(value) {
             field = value
             updateZoom()
         }
     var timeEnd = Fraction(4)
-        get() = field
         set(value) {
             field = value
             updateZoom()
+        }
+
+    var line = 0
+        set(value) {
+            field = value
+            layoutY = value*100.0
         }
 
     val arrangementBlockInput = ArrangementBlockInput(50.0, 50.0)
@@ -149,23 +153,14 @@ class ArrangementBlock(val zoom:FractionImmutablePointer): Region(), SpixieHasha
         layoutX = Fraction(100, 64).multiply(timeStart).multiply(zoom.value).toDouble()
     }
 
-    fun inTimeRange() = timeStart.toDouble() <= Main.world.time.time && timeEnd.toDouble() >= Main.world.time.time
+    fun inTimeRange() = timeStart.toDouble() <= Main.world.time.time && timeEnd.toDouble() > Main.world.time.time
 
     fun render(renderBufferBuilder: RenderBufferBuilder){
         if(inTimeRange()){
             for (component in visualEditor.components.children) {
-                if(component is ParticleSpray){
-                    component.clearParticles()
+                if (component is ParticleSpray) {
+                    component.autoStepParticles(Math.round(arrangementBlockInput.time.value.value*100).toInt())
                 }
-            }
-            var t = 0.0
-            while(t<arrangementBlockInput.time.value.value){
-                for (component in visualEditor.components.children) {
-                    if (component is ParticleSpray) {
-                        component.stepParticles()
-                    }
-                }
-                t+=0.01
             }
 
             for (component in visualEditor.components.children) {
@@ -182,6 +177,6 @@ class ArrangementBlock(val zoom:FractionImmutablePointer): Region(), SpixieHasha
     }
 
     override fun spixieHash(): Long {
-        return visualEditor.spixieHash() mix timeStart.toDouble().raw() mix timeEnd.toDouble().raw()
+        return visualEditor.spixieHash() mix timeStart.toDouble().raw() mix timeEnd.toDouble().raw() mix arrangementBlockInput.time.value.value.raw()
     }
 }

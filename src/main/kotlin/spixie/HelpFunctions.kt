@@ -1,8 +1,11 @@
 package spixie
 
+import javafx.application.Platform
 import javafx.scene.input.DataFormat
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.util.concurrent.CountDownLatch
 import javax.imageio.ImageIO
 
 fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
@@ -63,6 +66,24 @@ fun BufferedImage.toPNGByteArray():ByteArray {
     val byteArrayOutputStream = ByteArrayOutputStream()
     ImageIO.write(this, "png", byteArrayOutputStream)
     return byteArrayOutputStream.toByteArray()
+}
+
+fun InputStream.printAvailable(){
+    val available = this.available()
+    if(available>0){
+        val byteArray = ByteArray(available)
+        this.read(byteArray)
+        System.out.write(byteArray)
+    }
+}
+
+fun runInUIAndWait(work: () -> Unit){
+    val latch = CountDownLatch(1)
+    Platform.runLater {
+        work()
+        latch.countDown()
+    }
+    latch.await()
 }
 
 object DragAndDropType {

@@ -1,11 +1,16 @@
 package spixie
 
+import javafx.embed.swing.SwingFXUtils
 import javafx.scene.Group
+import javafx.scene.canvas.Canvas
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Pane
 import javafx.scene.shape.Line
+import javafx.scene.shape.Rectangle
 import org.apache.commons.math3.fraction.Fraction
+import java.awt.Color
+import java.awt.image.BufferedImage
 
 class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     val content = Group()
@@ -13,8 +18,19 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
     val zoom = FractionImmutablePointer(Fraction(64))
     val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
+    var timePointerCentering = false
+        set(value) {
+            field = value
+            if(value){
+                updateTimePointer()
+            }
+        }
+    val waveform = Canvas(1.0, 600.0)
 
     init {
+        widthProperty().addListener { _, _, newValue ->
+            waveform.width = newValue.toDouble() + 200.0
+        }
         style = "-fx-background-color: #FFFFFFFF;"
 
         initCustomPanning()
@@ -47,23 +63,45 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         setOnScroll { event ->
             if(event.deltaY<0){
                 if(zoom.value.compareTo(Fraction.ONE) != 0){
+                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
                     zoom.value = zoom.value.divide(2)
+                    var cursorNewX = cursorTime*zoom.value.toDouble()*100.0/64 + 0.5
+                    content.layoutX += cursor.startX - cursorNewX
+                    if(content.layoutX > 0) {
+                        cursorNewX += content.layoutX
+                        content.layoutX = 0.0
+                    }
+                    cursor.startX = cursorNewX
+                    cursor.endX = cursorNewX
+
                     for (child in blocks.children) {
                         if(child is ArrangementBlock){
                             child.updateZoom()
                         }
                     }
+                    redrawWaveform()
                     updateTimePointer()
                 }
             }
             if(event.deltaY>0){
                 if(zoom.value.compareTo(Fraction(4096)) != 0){
+                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
                     zoom.value = zoom.value.multiply(2)
+                    var cursorNewX = cursorTime*zoom.value.toDouble()*100.0/64 + 0.5
+                    content.layoutX += cursor.startX - cursorNewX
+                    if(content.layoutX > 0) {
+                        cursorNewX += content.layoutX
+                        content.layoutX = 0.0
+                    }
+                    cursor.startX = cursorNewX
+                    cursor.endX = cursorNewX
+
                     for (child in blocks.children) {
                         if(child is ArrangementBlock){
                             child.updateZoom()
                         }
                     }
+                    redrawWaveform()
                     updateTimePointer()
                 }
             }
@@ -72,12 +110,17 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
 
         val grid = initGrid()
 
-        content.children.addAll(grid, blocks, cursor, timePointer)
+        content.children.addAll(waveform, grid, blocks, cursor, timePointer)
         children.addAll(content)
 
+        clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
-
-
+        content.layoutXProperty().addListener { _, _, _ ->
+            redrawWaveform()
+        }
+        content.layoutYProperty().addListener { _, _, y ->
+            waveform.layoutY = -y.toDouble()
+        }
 
         blocks.children.add(ArrangementBlock(zoom))
     }
@@ -93,6 +136,9 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         val x = Math.round(zoom.value.toDouble() / 64.0 * Main.world.time.time * 100.0).toDouble()
         timePointer.startX = x
         timePointer.endX = x
+        if(timePointerCentering){
+            content.layoutX = -(timePointer.startX - width/5)
+        }
     }
 
     private fun initCustomPanning(){
@@ -116,6 +162,60 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                 content.layoutY = minOf(layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag), 0.0)
             }
         })
+    }
+
+    private @Volatile var nowRedrawing = false
+    private @Volatile var restartRedrawingWaveform = false
+    fun redrawWaveform(){
+        if(!nowRedrawing){
+            nowRedrawing = true
+            Thread(Runnable {
+                val newWaveformLayoutX = -content.layoutX - 100
+                val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
+                val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
+
+                val startSecond = startTime*3600/Main.world.bpm.value.value/60
+                val endSecond = endTime*3600/Main.world.bpm.value.value/60
+
+                val secondsInPixel = (endSecond - startSecond) / waveform.width
+
+
+                val bufferedImage = BufferedImage(waveform.width.toInt(), waveform.height.toInt(), BufferedImage.TYPE_4BYTE_ABGR)
+                val g = bufferedImage.graphics
+                g.color = Color.WHITE
+                g.fillRect(0, 0, bufferedImage.width, bufferedImage.height)
+                g.color = Color(66, 170, 255)
+                val rms = Main.audio.rms
+                var from = 0
+                for(x in 0 until bufferedImage.width){
+                    var maxrms = 0.0f
+                    var to = Math.round((startSecond + x * secondsInPixel)*100).toInt()
+                    if(from > to){
+                        from = to
+                    }
+                    for(i in from..to){
+                        if(i>0 && i<rms.size){
+                            val r = rms[i]
+                            if(r>maxrms) maxrms = r
+                        }
+                    }
+                    from = to
+                    g.drawLine(x, ((0.5+ maxrms /2)*waveform.height).toInt(), x, ((0.5- maxrms /2)*waveform.height).toInt())
+                }
+                val toFXImage = SwingFXUtils.toFXImage(bufferedImage, null)
+                runInUIAndWait {
+                    waveform.graphicsContext2D.drawImage(toFXImage, 0.0, 0.0)
+                    waveform.layoutX = newWaveformLayoutX
+                }
+                nowRedrawing = false
+                if(restartRedrawingWaveform){
+                    restartRedrawingWaveform =false
+                    redrawWaveform()
+                }
+            }).start()
+        }else{
+            restartRedrawingWaveform = true
+        }
     }
 
     private fun initGrid():Group{

@@ -109,11 +109,17 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         set(initial)
     }
 
+    private var min = 0.0
+    fun limitMin(min: Double): ValueControl{
+        this.min = min
+        return this
+    }
+
     var onInputOutputConnected: (Any, Any) -> Unit = { _, _ ->  }
 
     fun set(value: Double) {
-        if(value<0.0){
-            this.value.value = 0.0
+        if(value<min){
+            this.value.value = min
         }else{
             this.value.value = value
         }

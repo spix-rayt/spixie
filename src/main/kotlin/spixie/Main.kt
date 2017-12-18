@@ -13,6 +13,8 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.layout.Pane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
+import javafx.util.Duration
+import java.io.File
 
 class Main : Application() {
     @Throws(Exception::class)
@@ -41,7 +43,6 @@ class Main : Application() {
         stage.fullScreenExitKeyCombination = KeyCombination.NO_MATCH
         stage.show()
         stage.isFullScreen = true
-        mainStage = stage
 
         workingWindow.prefWidthProperty().bind(scene.widthProperty())
         workingWindow.prefHeightProperty().bind(scene.heightProperty())
@@ -49,6 +50,8 @@ class Main : Application() {
 
         val windowOpacity = arrayOf(1.0f)
         workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+
+        var playStartTime = 0.0
 
         root.onKeyPressed = EventHandler<KeyEvent> { event ->
             if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
@@ -89,6 +92,18 @@ class Main : Application() {
             if(event.code == KeyCode.P){
                 world.autoRenderNextFrame = true
             }
+            if(event.code == KeyCode.SPACE){
+                if(audio.isPlayed()){
+                    audio.pause()
+                    Platform.runLater { world.time.time = playStartTime }
+                }else{
+                    playStartTime = world.time.time
+                    audio.play(Duration.seconds(world.time.frame/60.0))
+                }
+            }
+            if(event.code == KeyCode.C){
+                workingWindow.arrangementWindow.timePointerCentering = true
+            }
         }
 
         root.onKeyReleased = EventHandler<KeyEvent> { event ->
@@ -97,6 +112,9 @@ class Main : Application() {
             }
             if(event.code == KeyCode.P){
                 world.autoRenderNextFrame = false
+            }
+            if(event.code == KeyCode.C){
+                workingWindow.arrangementWindow.timePointerCentering = false
             }
         }
 
@@ -109,9 +127,10 @@ class Main : Application() {
     }
 
     companion object {
-        var mainStage:Stage? = null
         var world: World = World()
         val workingWindow = WorkingWindow()
+        val audio = Audio()
+        val settings = Settings.load()
 
         var internalObject: Any = Any()
 

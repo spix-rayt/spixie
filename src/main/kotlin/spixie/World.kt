@@ -1,8 +1,5 @@
 package spixie
 
-import io.humble.video.*
-import io.humble.video.awt.MediaPictureConverter
-import io.humble.video.awt.MediaPictureConverterFactory
 import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.image.Image
@@ -11,11 +8,11 @@ import org.apache.commons.collections4.map.ReferenceMap
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.util.*
-import java.util.concurrent.CountDownLatch
+import javax.imageio.ImageIO
 
 class World {
-    val time = TimeProperty(140.0)
-    var bpm = ValueControl(140.0, 1.0, "BPM")
+    val time = TimeProperty(160.0)
+    var bpm = ValueControl(160.0, 1.0, "BPM")
     @Volatile var renderingToFile = false
     var imageView:ImageView = ImageView()
     val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
@@ -30,13 +27,23 @@ class World {
         }
 
     var currentRenderThread: Thread = Thread(Runnable {
+
         while (true) {
             try {
                 if (!renderingToFile) {
                     if(needClearCache){
                         cache.clear()
+                        Main.workingWindow.resetCurrentFrameCache()
                         frameHashShown=0L
                         needClearCache=false
+                    }
+                    if(Main.audio.isPlayed()){
+                        runInUIAndWait {
+                            val newTime = Main.audio.getTime()
+                            if(newTime!= time.time){
+                                time.time=newTime
+                            }
+                        }
                     }
                     val spixieHash = calcSpixieHash()
                     if(frameHashShown == spixieHash){
@@ -105,70 +112,52 @@ class World {
         renderingToFile = true
         Thread(Runnable {
             openCLRenderer.setSize(1920, 1080)
-            val frameRate = Rational.make(1, 60)
-            val muxer = Muxer.make("out.mkv", null, "matroska")
-            val codec = Codec.findEncodingCodecByName("ffv1")
-            val encoder = Encoder.make(codec)
-            encoder.width = 1920
-            encoder.height = 1080
-            encoder.pixelFormat = PixelFormat.Type.PIX_FMT_YUV420P
-            encoder.timeBase = frameRate
-            encoder.setFlag(Coder.Flag.FLAG_GLOBAL_HEADER, true)
-
-            encoder.open(null, null)
-            muxer.addNewStream(encoder)
-            muxer.open(null, null)
-
-            var converter: MediaPictureConverter? = null
-            val picture = MediaPicture.make(encoder.width, encoder.height, encoder.pixelFormat)
-            picture.timeBase = frameRate
-
-            val packet = MediaPacket.make()
-
             val countFrames = time.frame + 1
+            val processBuilder = ProcessBuilder(
+                    listOf(
+                            Main.settings.ffmpeg,
+                            "-y",
+                            "-f", "image2pipe",
+                            "-framerate", "60",
+                            "-i", "-",
+                            "-c:v", "libx264",
+                            "-preset", "slow",
+                            "-crf", "17",
+                            "-pix_fmt", "yuv420p",
+                            "out.mp4"
+                    )
+            )
+            val process = processBuilder.start()
+            val outputStream = process.outputStream
+            val inputStream = process.inputStream
+            val errorStream = process.errorStream
+
             for (frame in 0 until countFrames) {
                 runInUIAndWait {
                     this@World.time.frame = frame
+                }
+                if(!process.isAlive){
+                    break
                 }
 
                 val bufferedImage = openclRender()
                 val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
                 bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
+                ImageIO.write(bufferedImage1, "png", outputStream)
 
-                if(converter == null){
-                    converter = MediaPictureConverterFactory.createConverter(bufferedImage1, picture)
-                }
-                converter!!.toPicture(picture, bufferedImage1, frame.toLong())
-
-                do{
-                    encoder.encode(packet, picture)
-                    if(packet.isComplete){
-                        muxer.write(packet, false)
-                    }
-                }while (packet.isComplete)
-
+                inputStream.printAvailable()
+                errorStream.printAvailable()
 
                 Platform.runLater { frameRenderedToFileEventHandler.handle(frame + 1, countFrames) }
             }
-            do{
-                encoder.encode(packet, picture)
-                if(packet.isComplete){
-                    muxer.write(packet, false)
-                }
-            }while (packet.isComplete)
-            muxer.close()
+            outputStream.close()
+            process.waitFor()
+            inputStream.printAvailable()
+            errorStream.printAvailable()
+            println("Process finished with exit code ${process.exitValue()}")
             renderingToFile = false
             Platform.runLater { renderToFileCompleted.handle() }
         }).start()
-    }
-
-    fun runInUIAndWait(work: () -> Unit){
-        val latch = CountDownLatch(1)
-        Platform.runLater {
-            work()
-            latch.countDown()
-        }
-        latch.await()
     }
 
     private var needClearCache = false

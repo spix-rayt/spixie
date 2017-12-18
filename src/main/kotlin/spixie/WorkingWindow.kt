@@ -6,6 +6,7 @@ import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
+import spixie.components.ParticleSpray
 import java.util.*
 
 class WorkingWindow : BorderPane() {
@@ -45,7 +46,7 @@ class WorkingWindow : BorderPane() {
 
         val timeLabel = ValueLabel("Time")
         Main.world.time.onTimeChanged { time ->
-            timeLabel.value.value = time
+            timeLabel.value.value = Math.round(time*1000)/1000.0
         }
         menuBar.items.addAll(renderButton, slider, clearCacheButton, timeLabel)
         top = menuBar
@@ -74,5 +75,17 @@ class WorkingWindow : BorderPane() {
         }
         center = workingWindowOpenableContent as Node
         center.requestFocus()
+    }
+
+    fun resetCurrentFrameCache(){
+        for (block in arrangementWindow.blocks.children) {
+            if(block is ArrangementBlock){
+                for (component in block.visualEditor.components.children) {
+                    if(component is ParticleSpray){
+                        component.clearParticles()
+                    }
+                }
+            }
+        }
     }
 }
