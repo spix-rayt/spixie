@@ -99,11 +99,7 @@ class World {
     private fun openclRender():BufferedImage {
         val renderBufferBuilder = RenderBufferBuilder(openCLRenderer.width, openCLRenderer.height, openCLRenderer.BLOCKSIZE)
 
-        for (block in Main.workingWindow.arrangementWindow.blocks.children) {
-            if(block is ArrangementBlock){
-                block.render(renderBufferBuilder)
-            }
-        }
+        Main.workingWindow.arrangementWindow.render(renderBufferBuilder)
 
         return openCLRenderer.render(renderBufferBuilder)
     }

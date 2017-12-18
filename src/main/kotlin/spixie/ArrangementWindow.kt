@@ -9,12 +9,15 @@ import javafx.scene.layout.Pane
 import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import org.apache.commons.math3.fraction.Fraction
+import spixie.components.Circle
+import spixie.components.ParticleSpray
 import java.awt.Color
 import java.awt.image.BufferedImage
 
 class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     val content = Group()
-    val blocks = Group()
+    val grid = Group()
+    val visualEditor = VisualEditor()
     val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
     val zoom = FractionImmutablePointer(Fraction(64))
     val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
@@ -25,7 +28,80 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                 updateTimePointer()
             }
         }
-    val waveform = Canvas(1.0, 600.0)
+    val waveform = Canvas(1.0, 300.0)
+
+    val redrawWaveform = SerialWorker {
+        val newWaveformLayoutX = -content.layoutX - 100
+        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
+        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
+
+        val startSecond = startTime*3600/Main.world.bpm.value.value/60
+        val endSecond = endTime*3600/Main.world.bpm.value.value/60
+
+        val secondsInPixel = (endSecond - startSecond) / waveform.width
+
+
+        val bufferedImage = BufferedImage(waveform.width.toInt(), waveform.height.toInt(), BufferedImage.TYPE_4BYTE_ABGR)
+        val g = bufferedImage.graphics
+        g.color = Color.WHITE
+        g.fillRect(0, 0, bufferedImage.width, bufferedImage.height)
+        g.color = Color(66, 170, 255)
+        val rms = Main.audio.rms
+        var from = 0
+        for(x in 0 until bufferedImage.width){
+            var maxrms = 0.0f
+            var to = Math.round((startSecond + x * secondsInPixel)*100).toInt()
+            if(from > to){
+                from = to
+            }
+            for(i in from..to){
+                if(i>0 && i<rms.size){
+                    val r = rms[i]
+                    if(r>maxrms) maxrms = r
+                }
+            }
+            from = to
+            g.drawLine(x, ((0.5+ maxrms /2)*waveform.height).toInt(), x, ((0.5- maxrms /2)*waveform.height).toInt())
+        }
+        val toFXImage = SwingFXUtils.toFXImage(bufferedImage, null)
+        runInUIAndWait {
+            waveform.graphicsContext2D.drawImage(toFXImage, 0.0, 0.0)
+            waveform.layoutX = newWaveformLayoutX
+        }
+    }
+
+    val makeGrid = SerialWorker {
+        val lines = ArrayList<Line>()
+        val x = -content.layoutX.toInt() / 400
+        val y = -content.layoutY.toInt() / 100
+        for(i in y-10..y+20){
+            val line = Line((x-3) * 400.0, i * 100.0 + 0.5, (x-3) * 400.0 + 10000.0, i * 100.0 + 0.5)
+            line.opacity = 0.4
+            lines.add(line)
+        }
+        val startY = (y-10) * 100.0
+        for(i in x-3..x+8){
+            val lineMajor = Line(i * 400.0 + 0.5, startY, i * 400.0 + 0.5, startY + 10000.0)
+            lineMajor.opacity = 0.4
+            lines.add(lineMajor)
+            val line1 = Line(i * 400.0 + 0.5+100, startY, i * 400.0 + 0.5+100, startY + 10000.0)
+            line1.opacity = 0.1
+            lines.add(line1)
+            val line2 = Line(i * 400.0 + 0.5+200, startY, i * 400.0 + 0.5+200, startY + 10000.0)
+            line2.opacity = 0.1
+            lines.add(line2)
+            val line3 = Line(i * 400.0 + 0.5+300, startY, i * 400.0 + 0.5+300, startY + 10000.0)
+            line3.opacity = 0.1
+            lines.add(line3)
+        }
+        runInUIAndWait {
+            grid.children.setAll(lines)
+            cursor.startY = startY
+            cursor.endY = startY + 10000.0
+            timePointer.startY = startY
+            timePointer.endY = startY + 10000.0
+        }
+    }
 
     init {
         widthProperty().addListener { _, _, newValue ->
@@ -74,12 +150,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    for (child in blocks.children) {
-                        if(child is ArrangementBlock){
-                            child.updateZoom()
-                        }
-                    }
-                    redrawWaveform()
+                    redrawWaveform.run()
                     updateTimePointer()
                 }
             }
@@ -96,33 +167,28 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    for (child in blocks.children) {
-                        if(child is ArrangementBlock){
-                            child.updateZoom()
-                        }
-                    }
-                    redrawWaveform()
+                    redrawWaveform.run()
                     updateTimePointer()
                 }
             }
             event.consume()
         }
 
-        val grid = initGrid()
+        makeGrid.run()
 
-        content.children.addAll(waveform, grid, blocks, cursor, timePointer)
+        content.children.addAll(waveform, grid, cursor, timePointer)
         children.addAll(content)
 
         clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
-            redrawWaveform()
+            redrawWaveform.run()
+            makeGrid.run()
         }
         content.layoutYProperty().addListener { _, _, y ->
             waveform.layoutY = -y.toDouble()
+            makeGrid.run()
         }
-
-        blocks.children.add(ArrangementBlock(zoom))
     }
 
     private fun updateCursor(event:MouseEvent){
@@ -164,89 +230,26 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         })
     }
 
-    private @Volatile var nowRedrawing = false
-    private @Volatile var restartRedrawingWaveform = false
-    fun redrawWaveform(){
-        if(!nowRedrawing){
-            nowRedrawing = true
-            Thread(Runnable {
-                val newWaveformLayoutX = -content.layoutX - 100
-                val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
-                val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
-
-                val startSecond = startTime*3600/Main.world.bpm.value.value/60
-                val endSecond = endTime*3600/Main.world.bpm.value.value/60
-
-                val secondsInPixel = (endSecond - startSecond) / waveform.width
-
-
-                val bufferedImage = BufferedImage(waveform.width.toInt(), waveform.height.toInt(), BufferedImage.TYPE_4BYTE_ABGR)
-                val g = bufferedImage.graphics
-                g.color = Color.WHITE
-                g.fillRect(0, 0, bufferedImage.width, bufferedImage.height)
-                g.color = Color(66, 170, 255)
-                val rms = Main.audio.rms
-                var from = 0
-                for(x in 0 until bufferedImage.width){
-                    var maxrms = 0.0f
-                    var to = Math.round((startSecond + x * secondsInPixel)*100).toInt()
-                    if(from > to){
-                        from = to
-                    }
-                    for(i in from..to){
-                        if(i>0 && i<rms.size){
-                            val r = rms[i]
-                            if(r>maxrms) maxrms = r
-                        }
-                    }
-                    from = to
-                    g.drawLine(x, ((0.5+ maxrms /2)*waveform.height).toInt(), x, ((0.5- maxrms /2)*waveform.height).toInt())
-                }
-                val toFXImage = SwingFXUtils.toFXImage(bufferedImage, null)
-                runInUIAndWait {
-                    waveform.graphicsContext2D.drawImage(toFXImage, 0.0, 0.0)
-                    waveform.layoutX = newWaveformLayoutX
-                }
-                nowRedrawing = false
-                if(restartRedrawingWaveform){
-                    restartRedrawingWaveform =false
-                    redrawWaveform()
-                }
-            }).start()
-        }else{
-            restartRedrawingWaveform = true
-        }
-    }
-
-    private fun initGrid():Group{
-        val group = Group()
-        for(i in 0..99){
-            val line = Line(0.0, i * 100.0 + 0.5, 10000.0, i * 100.0 + 0.5)
-            line.opacity = 0.4
-            group.children.addAll(line)
+    fun render(renderBufferBuilder: RenderBufferBuilder){
+        for (component in visualEditor.components.children) {
+            if (component is ParticleSpray) {
+                component.autoStepParticles(Math.round(Main.world.time.time*100).toInt())
+            }
         }
 
-        for(i in 0..34){
-            val lineMajor = Line(i * 400.0 + 0.5, 0.0, i * 400.0 + 0.5, 10000.0)
-            lineMajor.opacity = 0.4
-            val line1 = Line(i * 400.0 + 0.5+100, 0.0, i * 400.0 + 0.5+100, 10000.0)
-            line1.opacity = 0.1
-            val line2 = Line(i * 400.0 + 0.5+200, 0.0, i * 400.0 + 0.5+200, 10000.0)
-            line2.opacity = 0.1
-            val line3 = Line(i * 400.0 + 0.5+300, 0.0, i * 400.0 + 0.5+300, 10000.0)
-            line3.opacity = 0.1
-            group.children.addAll(lineMajor, line1, line2, line3)
+        for (component in visualEditor.components.children) {
+            if(component is ParticleSpray){
+                for (particle in component.particles) {
+                    renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
+                }
+            }
+            if(component is Circle){
+                component.render(renderBufferBuilder)
+            }
         }
-        return group
     }
 
     override fun spixieHash(): Long {
-        var hash = magic.toLong()
-        for (block in blocks.children) {
-            if(block is ArrangementBlock){
-                hash = hash mix block.spixieHash()
-            }
-        }
-        return hash
+        return visualEditor.spixieHash()
     }
 }

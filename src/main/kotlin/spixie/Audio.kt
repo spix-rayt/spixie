@@ -72,7 +72,7 @@ class Audio {
 
 
             rms = rmsBlocks.toFloatArray()
-            Main.workingWindow.arrangementWindow.redrawWaveform()
+            Main.workingWindow.arrangementWindow.redrawWaveform.run()
 
 
             try {

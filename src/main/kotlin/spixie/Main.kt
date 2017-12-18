@@ -104,6 +104,9 @@ class Main : Application() {
             if(event.code == KeyCode.C){
                 workingWindow.arrangementWindow.timePointerCentering = true
             }
+            if(event.code == KeyCode.V){
+                Main.workingWindow.nextOpen(Main.workingWindow.arrangementWindow.visualEditor)
+            }
         }
 
         root.onKeyReleased = EventHandler<KeyEvent> { event ->

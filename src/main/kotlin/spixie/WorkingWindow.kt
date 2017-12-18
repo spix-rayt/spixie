@@ -78,13 +78,9 @@ class WorkingWindow : BorderPane() {
     }
 
     fun resetCurrentFrameCache(){
-        for (block in arrangementWindow.blocks.children) {
-            if(block is ArrangementBlock){
-                for (component in block.visualEditor.components.children) {
-                    if(component is ParticleSpray){
-                        component.clearParticles()
-                    }
-                }
+        for (component in arrangementWindow.visualEditor.components.children) {
+            if(component is ParticleSpray){
+                component.clearParticles()
             }
         }
     }
