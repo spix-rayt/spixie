@@ -107,6 +107,9 @@ class Main : Application() {
             if(event.code == KeyCode.V){
                 Main.workingWindow.nextOpen(Main.workingWindow.arrangementWindow.visualEditor)
             }
+            if(event.code == KeyCode.Q){
+                Main.workingWindow.arrangementWindow.selectionBlock.buildGraph()
+            }
         }
 
         root.onKeyReleased = EventHandler<KeyEvent> { event ->

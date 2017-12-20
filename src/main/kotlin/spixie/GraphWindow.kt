@@ -23,7 +23,7 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
     private var mouseX: Double? = null
     private var mouseY: Double? = null
     private var mousePressPoint: Point? = null
-    private val points = ArrayList<Point>()
+    private val graphData = GraphData()
     private val control = ToolBar()
     private val maxOutputValue = ValueControl(1.0, 1.0, "Max Output")
 
@@ -31,11 +31,9 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
 
     init {
         value.calcNewValue = { inputNewValue ->
-            (1.0 - getValue(inputNewValue)) * maxOutputValue.value.value
+            (1.0 - graphData.getValue(inputNewValue)) * maxOutputValue.value.value
         }
         maxOutputValue.set(1.0)
-        insertOrUpdatePoint(0.0, 0.5, false)
-        sortPoints()
         canvas.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             mousePressPoint = Point(mouseEvent.x, mouseEvent.y)
             val mouseValueX = (mouseEvent.x + startX) / unitWidthInPixels
@@ -44,7 +42,7 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
                 startDragX = startX + mouseEvent.x.toLong()
             }
             if (mouseEvent.button == MouseButton.PRIMARY) {
-                insertOrUpdatePoint(mouseValueX, mouseValueY, false)
+                graphData.insertOrUpdatePoint(mouseValueX, mouseValueY, false)
                 paint()
             }
         }
@@ -59,7 +57,7 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
                 paint()
             }
             if (mouseEvent.button == MouseButton.PRIMARY) {
-                insertOrUpdatePoint(mouseValueX, mouseValueY, true)
+                graphData.insertOrUpdatePoint(mouseValueX, mouseValueY, true)
                 paint()
             }
 
@@ -112,62 +110,6 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
 
         top = control
         control.items.addAll(maxOutputValue)
-    }
-
-    private var lastInsertedOrUpdated:Point = Point(0.0, 0.0)
-    private fun insertOrUpdatePoint(x: Double, y:Double, clearLine:Boolean) {
-        val magnet = 0.05
-        val index = Math.round(x / magnet).toInt()
-        var currentPoint:Point? = null
-        for (point in points) {
-            if(Math.round(point.x/magnet).toInt() == index){
-                point.y = y
-                currentPoint = point
-                break
-            }
-        }
-        if(currentPoint == null){
-            currentPoint = Point(index * magnet, y)
-            points.add(currentPoint)
-        }
-        sortPoints()
-        if(clearLine){
-            val (startPoint, endPoint) = if(currentPoint.x > lastInsertedOrUpdated.x) {
-                lastInsertedOrUpdated to currentPoint
-            } else {
-                currentPoint to lastInsertedOrUpdated
-            }
-            var delStart = false
-            val toDel = ArrayList<Point>()
-            for (point in points) {
-                if(point == endPoint){
-                    break
-                }
-                if(delStart){
-                    toDel.add(point)
-                }
-                if(point == startPoint){
-                    delStart = true
-                }
-            }
-            for (point in toDel) {
-                points.remove(point)
-            }
-        }
-        lastInsertedOrUpdated = currentPoint
-    }
-
-    private fun sortPoints() {
-        points.sortWith(Comparator<Point> { p1, p2 -> java.lang.Double.compare(p1.x, p2.x) })
-        /*var last: Point? = null
-        for (point in points) {
-            point.prev = last
-            if (last != null) {
-                last.next = point
-            }
-            last = point
-        }
-        last!!.next = null*/
     }
 
     private fun paint() {
@@ -223,40 +165,10 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
         g.stroke = Color(1.0, 0.0, 0.0, 1.0)
         var x = 0
         while (x < canvas.width) {
-            val y1 = getValue((startX + x) / unitWidthInPixels)
-            val y2 = getValue((startX + x.toDouble() + 1.0) / unitWidthInPixels)
+            val y1 = graphData.getValue((startX + x) / unitWidthInPixels)
+            val y2 = graphData.getValue((startX + x.toDouble() + 1.0) / unitWidthInPixels)
             g.strokeLine(x.toDouble(), y1 * canvas.height, (x + 1).toDouble(), y2 * canvas.height)
             x++
-        }
-    }
-
-    private fun getValue(param: Double): Double {
-        var p1: Point? = null
-        var p3: Point? = null
-        if (points.size == 1) {
-            return points[0].y
-        } else {
-            if (param < points[0].x) {
-                return points[0].y
-            }
-            if (param > points[points.size - 1].x) {
-                return points[points.size - 1].y
-            }
-            for (point in points) {
-                if (p1 == null) {
-                    p1 = point
-                } else {
-                    if (p3 != null) {
-                        p1 = p3
-                    }
-                    p3 = point
-                    if (p3.x >= param) {
-                        val t = (param - p1.x) / (p3.x - p1.x)
-                        return p1.y + (p3.y - p1.y)*t
-                    }
-                }
-            }
-            return p3!!.y
         }
     }
 

@@ -86,6 +86,15 @@ fun runInUIAndWait(work: () -> Unit){
     latch.await()
 }
 
+fun Int.roundUp(multiplicity: Int): Int{
+    var r = this % multiplicity
+    if(r == 0){
+        return this
+    }else{
+        return this + multiplicity - r
+    }
+}
+
 object DragAndDropType {
     val INTERNALOBJECT = DataFormat("INTERNALOBJECT")
 }

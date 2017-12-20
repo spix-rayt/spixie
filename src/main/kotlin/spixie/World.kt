@@ -97,11 +97,9 @@ class World {
     }
 
     private fun openclRender():BufferedImage {
-        val renderBufferBuilder = RenderBufferBuilder(openCLRenderer.width, openCLRenderer.height, openCLRenderer.BLOCKSIZE)
 
-        Main.workingWindow.arrangementWindow.render(renderBufferBuilder)
 
-        return openCLRenderer.render(renderBufferBuilder)
+        return openCLRenderer.render(Main.workingWindow.arrangementWindow.render())
     }
 
     fun renderToFile(frameRenderedToFileEventHandler: FrameRenderedToFileEvent, renderToFileCompleted: RenderToFileCompleted) {

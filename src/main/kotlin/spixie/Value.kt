@@ -2,7 +2,6 @@ package spixie
 
 class Value<T>(initial:T) {
     var value:T = initial
-        get() = field
         set(value) {
             field = value
             for (onChangedCallback in onChangedCallbacks) {
@@ -11,7 +10,6 @@ class Value<T>(initial:T) {
         }
 
     var input:Value<T>? = null
-        get() = field
         set(value) {
             field?.removeOnChanged(inputOnChangedCallback)
             inputOnChangedCallback = value?.onChanged { newValue -> this.value = calcNewValue(newValue) }

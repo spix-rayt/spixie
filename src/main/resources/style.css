@@ -19,6 +19,6 @@ Graph{
     -fx-background-color: white;
 }
 
-ArrangementBlock{
-    -fx-background-color: #E30B5C44;
+ArrangementSelectionBlock{
+    -fx-background-color: #00000010;
 }
