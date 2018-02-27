@@ -54,61 +54,78 @@ class Main : Application() {
         var playStartTime = 0.0
 
         root.onKeyPressed = EventHandler<KeyEvent> { event ->
-            if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
-                windowOpacity[0] = 1.0f
-                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
-            }
-            if (event.code == KeyCode.DIGIT2 && event.isControlDown) {
-                windowOpacity[0] = 0.8f
-                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
-            }
-            if (event.code == KeyCode.DIGIT3 && event.isControlDown) {
-                windowOpacity[0] = 0.6f
-                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
-            }
-            if (event.code == KeyCode.DIGIT4 && event.isControlDown) {
-                windowOpacity[0] = 0.4f
-                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
-            }
-            if (event.code == KeyCode.DIGIT5 && event.isControlDown) {
-                windowOpacity[0] = 0.2f
-                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
-            }
-            if (event.code == KeyCode.DIGIT6 && event.isControlDown) {
-                windowOpacity[0] = 0.0f
-                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
-            }
-            if (event.code == KeyCode.TAB) {
-                workingWindow.style = "-fx-opacity: 0.0"
-            }
-
-            if(event.code == KeyCode.A){
-                val frame = world.time.frame
-                if(frame>0) world.time.frame -= 1
-            }
-            if(event.code == KeyCode.D){
-                world.time.frame += 1
-            }
-            if(event.code == KeyCode.P){
-                world.autoRenderNextFrame = true
-            }
-            if(event.code == KeyCode.SPACE){
-                if(audio.isPlayed()){
-                    audio.pause()
-                    Platform.runLater { world.time.time = playStartTime }
-                }else{
-                    playStartTime = world.time.time
-                    audio.play(Duration.seconds(world.time.frame/60.0))
+            if(event.isControlDown && !event.isAltDown && !event.isShiftDown){
+                if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
+                    windowOpacity[0] = 1.0f
+                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                }
+                if (event.code == KeyCode.DIGIT2 && event.isControlDown) {
+                    windowOpacity[0] = 0.8f
+                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                }
+                if (event.code == KeyCode.DIGIT3 && event.isControlDown) {
+                    windowOpacity[0] = 0.6f
+                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                }
+                if (event.code == KeyCode.DIGIT4 && event.isControlDown) {
+                    windowOpacity[0] = 0.4f
+                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                }
+                if (event.code == KeyCode.DIGIT5 && event.isControlDown) {
+                    windowOpacity[0] = 0.2f
+                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                }
+                if (event.code == KeyCode.DIGIT6 && event.isControlDown) {
+                    windowOpacity[0] = 0.0f
+                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                }
+                if(event.code == KeyCode.C){
+                    Main.workingWindow.arrangementWindow.selectionBlock.copy()
+                }
+                if(event.code == KeyCode.V){
+                    Main.workingWindow.arrangementWindow.selectionBlock.paste()
+                }
+                if(event.code == KeyCode.D){
+                    Main.workingWindow.arrangementWindow.selectionBlock.duplicate()
                 }
             }
-            if(event.code == KeyCode.C){
-                workingWindow.arrangementWindow.timePointerCentering = true
-            }
-            if(event.code == KeyCode.V){
-                Main.workingWindow.nextOpen(Main.workingWindow.arrangementWindow.visualEditor)
-            }
-            if(event.code == KeyCode.Q){
-                Main.workingWindow.arrangementWindow.selectionBlock.buildGraph()
+
+            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
+                if (event.code == KeyCode.TAB) {
+                    workingWindow.style = "-fx-opacity: 0.0"
+                }
+
+                if(event.code == KeyCode.A){
+                    val frame = world.time.frame
+                    if(frame>0) world.time.frame -= 1
+                }
+                if(event.code == KeyCode.D){
+                    world.time.frame += 1
+                }
+                if(event.code == KeyCode.P){
+                    world.autoRenderNextFrame = true
+                }
+                if(event.code == KeyCode.SPACE){
+                    if(audio.isPlayed()){
+                        audio.pause()
+                        Platform.runLater { world.time.time = playStartTime }
+                    }else{
+                        playStartTime = world.time.time
+                        audio.play(Duration.seconds(world.time.frame/60.0))
+                    }
+                }
+                if(event.code == KeyCode.C){
+                    workingWindow.arrangementWindow.timePointerCentering = true
+                }
+                if(event.code == KeyCode.V){
+                    Main.workingWindow.nextOpen(Main.workingWindow.arrangementWindow.visualEditor)
+                }
+                if(event.code == KeyCode.Q){
+                    Main.workingWindow.arrangementWindow.selectionBlock.buildGraph()
+                }
+                if(event.code == KeyCode.DELETE){
+                    Main.workingWindow.arrangementWindow.selectionBlock.del()
+                }
             }
         }
 

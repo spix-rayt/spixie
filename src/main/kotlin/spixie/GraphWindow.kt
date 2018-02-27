@@ -35,14 +35,14 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
         }
         maxOutputValue.set(1.0)
         canvas.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
-            mousePressPoint = Point(mouseEvent.x, mouseEvent.y)
+            mousePressPoint = Point((mouseEvent.x*100).toInt(), mouseEvent.y)
             val mouseValueX = (mouseEvent.x + startX) / unitWidthInPixels
             val mouseValueY = mouseEvent.y / canvas.height
             if (mouseEvent.button == MouseButton.MIDDLE) {
                 startDragX = startX + mouseEvent.x.toLong()
             }
             if (mouseEvent.button == MouseButton.PRIMARY) {
-                graphData.insertOrUpdatePoint(mouseValueX, mouseValueY, false)
+                graphData.insertOrUpdatePoint((mouseValueX*100).toInt(), mouseValueY, false)
                 paint()
             }
         }
@@ -57,7 +57,7 @@ class GraphWindow() : BorderPane(), WorkingWindowOpenableContent {
                 paint()
             }
             if (mouseEvent.button == MouseButton.PRIMARY) {
-                graphData.insertOrUpdatePoint(mouseValueX, mouseValueY, true)
+                graphData.insertOrUpdatePoint((mouseValueX*100).toInt(), mouseValueY, true)
                 paint()
             }
 

@@ -22,17 +22,20 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
         set(value) {
             field = value
             updateZoom()
+            Main.workingWindow.arrangementWindow.graphBuilderGroup.children.clear()
         }
     var timeEnd = Fraction(0)
         set(value) {
             field = value
             updateZoom()
+            Main.workingWindow.arrangementWindow.graphBuilderGroup.children.clear()
         }
 
     var line = 0
         set(value) {
             field = value
             layoutY = value*100.0
+            Main.workingWindow.arrangementWindow.graphBuilderGroup.children.clear()
         }
 
     init {
@@ -45,21 +48,54 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
         layoutX = Fraction(100, 64).multiply(timeStart).multiply(zoom.value).toDouble()
     }
 
+    private fun newGraph(): ArrangementGraph {
+        val newGraph = ArrangementGraph()
+        Main.workingWindow.arrangementWindow.graphCanvases.children.addAll(newGraph.canvas)
+        newGraph.canvas.width = Main.workingWindow.arrangementWindow.width + 200.0
+        newGraph.canvas.layoutY = line*100.0
+        return newGraph
+    }
+
     fun buildGraph(){
-        val arrangementWindow = Main.workingWindow.arrangementWindow
-        val graph = arrangementWindow.graphs.getOrPut(line) {
-            val newGraph = ArrangementGraph()
-            Main.workingWindow.arrangementWindow.graphCanvases.children.addAll(newGraph.canvas)
-            newGraph.canvas.width = arrangementWindow.width + 200.0
-            newGraph.canvas.layoutY = line*100.0
-            newGraph
+        val graph = Main.workingWindow.arrangementWindow.graphs.getOrPut(line) { newGraph() }
+        val graphBuilder = GraphBuilder(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt(), graph)
+        graphBuilder.layoutX = layoutX
+        graphBuilder.layoutY = layoutY + height+10.0
+        Main.workingWindow.arrangementWindow.graphBuilderGroup.children.addAll(graphBuilder)
+    }
+
+    var pointsCopy = ArrayList<Point>()
+    var copyLength = 0
+
+    fun copy(){
+        Main.workingWindow.arrangementWindow.graphs[line]?.let { graph ->
+            pointsCopy = graph.data.copy(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+            copyLength = timeEnd.multiply(100).toInt() - timeStart.multiply(100).toInt()
         }
-        val c = (timeEnd.subtract(timeStart).multiply(100)).toInt()
-        graph.data.insertOrUpdatePoint(timeStart.toDouble(), graph.data.getValue(timeStart.toDouble()), false)
-        graph.data.insertOrUpdatePoint(timeEnd.toDouble(), graph.data.getValue(timeEnd.toDouble()), false)
-        for(i in 1 until c){
-            graph.data.insertOrUpdatePoint(timeStart.toDouble() + i * 0.01, (Math.sin(i.toDouble()*0.1) + 1.0) / 2, false)
+    }
+
+    fun paste(){
+        val graph = Main.workingWindow.arrangementWindow.graphs.getOrPut(line) { newGraph() }
+        graph.data.del(timeStart.multiply(100).toInt(), timeStart.multiply(100).toInt() + copyLength)
+        graph.data.paste(timeStart.multiply(100).toInt(), pointsCopy)
+        Main.workingWindow.arrangementWindow.updateGraphs.run()
+    }
+
+    fun del() {
+        Main.workingWindow.arrangementWindow.graphs[line]?.let { graph ->
+            graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+            Main.workingWindow.arrangementWindow.updateGraphs.run()
         }
-        arrangementWindow.updateGraphs.run()
+    }
+
+    fun duplicate(){
+        val graph = Main.workingWindow.arrangementWindow.graphs.getOrPut(line) { newGraph() }
+        val p = graph.data.copy(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+        val l = timeEnd.subtract(timeStart)
+        timeEnd = timeEnd.add(l)
+        timeStart = timeStart.add(l)
+        graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+        graph.data.paste(timeStart.multiply(100).toInt(), p)
+        Main.workingWindow.arrangementWindow.updateGraphs.run()
     }
 }

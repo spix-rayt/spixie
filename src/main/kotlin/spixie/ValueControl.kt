@@ -1,10 +1,15 @@
 package spixie
 
 import javafx.event.EventHandler
+import javafx.geometry.Insets
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import javafx.scene.input.*
+import javafx.scene.layout.Background
+import javafx.scene.layout.BackgroundFill
+import javafx.scene.layout.CornerRadii
 import javafx.scene.layout.HBox
+import javafx.scene.paint.Color
 import org.apache.commons.math3.fraction.Fraction
 import spixie.components.Graph
 
@@ -18,6 +23,32 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
 
     val value = Value<Double>(initial)
 
+    private var min = 0.0
+    fun limitMin(min: Double): ValueControl{
+        this.min = min
+        return this
+    }
+
+    private var max = Double.MAX_VALUE
+    fun limitMax(max:Double): ValueControl{
+        this.max = max
+        return this
+    }
+
+    var onInputOutputConnected: (Any, Any) -> Unit = { _, _ ->  }
+
+    fun set(value: Double) {
+        when {
+            value < min -> this.value.value = min
+            value > max -> this.value.value = max
+            else -> this.value.value = value
+        }
+    }
+
+    override fun toString(): String {
+        return name
+    }
+
     init {
         this.mul = mul
         labelName.text = name + ": "
@@ -25,6 +56,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
 
         labelValue.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
+                mouseEvent.consume()
                 startDragValue = Fraction(value.value).add(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt()))
                 dragged = false
             }
@@ -32,6 +64,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
 
         labelValue.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
+                mouseEvent.consume()
                 set(startDragValue.subtract(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt())).toDouble())
                 dragged = true
             }
@@ -40,6 +73,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         labelValue.onMouseReleased = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 if (!dragged) {
+                    mouseEvent.consume()
                     children.remove(labelValue)
                     children.addAll(textFieldValue)
                     textFieldValue.requestFocus()
@@ -107,25 +141,5 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
             labelValue.text = newValue.toString()
         }
         set(initial)
-    }
-
-    private var min = 0.0
-    fun limitMin(min: Double): ValueControl{
-        this.min = min
-        return this
-    }
-
-    var onInputOutputConnected: (Any, Any) -> Unit = { _, _ ->  }
-
-    fun set(value: Double) {
-        if(value<min){
-            this.value.value = min
-        }else{
-            this.value.value = value
-        }
-    }
-
-    override fun toString(): String {
-        return name
     }
 }

@@ -18,6 +18,7 @@ import java.nio.FloatBuffer
 
 class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     val content = Group()
+    val graphBuilderGroup = Group()
     val grid = Group()
     val graphCanvases = Group()
     val visualEditor = VisualEditor()
@@ -111,12 +112,16 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     }
 
     val updateGraphs = SerialWorker {
+        updateGraph(null) // update all graphs
+    }
+
+    fun updateGraph(only: ArrangementGraph?){
         val newGraphsLayoutX = -content.layoutX - 100
         val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
         val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
         runInUIAndWait {
-            for (graph in graphs) {
-                val canvas = graph.value.canvas
+            val redraw = { graph: ArrangementGraph ->
+                val canvas = graph.canvas
                 canvas.layoutX = newGraphsLayoutX
                 val g = canvas.graphicsContext2D
                 g.clearRect(0.0, 0.0, canvas.width, canvas.height)
@@ -126,10 +131,17 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                 g.stroke = javafx.scene.paint.Color(1.0, 0.0, 0.0, 1.0)
                 var x = 0
                 while (x < canvas.width) {
-                    val y1 = graph.value.data.getValue(startTime + x*beatsInPixel)
-                    val y2 = graph.value.data.getValue(startTime + (x+1.0)*beatsInPixel)
+                    val y1 = graph.data.getValue(startTime + x*beatsInPixel)
+                    val y2 = graph.data.getValue(startTime + (x+1.0)*beatsInPixel)
                     g.strokeLine(x.toDouble(), y1 * canvas.height, (x + 1).toDouble(), y2 * canvas.height)
                     x++
+                }
+            }
+            if(only != null){
+                redraw(only)
+            }else{
+                for (graph in graphs) {
+                    redraw(graph.value)
                 }
             }
         }
@@ -165,9 +177,10 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
             }
         })
 
-        var mousePressedCursorX = 0.0
-        var mousePressedLine = 0
+        var mousePressedCursorX:Double? = null
+        var mousePressedLine:Int? = null
         addEventHandler(MouseEvent.MOUSE_PRESSED, { event ->
+            if(event.isConsumed) return@addEventHandler
             if(event.button == MouseButton.PRIMARY){
                 mousePressedCursorX = cursor.startX
                 mousePressedLine = (content.screenToLocal(event.screenX, event.screenY).y/100.0).toInt()
@@ -176,27 +189,33 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
 
         addEventHandler(MouseEvent.MOUSE_RELEASED, { event ->
             if(event.button == MouseButton.PRIMARY){
-                if(mousePressedCursorX == cursor.startX){
-                    val restartAudio = Main.audio.isPlayed()
-                    if(restartAudio){
-                        Main.audio.pause()
-                    }
-                    Main.world.time.time = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
-                    if(restartAudio){
-                        Main.audio.play(Duration.seconds(Main.world.time.frame/60.0))
-                    }
-                }
-                val time1 = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
-                val time2 = (mousePressedCursorX-0.5)*64/100.0/zoom.value.toDouble()
-                if(time1 < time2){
-                    selectionBlock.timeStart = Fraction(time1)
-                    selectionBlock.timeEnd = Fraction(time2)
-                }else{
-                    selectionBlock.timeStart = Fraction(time2)
-                    selectionBlock.timeEnd = Fraction(time1)
-                }
+                mousePressedCursorX?.let { pressedCursorX ->
+                    mousePressedLine?.let { pressedLine ->
+                        if(pressedCursorX == cursor.startX){
+                            val restartAudio = Main.audio.isPlayed()
+                            if(restartAudio){
+                                Main.audio.pause()
+                            }
+                            Main.world.time.time = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
+                            if(restartAudio){
+                                Main.audio.play(Duration.seconds(Main.world.time.frame/60.0))
+                            }
+                        }
+                        val time1 = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
+                        val time2 = (pressedCursorX-0.5)*64/100.0/zoom.value.toDouble()
+                        if(time1 < time2){
+                            selectionBlock.timeStart = Fraction(time1)
+                            selectionBlock.timeEnd = Fraction(time2)
+                        }else{
+                            selectionBlock.timeStart = Fraction(time2)
+                            selectionBlock.timeEnd = Fraction(time1)
+                        }
 
-                selectionBlock.line = mousePressedLine
+                        selectionBlock.line = pressedLine
+                        mousePressedCursorX = null
+                        mousePressedLine = null
+                    }
+                }
             }
         })
 
@@ -244,7 +263,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
 
         updateGrid.run()
 
-        content.children.addAll(waveform, grid, graphCanvases, selectionBlock, cursor, timePointer)
+        content.children.addAll(waveform, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
         children.addAll(content)
 
         clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)

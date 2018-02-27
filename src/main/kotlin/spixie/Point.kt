@@ -1,6 +1,6 @@
 package spixie
 
-class Point(var x: Double, var y: Double) {
+class Point(var x: Int, var y: Double) {
     override fun toString(): String {
         return "Point{" +
                 "x=" + x +

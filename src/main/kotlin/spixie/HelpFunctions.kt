@@ -95,6 +95,10 @@ fun Int.roundUp(multiplicity: Int): Int{
     }
 }
 
+fun linearInterpolate(y1: Double, y2:Double, t:Double): Double {
+    return (y1*(1.0-t)+y2*t);
+}
+
 object DragAndDropType {
     val INTERNALOBJECT = DataFormat("INTERNALOBJECT")
 }
