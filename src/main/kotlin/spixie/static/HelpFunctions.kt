@@ -1,4 +1,4 @@
-package spixie
+package spixie.static
 
 import javafx.application.Platform
 import javafx.scene.input.DataFormat
@@ -60,6 +60,10 @@ infix fun Long.mix(n:Long):Long{
 
 fun Double.raw():Long{
     return java.lang.Double.doubleToRawLongBits(this)
+}
+
+fun Float.raw():Long{
+    return this.toDouble().raw()
 }
 
 fun BufferedImage.toPNGByteArray():ByteArray {

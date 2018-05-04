@@ -1,10 +1,9 @@
 package spixie
 
+import spixie.static.toPNGByteArray
 import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
-import javax.imageio.ImageIO
 
-class DeferredPng(bufferedImage:BufferedImage) {
+class AsyncPngConvert(bufferedImage:BufferedImage) {
     private val thread:Thread
     var value:ByteArray? = null
     init {

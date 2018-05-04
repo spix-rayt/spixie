@@ -78,13 +78,13 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
         val graph = Main.workingWindow.arrangementWindow.graphs.getOrPut(line) { newGraph() }
         graph.data.del(timeStart.multiply(100).toInt(), timeStart.multiply(100).toInt() + copyLength)
         graph.data.paste(timeStart.multiply(100).toInt(), pointsCopy)
-        Main.workingWindow.arrangementWindow.updateGraphs.run()
+        Main.workingWindow.arrangementWindow.needUpdateAllGraphs = true
     }
 
     fun del() {
         Main.workingWindow.arrangementWindow.graphs[line]?.let { graph ->
             graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
-            Main.workingWindow.arrangementWindow.updateGraphs.run()
+            Main.workingWindow.arrangementWindow.needUpdateAllGraphs = true
         }
     }
 
@@ -96,6 +96,6 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
         timeStart = timeStart.add(l)
         graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
         graph.data.paste(timeStart.multiply(100).toInt(), p)
-        Main.workingWindow.arrangementWindow.updateGraphs.run()
+        Main.workingWindow.arrangementWindow.needUpdateAllGraphs = true
     }
 }

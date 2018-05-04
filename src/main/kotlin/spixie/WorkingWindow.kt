@@ -6,7 +6,6 @@ import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
-import spixie.components.ParticleSpray
 import java.util.*
 
 class WorkingWindow : BorderPane() {
@@ -16,11 +15,11 @@ class WorkingWindow : BorderPane() {
         val renderButton = Button("Render")
         renderButton.onMouseClicked = EventHandler<MouseEvent> {
             this@WorkingWindow.isDisable = true
-            Main.world.renderToFile(object: World.FrameRenderedToFileEvent{
+            Main.renderManager.renderToFile(object: RenderManager.FrameRenderedToFileEvent{
                 override fun handle(currentFrame: Int, framesCount: Int) {
                     renderButton.text = currentFrame.toString() + " / " + framesCount
                 }
-            }, object: World.RenderToFileCompleted{
+            }, object: RenderManager.RenderToFileCompleted{
                 override fun handle() {
                     renderButton.text = "Render"
                     this@WorkingWindow.isDisable = false
@@ -34,18 +33,18 @@ class WorkingWindow : BorderPane() {
         slider.minorTickCount = 0
         slider.isSnapToTicks = true
         slider.valueProperty().addListener { _, _, newValue ->
-            Main.world.scaleDown = newValue.toInt()
+            Main.renderManager.scaleDown = newValue.toInt()
         }
         slider.isFocusTraversable = false
 
         val clearCacheButton = Button("Clear cache")
         clearCacheButton.setOnAction {
-            Main.world.clearCache()
+            Main.renderManager.clearCache()
         }
         clearCacheButton.isFocusTraversable = false
 
         val timeLabel = ValueLabel("Time")
-        Main.world.time.onTimeChanged { time ->
+        Main.renderManager.time.timeChanges.subscribe { time ->
             timeLabel.value.value = Math.round(time*1000)/1000.0
         }
         menuBar.items.addAll(renderButton, slider, clearCacheButton, timeLabel)
@@ -75,13 +74,5 @@ class WorkingWindow : BorderPane() {
         }
         center = workingWindowOpenableContent as Node
         center.requestFocus()
-    }
-
-    fun resetCurrentFrameCache(){
-        for (component in arrangementWindow.visualEditor.components.children) {
-            if(component is ParticleSpray){
-                component.clearParticles()
-            }
-        }
     }
 }

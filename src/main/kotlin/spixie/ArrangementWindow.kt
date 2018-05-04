@@ -10,13 +10,13 @@ import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.math3.fraction.Fraction
-import spixie.components.Circle
-import spixie.components.ParticleSpray
+import spixie.visual_editor.VisualEditor
+import java.awt.AlphaComposite
 import java.awt.Color
+import java.awt.Graphics2D
 import java.awt.image.BufferedImage
-import java.nio.FloatBuffer
 
-class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
+class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     val content = Group()
     val graphBuilderGroup = Group()
     val grid = Group()
@@ -36,22 +36,20 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     val waveform = Canvas(1.0, 300.0)
     val graphs = HashMap<Int, ArrangementGraph>()
 
-    val redrawWaveform = SerialWorker {
+    fun redrawWaveform() {
         val newWaveformLayoutX = -content.layoutX - 100
         val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
         val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
 
-        val startSecond = startTime*3600/Main.world.bpm.value.value/60
-        val endSecond = endTime*3600/Main.world.bpm.value.value/60
+        val startSecond = startTime*3600/Main.renderManager.bpm.value.value/60
+        val endSecond = endTime*3600/Main.renderManager.bpm.value.value/60
 
         val secondsInPixel = (endSecond - startSecond) / waveform.width
 
 
         val bufferedImage = BufferedImage(waveform.width.toInt(), waveform.height.toInt(), BufferedImage.TYPE_4BYTE_ABGR)
-        val g = bufferedImage.graphics
-        g.color = Color.WHITE
-        g.fillRect(0, 0, bufferedImage.width, bufferedImage.height)
-        g.color = Color(66, 170, 255)
+        val g = bufferedImage.createGraphics()
+        g.color = Color(66, 170, 255, 255)
         val rms = Main.audio.rms
         if(rms.isNotEmpty()){
             var from = 0
@@ -72,77 +70,60 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
             }
         }
         val toFXImage = SwingFXUtils.toFXImage(bufferedImage, null)
-        runInUIAndWait {
-            waveform.graphicsContext2D.drawImage(toFXImage, 0.0, 0.0)
-            waveform.layoutX = newWaveformLayoutX
-        }
+        waveform.graphicsContext2D.clearRect(0.0, 0.0, waveform.width, waveform.height)
+        waveform.graphicsContext2D.drawImage(toFXImage, 0.0, 0.0)
+        waveform.layoutX = newWaveformLayoutX
     }
 
-    val updateGrid = SerialWorker {
-        val lines = ArrayList<Line>()
-        val x = -content.layoutX.toInt() / 400
-        val y = -content.layoutY.toInt() / 100
-        for(i in y-10..y+20){
-            val line = Line((x-3) * 400.0, i * 100.0 + 0.5, (x-3) * 400.0 + 10000.0, i * 100.0 + 0.5)
-            line.opacity = 0.4
-            lines.add(line)
-        }
-        val startY = (y-10) * 100.0
-        for(i in x-3..x+8){
-            val lineMajor = Line(i * 400.0 + 0.5, startY, i * 400.0 + 0.5, startY + 10000.0)
-            lineMajor.opacity = 0.4
-            lines.add(lineMajor)
-            val line1 = Line(i * 400.0 + 0.5+100, startY, i * 400.0 + 0.5+100, startY + 10000.0)
-            line1.opacity = 0.1
-            lines.add(line1)
-            val line2 = Line(i * 400.0 + 0.5+200, startY, i * 400.0 + 0.5+200, startY + 10000.0)
-            line2.opacity = 0.1
-            lines.add(line2)
-            val line3 = Line(i * 400.0 + 0.5+300, startY, i * 400.0 + 0.5+300, startY + 10000.0)
-            line3.opacity = 0.1
-            lines.add(line3)
-        }
-        runInUIAndWait {
-            grid.children.setAll(lines)
-            cursor.startY = startY
-            cursor.endY = startY + 10000.0
-            timePointer.startY = startY
-            timePointer.endY = startY + 10000.0
-        }
+    fun updateGrid(){
+        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.25%, transparent 0.25%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.25%, transparent 0.25%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.25%, transparent 0.25%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.25%, transparent 0.25%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000019 1%, transparent 1%);"
     }
 
-    val updateGraphs = SerialWorker {
-        updateGraph(null) // update all graphs
+    var needUpdateAllGraphs = false
+    var needUpdateGrid = false
+    var needRedrawWaveform = false
+
+    fun perFrame(){
+        if(needUpdateAllGraphs){
+            updateGraph(null)
+            needUpdateAllGraphs = false
+        }
+        if(needUpdateGrid){
+            updateGrid()
+            needUpdateGrid = false
+        }
+        if(needRedrawWaveform){
+            redrawWaveform()
+            needRedrawWaveform = false
+        }
     }
 
     fun updateGraph(only: ArrangementGraph?){
         val newGraphsLayoutX = -content.layoutX - 100
         val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
         val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
-        runInUIAndWait {
-            val redraw = { graph: ArrangementGraph ->
-                val canvas = graph.canvas
-                canvas.layoutX = newGraphsLayoutX
-                val g = canvas.graphicsContext2D
-                g.clearRect(0.0, 0.0, canvas.width, canvas.height)
-                val beatsInPixel = (endTime - startTime) / canvas.width
-                g.lineWidth = 1.0
+        val redraw = { graph: ArrangementGraph ->
+            val canvas = graph.canvas
+            canvas.layoutX = newGraphsLayoutX
+            val g = canvas.graphicsContext2D
+            g.clearRect(0.0, 0.0, canvas.width, canvas.height)
+            val beatsInPixel = (endTime - startTime) / canvas.width
+            g.lineWidth = 1.0
 
-                g.stroke = javafx.scene.paint.Color(1.0, 0.0, 0.0, 1.0)
-                var x = 0
-                while (x < canvas.width) {
-                    val y1 = graph.data.getValue(startTime + x*beatsInPixel)
-                    val y2 = graph.data.getValue(startTime + (x+1.0)*beatsInPixel)
-                    g.strokeLine(x.toDouble(), y1 * canvas.height, (x + 1).toDouble(), y2 * canvas.height)
-                    x++
-                }
+            g.stroke = javafx.scene.paint.Color(1.0, 0.0, 0.0, 1.0)
+            var x = 0
+            while (x < canvas.width) {
+                val y1 = graph.data.getValue(startTime + x * beatsInPixel)
+                val y2 = graph.data.getValue(startTime + (x + 1.0) * beatsInPixel)
+                g.strokeLine(x.toDouble(), y1 * canvas.height, (x + 1).toDouble(), y2 * canvas.height)
+                x++
             }
-            if(only != null){
-                redraw(only)
-            }else{
-                for (graph in graphs) {
-                    redraw(graph.value)
-                }
+        }
+        if (only != null) {
+            redraw(only)
+        } else {
+            for (graph in graphs) {
+                redraw(graph.value)
             }
         }
     }
@@ -154,14 +135,13 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                 graph.value.canvas.width = newValue.toDouble() + 200.0
             }
         }
-        style = "-fx-background-color: #FFFFFFFF;"
 
         initCustomPanning()
 
 
 
         timePointer.strokeWidth = 4.0
-        Main.world.time.onTimeChanged {
+        Main.renderManager.time.timeChanges.subscribe {
             updateTimePointer()
         }
 
@@ -173,7 +153,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
             updateCursor(event)
             if(event.isControlDown){
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
-                Main.world.time.time = screenToLocal.x*64/100.0/zoom.value.toDouble()
+                Main.renderManager.time.time = screenToLocal.x*64/100.0/zoom.value.toDouble()
             }
         })
 
@@ -192,13 +172,13 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                 mousePressedCursorX?.let { pressedCursorX ->
                     mousePressedLine?.let { pressedLine ->
                         if(pressedCursorX == cursor.startX){
-                            val restartAudio = Main.audio.isPlayed()
+                            val restartAudio = Main.audio.isPlaying()
                             if(restartAudio){
                                 Main.audio.pause()
                             }
-                            Main.world.time.time = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
+                            Main.renderManager.time.time = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
                             if(restartAudio){
-                                Main.audio.play(Duration.seconds(Main.world.time.frame/60.0))
+                                Main.audio.play(Duration.seconds(Main.renderManager.time.frame/60.0))
                             }
                         }
                         val time1 = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
@@ -233,8 +213,8 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    redrawWaveform.run()
-                    updateGraphs.run()
+                    needRedrawWaveform = true
+                    needUpdateAllGraphs = true
                     updateTimePointer()
                     selectionBlock.updateZoom()
                 }
@@ -252,8 +232,8 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    redrawWaveform.run()
-                    updateGraphs.run()
+                    needRedrawWaveform = true
+                    needUpdateAllGraphs = true
                     updateTimePointer()
                     selectionBlock.updateZoom()
                 }
@@ -261,7 +241,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
             event.consume()
         }
 
-        updateGrid.run()
+        needUpdateGrid = true
 
         content.children.addAll(waveform, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
         children.addAll(content)
@@ -269,14 +249,14 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
         clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
-            redrawWaveform.run()
-            updateGrid.run()
-            updateGraphs.run()
+            needRedrawWaveform = true
+            needUpdateGrid = true
+            needUpdateAllGraphs = true
         }
         content.layoutYProperty().addListener { _, _, y ->
             waveform.layoutY = -y.toDouble()
-            updateGrid.run()
-            updateGraphs.run()
+            needUpdateGrid = true
+            needUpdateAllGraphs = true
         }
     }
 
@@ -288,7 +268,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
     }
 
     private fun updateTimePointer(){
-        val x = Math.round(zoom.value.toDouble() / 64.0 * Main.world.time.time * 100.0).toDouble()
+        val x = Math.round(zoom.value.toDouble() / 64.0 * Main.renderManager.time.time * 100.0).toDouble()
         timePointer.startX = x
         timePointer.endX = x
         if(timePointerCentering){
@@ -317,41 +297,5 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent, SpixieHashable {
                 content.layoutY = minOf(layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag), 0.0)
             }
         })
-    }
-
-    fun render(): FloatBuffer {
-        for (component in visualEditor.components.children) {
-            if (component is ParticleSpray) {
-                component.autoStepParticles(Math.round(Main.world.time.time*100).toInt())
-            }
-        }
-        var particles = 0
-
-        for (component in visualEditor.components.children) {
-            if(component is ParticleSpray){
-                particles+=component.particles.size
-            }
-            if(component is Circle){
-                particles+=Math.ceil(component.count.value.value).toInt()
-            }
-        }
-        val renderBufferBuilder = RenderBufferBuilder(particles)
-
-
-        for (component in visualEditor.components.children) {
-            if(component is ParticleSpray){
-                for (particle in component.particles) {
-                    renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
-                }
-            }
-            if(component is Circle){
-                component.render(renderBufferBuilder)
-            }
-        }
-        return renderBufferBuilder.complete()
-    }
-
-    override fun spixieHash(): Long {
-        return visualEditor.spixieHash()
     }
 }

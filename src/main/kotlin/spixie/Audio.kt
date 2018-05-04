@@ -3,6 +3,7 @@ package spixie
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.util.Duration
+import spixie.static.runInUIAndWait
 import java.io.DataInputStream
 import java.io.File
 import javax.sound.sampled.AudioSystem
@@ -32,13 +33,13 @@ class Audio {
         }
     }
 
-    fun isPlayed(): Boolean {
+    fun isPlaying(): Boolean {
         return play
     }
 
     fun getTime(): Double{
         mediaPlayer?.let {
-            return Main.world.bpm.value.value/3600*it.currentTime.toSeconds()*60
+            return it.currentTime.toSeconds()
         }
         return 0.0
     }
@@ -72,7 +73,7 @@ class Audio {
 
 
             rms = rmsBlocks.toFloatArray()
-            Main.workingWindow.arrangementWindow.redrawWaveform.run()
+            Main.workingWindow.arrangementWindow.needRedrawWaveform = true
 
 
             try {

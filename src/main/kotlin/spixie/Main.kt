@@ -1,5 +1,6 @@
 package spixie
 
+import javafx.animation.AnimationTimer
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.event.EventHandler
@@ -96,22 +97,23 @@ class Main : Application() {
                 }
 
                 if(event.code == KeyCode.A){
-                    val frame = world.time.frame
-                    if(frame>0) world.time.frame -= 1
+                    val frame = renderManager.time.frame
+                    if(frame>0) renderManager.time.frame -= 1
                 }
                 if(event.code == KeyCode.D){
-                    world.time.frame += 1
+                    renderManager.time.frame += 1
                 }
                 if(event.code == KeyCode.P){
-                    world.autoRenderNextFrame = true
+                    renderManager.autoRenderNextFrame = true
+                    renderManager.time.frame = renderManager.time.frame
                 }
                 if(event.code == KeyCode.SPACE){
-                    if(audio.isPlayed()){
+                    if(audio.isPlaying()){
                         audio.pause()
-                        Platform.runLater { world.time.time = playStartTime }
+                        Platform.runLater { renderManager.time.time = playStartTime }
                     }else{
-                        playStartTime = world.time.time
-                        audio.play(Duration.seconds(world.time.frame/60.0))
+                        playStartTime = renderManager.time.time
+                        audio.play(Duration.seconds(renderManager.time.frame/60.0))
                     }
                 }
                 if(event.code == KeyCode.C){
@@ -134,7 +136,7 @@ class Main : Application() {
                 workingWindow.style = "-fx-opacity: " + windowOpacity[0]
             }
             if(event.code == KeyCode.P){
-                world.autoRenderNextFrame = false
+                renderManager.autoRenderNextFrame = false
             }
             if(event.code == KeyCode.C){
                 workingWindow.arrangementWindow.timePointerCentering = false
@@ -142,18 +144,26 @@ class Main : Application() {
         }
 
         stage.onCloseRequest = EventHandler<WindowEvent> {
-            Main.world.currentRenderThread.interrupt()
             Platform.exit()
         }
 
-        world.renderStart(imageView)
+        renderManager.renderStart(imageView)
+        object : AnimationTimer() {
+            override fun handle(now: Long) {
+                renderManager.perFrame()
+                workingWindow.arrangementWindow.perFrame()
+            }
+        }.start()
+
+
+        //Test audio
+        audio.load(File("test.aiff"))
     }
 
     companion object {
-        var world: World = World()
+        var renderManager = RenderManager()
         val workingWindow = WorkingWindow()
         val audio = Audio()
-        val settings = Settings.load()
 
         var internalObject: Any = Any()
 

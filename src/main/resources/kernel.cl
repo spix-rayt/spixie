@@ -1,6 +1,6 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 
-kernel void RenderParticles(global float *particles, int width, int height, int particlesCount, global int *outImage) {
+kernel void RenderParticles(global float *particles, int width, int height, int realWidth, int particlesCount, global int *outImage) {
     __local float p[256*7];
     __local float validp[256];
     int workGroup = get_group_id(0);
@@ -10,7 +10,7 @@ kernel void RenderParticles(global float *particles, int width, int height, int 
     int imgy = (workGroup)/(width/256);
     int imgx = groupX*256 + localId;
 
-    float2 pixelPos = (float2)( ((imgx/(width-1.0f))-0.5f)*1000.0f*width/height , ((imgy/(height-1.0f))-0.5f)*1000.0f );
+    float2 pixelPos = (float2)( ((imgx/(realWidth-1.0f))-0.5f)*1000.0f*realWidth/height , ((imgy/(height-1.0f))-0.5f)*1000.0f );
     float red = 0.0f;
     float green = 0.0f;
     float blue = 0.0f;

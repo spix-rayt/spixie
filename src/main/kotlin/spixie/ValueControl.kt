@@ -1,17 +1,11 @@
 package spixie
 
 import javafx.event.EventHandler
-import javafx.geometry.Insets
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import javafx.scene.input.*
-import javafx.scene.layout.Background
-import javafx.scene.layout.BackgroundFill
-import javafx.scene.layout.CornerRadii
 import javafx.scene.layout.HBox
-import javafx.scene.paint.Color
 import org.apache.commons.math3.fraction.Fraction
-import spixie.components.Graph
 
 class ValueControl(initial: Double, mul: Double, private val name: String) : HBox() {
     private var startDragValue = Fraction(0)
@@ -21,7 +15,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
     private val textFieldValue = TextField()
     private var dragged = false
 
-    val value = Value<Double>(initial)
+    val value = Value(initial)
 
     private var min = 0.0
     fun limitMin(min: Double): ValueControl{
@@ -34,8 +28,6 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         this.max = max
         return this
     }
-
-    var onInputOutputConnected: (Any, Any) -> Unit = { _, _ ->  }
 
     fun set(value: Double) {
         when {
@@ -51,7 +43,12 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
 
     init {
         this.mul = mul
-        labelName.text = name + ": "
+        if(name.isNotEmpty()){
+            labelName.text = name + ": "
+        }else{
+            labelName.text = ""
+        }
+
         labelValue.styleClass.add("label-value")
 
         labelValue.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
@@ -83,7 +80,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         }
 
         textFieldValue.focusedProperty().addListener { _, _, t1 ->
-            if (!t1!!) {
+            if (!t1) {
                 try {
                     set(java.lang.Double.parseDouble(textFieldValue.text))
                 } catch (e: NumberFormatException) {
@@ -102,42 +99,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         }
         children.addAll(labelName, labelValue)
 
-        setOnDragOver { event ->
-            if(event.dragboard.hasContent(DragAndDropType.INTERNALOBJECT)){
-                event.acceptTransferModes(TransferMode.LINK)
-            }
-            event.consume()
-        }
-
-        setOnDragDropped { event ->
-            val dragboard = event.dragboard
-            var success = false
-            if(dragboard.hasContent(DragAndDropType.INTERNALOBJECT)){
-                onInputOutputConnected(Main.internalObject, this)
-                val obj = Main.internalObject
-                if(obj is Graph){
-                    obj.graphWindow.value.input = value
-                }
-                success = true
-            }
-            event.isDropCompleted = success
-            event.consume()
-        }
-
-        setOnDragDetected { event ->
-            if(event.button == MouseButton.PRIMARY){
-                if(event.isControlDown){
-                    val startDragAndDrop = this.startDragAndDrop(javafx.scene.input.TransferMode.LINK);
-                    val content = ClipboardContent()
-                    content.put(DragAndDropType.INTERNALOBJECT, "void")
-                    startDragAndDrop.setContent(content)
-                    Main.internalObject = this
-                    event.consume()
-                }
-            }
-        }
-
-        value.onChanged { newValue ->
+        value.changes.subscribe { newValue ->
             labelValue.text = newValue.toString()
         }
         set(initial)

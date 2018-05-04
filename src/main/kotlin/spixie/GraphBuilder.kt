@@ -1,9 +1,12 @@
 package spixie
 
+import io.reactivex.subjects.PublishSubject
 import javafx.scene.control.Button
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
+import spixie.static.linearInterpolate
+import java.util.concurrent.TimeUnit
 
 class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pane() {
     init {
@@ -28,7 +31,8 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
         children.clear()
         val phaseValue = ValueControl(0.0, 0.001, "Phase").limitMax(1.0)
         val frequencyValue = ValueControl(1.0, 0.01, "Frequency").limitMin(0.01).limitMax(32.0)
-        val update = SerialWorker {
+        val update = PublishSubject.create<Unit>()
+        update.sample(16, TimeUnit.MILLISECONDS).subscribe {
             graph.data.del(start, end)
             for(i in start..end){
                 var t = (((i - start) / 100.0) *frequencyValue.value.value + phaseValue.value.value*4) * Math.PI / 2
@@ -36,9 +40,9 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
             }
             Main.workingWindow.arrangementWindow.updateGraph(graph)
         }
-        update.run()
-        phaseValue.value.onChanged { update.run() }
-        frequencyValue.value.onChanged { update.run() }
+        update.onNext(Unit)
+        phaseValue.value.changes.subscribe { update.onNext(Unit) }
+        frequencyValue.value.changes.subscribe { update.onNext(Unit) }
         val vBox = VBox(phaseValue, frequencyValue)
         children.addAll(vBox)
     }
@@ -48,7 +52,8 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
         val startValue = ValueControl(0.0, 0.001, "Start").limitMax(1.0)
         val curvatureValue = ValueControl(0.5, 0.001, "Curvature").limitMax(1.0)
         val endValue = ValueControl(1.0, 0.001, "End").limitMax(1.0)
-        val update = SerialWorker {
+        val update = PublishSubject.create<Unit>()
+        update.sample(16, TimeUnit.MILLISECONDS).subscribe {
             graph.data.del(start, end)
             for(i in start..end){
                 var t = (i - start) / (end - start).toDouble()
@@ -59,10 +64,10 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
             }
             Main.workingWindow.arrangementWindow.updateGraph(graph)
         }
-        update.run()
-        startValue.value.onChanged { update.run() }
-        curvatureValue.value.onChanged { update.run() }
-        endValue.value.onChanged { update.run() }
+        update.onNext(Unit)
+        startValue.value.changes.subscribe { update.onNext(Unit) }
+        curvatureValue.value.changes.subscribe { update.onNext(Unit) }
+        endValue.value.changes.subscribe { update.onNext(Unit) }
         val vBox = VBox(startValue, curvatureValue, endValue)
         children.addAll(vBox)
     }

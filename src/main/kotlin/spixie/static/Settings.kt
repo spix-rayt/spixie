@@ -1,23 +1,25 @@
-package spixie
+package spixie.static
 
 import com.google.gson.Gson
 import java.io.File
 
-data class Settings(
+val Settings = Props.load()
+
+data class Props(
         val ffmpeg:String
 ){
     companion object {
-        fun default():Settings{
-            return Settings(
+        fun default(): Props {
+            return Props(
                     "ffmpeg"
             )
         }
 
-        fun load(): Settings{
+        fun load(): Props {
             val settingsFile = File("settings.json")
             if(settingsFile.exists()){
                 try{
-                    return Gson().fromJson<Settings>(settingsFile.bufferedReader().use { it.readText() }, Settings::class.java)
+                    return Gson().fromJson<Props>(settingsFile.bufferedReader().use { it.readText() }, Settings::class.java)
                 }catch (e:Exception){
                     return default()
                 }

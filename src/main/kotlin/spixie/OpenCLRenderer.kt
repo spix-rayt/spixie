@@ -1,6 +1,7 @@
 package spixie
 
 import com.jogamp.opencl.*
+import spixie.static.roundUp
 import java.awt.image.BufferedImage
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
@@ -44,6 +45,7 @@ class OpenCLRenderer {
         kernel.putArgs(clParticles)
         kernel.putArg(width)
         kernel.putArg(height)
+        kernel.putArg(realWidth)
         kernel.putArg(particlesCount)
         kernel.putArgs(clImageOut)
 
