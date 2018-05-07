@@ -16,6 +16,9 @@ import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import javafx.util.Duration
 import java.io.File
+import java.io.ObjectInputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 
 class Main : Application() {
     @Throws(Exception::class)
@@ -48,6 +51,7 @@ class Main : Application() {
         workingWindow.prefWidthProperty().bind(scene.widthProperty())
         workingWindow.prefHeightProperty().bind(scene.heightProperty())
         root.children.addAll(workingWindow)
+        workingWindow.nextOpen(arrangementWindow)
 
         val windowOpacity = arrayOf(1.0f)
         workingWindow.style = "-fx-opacity: " + windowOpacity[0]
@@ -81,13 +85,13 @@ class Main : Application() {
                     workingWindow.style = "-fx-opacity: " + windowOpacity[0]
                 }
                 if(event.code == KeyCode.C){
-                    Main.workingWindow.arrangementWindow.selectionBlock.copy()
+                    Main.arrangementWindow.selectionBlock.copy()
                 }
                 if(event.code == KeyCode.V){
-                    Main.workingWindow.arrangementWindow.selectionBlock.paste()
+                    Main.arrangementWindow.selectionBlock.paste()
                 }
                 if(event.code == KeyCode.D){
-                    Main.workingWindow.arrangementWindow.selectionBlock.duplicate()
+                    Main.arrangementWindow.selectionBlock.duplicate()
                 }
             }
 
@@ -97,15 +101,17 @@ class Main : Application() {
                 }
 
                 if(event.code == KeyCode.A){
-                    val frame = renderManager.time.frame
-                    if(frame>0) renderManager.time.frame -= 1
+                    renderManager.time.frame = (renderManager.time.frame-1).coerceAtLeast(0)
                 }
                 if(event.code == KeyCode.D){
                     renderManager.time.frame += 1
                 }
                 if(event.code == KeyCode.P){
-                    renderManager.autoRenderNextFrame = true
-                    renderManager.time.frame = renderManager.time.frame
+                    if(renderManager.autoRenderNextFrame != true){
+                        renderManager.autoRenderNextFrame = true
+                        renderManager.time.frame = renderManager.time.frame
+                        renderManager.forceRender.onNext(Unit)
+                    }
                 }
                 if(event.code == KeyCode.SPACE){
                     if(audio.isPlaying()){
@@ -117,16 +123,16 @@ class Main : Application() {
                     }
                 }
                 if(event.code == KeyCode.C){
-                    workingWindow.arrangementWindow.timePointerCentering = true
+                    arrangementWindow.timePointerCentering = true
                 }
                 if(event.code == KeyCode.V){
-                    Main.workingWindow.nextOpen(Main.workingWindow.arrangementWindow.visualEditor)
+                    Main.workingWindow.nextOpen(Main.arrangementWindow.visualEditor)
                 }
                 if(event.code == KeyCode.Q){
-                    Main.workingWindow.arrangementWindow.selectionBlock.buildGraph()
+                    Main.arrangementWindow.selectionBlock.buildGraph()
                 }
                 if(event.code == KeyCode.DELETE){
-                    Main.workingWindow.arrangementWindow.selectionBlock.del()
+                    Main.arrangementWindow.selectionBlock.del()
                 }
             }
         }
@@ -139,19 +145,29 @@ class Main : Application() {
                 renderManager.autoRenderNextFrame = false
             }
             if(event.code == KeyCode.C){
-                workingWindow.arrangementWindow.timePointerCentering = false
+                arrangementWindow.timePointerCentering = false
             }
         }
 
         stage.onCloseRequest = EventHandler<WindowEvent> {
+            val bytes = arrangementWindow.save()
+            Files.write(Paths.get("save.spixie"), bytes)
             Platform.exit()
+        }
+
+        File("save.spixie").let {
+            if(it.exists()){
+                arrangementWindow.load(ObjectInputStream(it.inputStream()))
+            }
         }
 
         renderManager.renderStart(imageView)
         object : AnimationTimer() {
             override fun handle(now: Long) {
                 renderManager.perFrame()
-                workingWindow.arrangementWindow.perFrame()
+                if(workingWindow.opacity != 0.0){
+                    arrangementWindow.perFrame()
+                }
             }
         }.start()
 
@@ -163,6 +179,7 @@ class Main : Application() {
     companion object {
         var renderManager = RenderManager()
         val workingWindow = WorkingWindow()
+        val arrangementWindow = ArrangementWindow()
         val audio = Audio()
 
         var internalObject: Any = Any()

@@ -82,12 +82,16 @@ fun InputStream.printAvailable(){
 }
 
 fun runInUIAndWait(work: () -> Unit){
-    val latch = CountDownLatch(1)
-    Platform.runLater {
+    if(Platform.isFxApplicationThread()){
         work()
-        latch.countDown()
+    }else{
+        val latch = CountDownLatch(1)
+        Platform.runLater {
+            work()
+            latch.countDown()
+        }
+        latch.await()
     }
-    latch.await()
 }
 
 fun Int.roundUp(multiplicity: Int): Int{

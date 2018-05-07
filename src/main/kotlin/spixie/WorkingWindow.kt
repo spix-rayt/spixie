@@ -9,7 +9,6 @@ import javafx.scene.layout.BorderPane
 import java.util.*
 
 class WorkingWindow : BorderPane() {
-    val arrangementWindow = ArrangementWindow()
     init {
         val menuBar = ToolBar()
         val renderButton = Button("Render")
@@ -63,7 +62,6 @@ class WorkingWindow : BorderPane() {
 
         isFocusTraversable = true
         isFocused = true
-        nextOpen(arrangementWindow)
     }
 
     val centerStack = LinkedList<WorkingWindowOpenableContent>()

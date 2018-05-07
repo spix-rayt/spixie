@@ -2,6 +2,7 @@ package spixie
 
 import io.reactivex.subjects.BehaviorSubject
 import javafx.application.Platform
+import spixie.static.frameToTime
 
 class TimeProperty(private var bpm: Double) {
     private var _frame = 0
@@ -12,7 +13,7 @@ class TimeProperty(private var bpm: Double) {
     set(value) {
         assert(Platform.isFxApplicationThread())
 
-        _time = bpm/3600*value
+        _time = frameToTime(value, bpm)
         _frame = value
         timeChanges.onNext(_time)
     }

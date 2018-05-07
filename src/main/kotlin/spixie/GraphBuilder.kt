@@ -38,7 +38,7 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
                 var t = (((i - start) / 100.0) *frequencyValue.value.value + phaseValue.value.value*4) * Math.PI / 2
                 graph.data.insertOrUpdatePoint(i, (Math.sin(t)+1.0)/2, false)
             }
-            Main.workingWindow.arrangementWindow.updateGraph(graph)
+            Main.arrangementWindow.updateGraph(graph)
         }
         update.onNext(Unit)
         phaseValue.value.changes.subscribe { update.onNext(Unit) }
@@ -62,7 +62,7 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
                 val y2 = linearInterpolate(cy, endValue.value.value, t)
                 graph.data.insertOrUpdatePoint(i, 1.0 - linearInterpolate(y1, y2, t), false)
             }
-            Main.workingWindow.arrangementWindow.updateGraph(graph)
+            Main.arrangementWindow.updateGraph(graph)
         }
         update.onNext(Unit)
         startValue.value.changes.subscribe { update.onNext(Unit) }

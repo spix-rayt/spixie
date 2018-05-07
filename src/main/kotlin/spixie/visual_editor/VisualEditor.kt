@@ -1,5 +1,6 @@
 package spixie.visual_editor
 
+import javafx.application.Platform
 import javafx.scene.Group
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
@@ -17,8 +18,9 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
     val content = Group()
     val components = Group()
     val connects = Group()
-    val resultComponent = Result()
     val inputToOutputConnection = hashMapOf<ComponentPin<*>, ComponentPin<*>>()
+    var time = 0.0
+    private set
 
     init {
         style = "-fx-background-color: #FFFFFFFF;"
@@ -38,11 +40,12 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
             }
         }
 
-        components.children.add(resultComponent)
+        components.children.add(Result())
 
         setOnKeyReleased { event ->
             if(event.code == KeyCode.HOME){
                 homeLayout()
+                reconnectPins()
                 event.consume()
             }
         }
@@ -50,8 +53,19 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
         content.children.addAll(components, connects)
     }
 
+    fun render(time:Double): ParticleArray {
+        this.time = time
+        components.children.forEach {
+            if(it is Result){
+                return it.getParticles()
+            }
+        }
+        return ParticleArray()
+    }
+
     fun reconnectPins(){
         connects.children.clear()
+        layout()
         inputToOutputConnection.forEach { input, output ->
             connectPins(output, input)
         }
@@ -67,8 +81,8 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
 
     fun connectPins(pin1: ComponentPin<*>, pin2: ComponentPin<*>){
         val cubicCurve = CubicCurve()
-        val aBounds = connects.screenToLocal(pin1.circle.localToScreen(pin1.circle.layoutBounds))
-        val bBounds = connects.screenToLocal(pin2.circle.localToScreen(pin2.circle.layoutBounds))
+        val aBounds = pin1.component.localToParent(pin1.component.content.localToParent(pin1.localToParent(pin1.circle.boundsInParent)))
+        val bBounds = pin2.component.localToParent(pin2.component.content.localToParent(pin2.localToParent(pin2.circle.boundsInParent)))
         cubicCurve.startX = (aBounds.minX + aBounds.maxX) / 2
         cubicCurve.startY = (aBounds.minY + aBounds.maxY) / 2
         cubicCurve.endX = (bBounds.minX + bBounds.maxX) / 2
@@ -100,7 +114,7 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
             }
         })
 
-        addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
+        addEventHandler(MouseEvent.MOUSE_DRAGGED, { event ->
             if(event.isMiddleButtonDown){
                 content.layoutX = layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag)
                 content.layoutY = layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag)

@@ -4,6 +4,7 @@ import javafx.geometry.Pos
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.Label
 import javafx.scene.control.MenuItem
+import javafx.scene.input.MouseButton
 import javafx.scene.input.TransferMode
 import javafx.scene.layout.HBox
 import javafx.scene.layout.StackPane
@@ -22,6 +23,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
         minHeight = 32.0
         maxHeight = 32.0
     }
+
     val label = Label(name)
 
     init {
@@ -37,22 +39,26 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
             ContextMenu(
                     MenuItem("Unconnect all").apply {
                         setOnAction {
-                            val iterator = Main.workingWindow.arrangementWindow.visualEditor.inputToOutputConnection.iterator()
+                            val iterator = Main.arrangementWindow.visualEditor.inputToOutputConnection.iterator()
                             for(entry in iterator){
                                 if(entry.key == this@ComponentPin || entry.value == this@ComponentPin){
                                     iterator.remove()
                                 }
                             }
-                            Main.workingWindow.arrangementWindow.visualEditor.reconnectPins()
+                            Main.arrangementWindow.visualEditor.reconnectPins()
                         }
                     }
             ).show(this, event.screenX, event.screenY)
         }
 
         circle.apply {
-            setOnMousePressed { event-> event.consume() }
+            setOnMousePressed { event ->
+                if(event.button == MouseButton.PRIMARY) event.consume()
+            }
 
-            setOnMouseDragged { event->event.consume() }
+            setOnMouseDragged { event ->
+                if(event.button == MouseButton.PRIMARY) event.consume()
+            }
 
             setOnMouseEntered {
                 selectionCircle.fill = Color.DARKVIOLET
@@ -63,11 +69,13 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
             }
 
             setOnDragDetected { event ->
-                val startDragAndDrop = startDragAndDrop(TransferMode.LINK)
-                startDragAndDrop.setContent(mapOf(DragAndDropType.INTERNALOBJECT to ""))
-                Main.internalObject = this@ComponentPin
+                if(event.button == MouseButton.PRIMARY){
+                    val startDragAndDrop = startDragAndDrop(TransferMode.LINK)
+                    startDragAndDrop.setContent(mapOf(DragAndDropType.INTERNALOBJECT to ""))
+                    Main.internalObject = this@ComponentPin
 
-                event.consume()
+                    event.consume()
+                }
             }
 
             setOnDragOver { event ->
@@ -97,12 +105,12 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
                     success = true
                     (Main.internalObject as? ComponentPin<*>)?.let { dragged ->
                         if(dragged.component.inputPins.contains(dragged)){
-                            Main.workingWindow.arrangementWindow.visualEditor.inputToOutputConnection[dragged] = this@ComponentPin
+                            Main.arrangementWindow.visualEditor.inputToOutputConnection[dragged] = this@ComponentPin
                         }else{
-                            Main.workingWindow.arrangementWindow.visualEditor.inputToOutputConnection[this@ComponentPin] = dragged
+                            Main.arrangementWindow.visualEditor.inputToOutputConnection[this@ComponentPin] = dragged
                         }
 
-                        Main.workingWindow.arrangementWindow.visualEditor.reconnectPins()
+                        Main.arrangementWindow.visualEditor.reconnectPins()
                     }
                 }
                 event.isDropCompleted = success
@@ -120,7 +128,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
     }
 
     fun receiveValue(): T? {
-        return Main.workingWindow.arrangementWindow.visualEditor.inputToOutputConnection[this]?.getValue?.invoke() as? T
+        return Main.arrangementWindow.visualEditor.inputToOutputConnection[this]?.getValue?.invoke() as? T
     }
 
     fun relocateNodes(){

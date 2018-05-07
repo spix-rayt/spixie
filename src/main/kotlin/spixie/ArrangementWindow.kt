@@ -10,11 +10,14 @@ import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.math3.fraction.Fraction
+import spixie.static.runInUIAndWait
+import spixie.visual_editor.Component
 import spixie.visual_editor.VisualEditor
-import java.awt.AlphaComposite
 import java.awt.Color
-import java.awt.Graphics2D
 import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 
 class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     val content = Group()
@@ -120,10 +123,14 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             }
         }
         if (only != null) {
-            redraw(only)
+            runInUIAndWait {
+                redraw(only)
+            }
         } else {
-            for (graph in graphs) {
-                redraw(graph.value)
+            runInUIAndWait {
+                for (graph in graphs) {
+                    redraw(graph.value)
+                }
             }
         }
     }
@@ -134,6 +141,8 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             for (graph in graphs) {
                 graph.value.canvas.width = newValue.toDouble() + 200.0
             }
+            needRedrawWaveform = true
+            needUpdateAllGraphs = true
         }
 
         initCustomPanning()
@@ -257,6 +266,62 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             waveform.layoutY = -y.toDouble()
             needUpdateGrid = true
             needUpdateAllGraphs = true
+        }
+    }
+
+    fun save(): ByteArray {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
+
+        val components = visualEditor.components.children.filter { it is Component }.map { it as Component }
+        components.forEachIndexed { index, component -> component.serializationIndex = index }
+        objectOutputStream.writeObject(components)
+
+        objectOutputStream.writeObject(
+                visualEditor.inputToOutputConnection.map { entry ->
+                    val v1 = entry.key.component.serializationIndex to entry.key.component.inputPins.indexOf(entry.key)
+                    val v2 = entry.value.component.serializationIndex to entry.value.component.outputPins.indexOf(entry.value)
+                    v1 to v2
+                }
+        )
+
+        objectOutputStream.writeObject(graphs.map { it.key to it.value.data.points }.toMap())
+
+        objectOutputStream.close()
+        return byteArrayOutputStream.toByteArray()
+    }
+
+    fun load(objectInputStream: ObjectInputStream){
+        try{
+            val components = objectInputStream.readObject() as List<Component>
+            visualEditor.components.children.setAll(components)
+            val idToComponent = components.map { it.serializationIndex to it }.toMap()
+
+            val connections = objectInputStream.readObject() as List<Pair<Pair<Int, Int>, Pair<Int, Int>>>
+            connections.forEach {
+                val (a,b) = it
+                val (componentInputIndex, inputIndex) = a
+                val (componentOutputIndex, outputIndex) = b
+                idToComponent[componentInputIndex]?.inputPins?.get(inputIndex)?.let { inputPin ->
+                    idToComponent[componentOutputIndex]?.outputPins?.get(outputIndex)?.let { outputPin ->
+                        visualEditor.inputToOutputConnection[inputPin] = outputPin
+                    }
+                }
+            }
+            visualEditor.reconnectPins()
+
+            val graphPoints = objectInputStream.readObject() as Map<Int, ArrayList<Point>>
+            graphPoints.forEach {
+                val arrangementGraph = ArrangementGraph()
+                arrangementGraph.data.points.addAll(it.value)
+                graphs[it.key] = arrangementGraph
+                arrangementGraph.canvas.layoutY = 100.0*it.key
+                graphCanvases.children.addAll(arrangementGraph.canvas)
+            }
+            needUpdateAllGraphs = true
+            Main.renderManager.clearCache()
+        }catch (e:Exception){
+            e.printStackTrace()
         }
     }
 

@@ -13,24 +13,26 @@ import javafx.embed.swing.SwingFXUtils
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
-import spixie.static.Settings
-import spixie.static.printAvailable
-import spixie.static.runInUIAndWait
+import spixie.static.*
 import spixie.visual_editor.ParticleArray
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.*
+import java.util.concurrent.ThreadLocalRandom
 import javax.imageio.ImageIO
+import kotlin.math.roundToInt
 
 class RenderManager {
     val time = TimeProperty(160.0)
     var bpm = ValueControl(160.0, 1.0, "BPM")
     @Volatile var renderingToFile = false
     private val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
-    private val cache = ReferenceMap<Long, AsyncPngConvert>()
-    private val frameCache = ReferenceMap<Double, AsyncPngConvert>()
-    val forceRender = BehaviorSubject.createDefault(Unit)
-    var autoRenderNextFrame = false
+    private val cache = ReferenceMap<Long, ByteArray>()
+    private val frameCache = ReferenceMap<Double, ByteArray>()
+    val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
+    @Volatile var autoRenderNextFrame = false
 
     var scaleDown:Int = 2
         set(value) {
@@ -39,8 +41,9 @@ class RenderManager {
         }
 
     private fun resizeIfNotCorrect(width: Int, height: Int) {
-        if (openCLRenderer.width != width || openCLRenderer.height != height) {
+        if (openCLRenderer.realWidth != width || openCLRenderer.realHeight != height) {
             openCLRenderer.setSize(width,height)
+            clearCache()
         }
     }
 
@@ -52,36 +55,33 @@ class RenderManager {
         perFrame = {
             if(Main.audio.isPlaying()){
                 val seconds = Main.audio.getTime()
-                time.time = Main.renderManager.bpm.value.value/3600*seconds*60
-                frameCache[Main.renderManager.bpm.value.value/3600*(seconds*60).toInt()]?.get()?.let {
-                    imageView.image = Image(ByteArrayInputStream(it))
+                time.time = frameToTime((seconds*60).roundToInt(), Main.renderManager.bpm.value.value)
+                frameCache[time.time]?.let {
+                    val byteArrayInputStream = ByteArrayInputStream(it)
+                    imageView.image = Image(byteArrayInputStream)
                 }
             }
         }
 
-        Flowable.combineLatest(time.timeChanges.toFlowable(BackpressureStrategy.LATEST), forceRender.toFlowable(BackpressureStrategy.LATEST), BiFunction { t:Double, _:Unit -> t })
-                .observeOn(renderThread)
+        Observable.combineLatest(time.timeChanges.distinctUntilChanged(), forceRender, BiFunction { t:Double, _:Unit -> t })
+                .toFlowable(BackpressureStrategy.LATEST)
+                .observeOn(renderThread, false, 1)
                 .subscribe { t ->
                     try {
                         if (!renderingToFile && !Main.audio.isPlaying()) {
-                            val particles = Main.workingWindow.arrangementWindow.visualEditor.resultComponent.getParticles()
-                            val cachedImageAsync = cache[particles.hash]
-                            val imageCached = cachedImageAsync?.get()
+                            val particles = Main.arrangementWindow.visualEditor.render(t)
+                            val imageCached = cache[particles.hash]
                             if(imageCached == null){
                                 resizeIfNotCorrect(imageView.fitWidth.toInt()/scaleDown, imageView.fitHeight.toInt()/scaleDown)
-                                val bufferedImage = openclRender(particles)
-                                val image = SwingFXUtils.toFXImage(bufferedImage, null)
-                                val asyncPng = AsyncPngConvert(bufferedImage)
-                                cache.put(particles.hash, asyncPng)
-                                frameCache.put(t, asyncPng)
-                                runInUIAndWait {
-                                    imageView.image = image
-                                }
+                                val image = openclRender(particles).toPNGByteArray()
+                                cache.put(particles.hash, image)
+                                frameCache.put(t, image)
                             }else{
-                                val toFXImage = Image(ByteArrayInputStream(imageCached))
-                                frameCache.put(t, cachedImageAsync)
-                                runInUIAndWait {
-                                    imageView.image = toFXImage
+                                frameCache.put(t, imageCached)
+                            }
+                            runInUIAndWait {
+                                frameCache[t]?.let {
+                                    imageView.image = Image(ByteArrayInputStream(it))
                                 }
                             }
                             if(autoRenderNextFrame){
@@ -91,7 +91,7 @@ class RenderManager {
                             }
                         }
                     } catch (e: ConcurrentModificationException) {
-
+                        forceRender.onNext(Unit)
                     }
                 }
     }
@@ -129,14 +129,11 @@ class RenderManager {
             val errorStream = process.errorStream
 
             for (frame in 0 until countFrames) {
-                runInUIAndWait {
-                    this@RenderManager.time.frame = frame
-                }
                 if(!process.isAlive){
                     break
                 }
 
-                val bufferedImage = openclRender(Main.workingWindow.arrangementWindow.visualEditor.resultComponent.getParticles())
+                val bufferedImage = openclRender(Main.arrangementWindow.visualEditor.render(frameToTime(frame, bpm.value.value)))
                 val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
                 bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
                 ImageIO.write(bufferedImage1, "png", outputStream)
@@ -160,6 +157,7 @@ class RenderManager {
         Completable.fromAction {
             cache.clear()
             frameCache.clear()
+            forceRender.onNext(Unit)
         }.subscribeOn(renderThread).subscribe()
     }
 

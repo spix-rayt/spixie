@@ -5,10 +5,12 @@ import javafx.scene.Group
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.Region
 import spixie.Main
-import spixie.static.magic
+import java.io.Externalizable
+import java.io.ObjectInput
+import java.io.ObjectOutput
 import kotlin.math.*
 
-open class Component:Region() {
+open class Component:Region(), Externalizable {
     val inputPins = arrayListOf<ComponentPin<*>>()
     val outputPins = arrayListOf<ComponentPin<*>>()
     val content = Group()
@@ -42,7 +44,7 @@ open class Component:Region() {
         val newY = floor(y / 32.0) * 32.0
         if(layoutX != newX || layoutY != newY){
             relocate(newX, newY)
-            Main.workingWindow.arrangementWindow.visualEditor.reconnectPins()
+            Main.arrangementWindow.visualEditor.reconnectPins()
         }
     }
 
@@ -67,5 +69,18 @@ open class Component:Region() {
         prefHeight = max(inputPins.size, outputPins.size)*32.0 + 1.0
         width = 256.0 + 96.0 + 1.0
         height = max(inputPins.size, outputPins.size)*32.0 + 1.0
+    }
+
+    var serializationIndex = -1
+
+    override fun writeExternal(o: ObjectOutput) {
+        o.writeDouble(layoutX)
+        o.writeDouble(layoutY)
+        o.writeInt(serializationIndex)
+    }
+
+    override fun readExternal(o: ObjectInput) {
+        magneticRelocate(o.readDouble(), o.readDouble())
+        serializationIndex = o.readInt()
     }
 }
