@@ -10,6 +10,9 @@ import java.util.concurrent.TimeUnit
 
 class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pane() {
     init {
+        assert(end > start)
+
+        style = "-fx-border-color: #9A12B3FF; -fx-border-width: 1; -fx-background-color: #FFFFFFFF;"
         width = 500.0
         height = 300.0
         val hBox = HBox(2.0)
@@ -21,6 +24,10 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
         randomModeButton.setOnAction { randomMode() }
         hBox.children.addAll(curveModeButton, sineModeButton, randomModeButton)
         children.addAll(hBox)
+
+        setOnMousePressed {
+            it.consume()
+        }
     }
 
     private fun randomMode() {
@@ -29,14 +36,14 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
 
     private fun sineMode() {
         children.clear()
-        val phaseValue = ValueControl(0.0, 0.001, "Phase").limitMax(1.0)
+        val phaseValue = ValueControl(graph.data.getValue(start).toDouble(), 0.001, "Start").limitMin(-1.0).limitMax(1.0)
         val frequencyValue = ValueControl(1.0, 0.01, "Frequency").limitMin(0.01).limitMax(32.0)
         val update = PublishSubject.create<Unit>()
         update.sample(16, TimeUnit.MILLISECONDS).subscribe {
-            graph.data.del(start, end)
+            graph.data.resizeIfNeed(end+1)
             for(i in start..end){
-                var t = (((i - start) / 100.0) *frequencyValue.value.value + phaseValue.value.value*4) * Math.PI / 2
-                graph.data.insertOrUpdatePoint(i, (Math.sin(t)+1.0)/2, false)
+                var t = (((i - start) / 100.0) *frequencyValue.value.value + (phaseValue.value.value/2+0.75)*4) * Math.PI / 2
+                graph.data.points[i] = ((Math.sin(t)+1.0)/2).toFloat()
             }
             Main.arrangementWindow.updateGraph(graph)
         }
@@ -49,18 +56,18 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
 
     private fun curveMode(){
         children.clear()
-        val startValue = ValueControl(0.0, 0.001, "Start").limitMax(1.0)
+        val startValue = ValueControl(graph.data.getValue(start).toDouble(), 0.001, "Start").limitMax(1.0)
         val curvatureValue = ValueControl(0.5, 0.001, "Curvature").limitMax(1.0)
-        val endValue = ValueControl(1.0, 0.001, "End").limitMax(1.0)
+        val endValue = ValueControl(graph.data.getValue(end).toDouble(), 0.001, "End").limitMax(1.0)
         val update = PublishSubject.create<Unit>()
         update.sample(16, TimeUnit.MILLISECONDS).subscribe {
-            graph.data.del(start, end)
+            graph.data.resizeIfNeed(end+1)
             for(i in start..end){
                 var t = (i - start) / (end - start).toDouble()
                 val cy = startValue.value.value + (endValue.value.value - startValue.value.value)*curvatureValue.value.value
                 val y1 = linearInterpolate(startValue.value.value, cy, t)
                 val y2 = linearInterpolate(cy, endValue.value.value, t)
-                graph.data.insertOrUpdatePoint(i, 1.0 - linearInterpolate(y1, y2, t), false)
+                graph.data.points[i] = linearInterpolate(y1, y2, t).toFloat()
             }
             Main.arrangementWindow.updateGraph(graph)
         }

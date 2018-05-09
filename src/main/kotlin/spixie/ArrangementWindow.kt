@@ -116,8 +116,8 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             g.stroke = javafx.scene.paint.Color(1.0, 0.0, 0.0, 1.0)
             var x = 0
             while (x < canvas.width) {
-                val y1 = graph.data.getValue(startTime + x * beatsInPixel)
-                val y2 = graph.data.getValue(startTime + (x + 1.0) * beatsInPixel)
+                val y1 = 1.0 - graph.data.getValue(startTime + x * beatsInPixel)
+                val y2 = 1.0 - graph.data.getValue(startTime + (x + 1.0) * beatsInPixel)
                 g.strokeLine(x.toDouble(), y1 * canvas.height, (x + 1).toDouble(), y2 * canvas.height)
                 x++
             }
@@ -310,10 +310,10 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             }
             visualEditor.reconnectPins()
 
-            val graphPoints = objectInputStream.readObject() as Map<Int, ArrayList<Point>>
+            val graphPoints = objectInputStream.readObject() as Map<Int, FloatArray>
             graphPoints.forEach {
                 val arrangementGraph = ArrangementGraph()
-                arrangementGraph.data.points.addAll(it.value)
+                arrangementGraph.data.points = it.value
                 graphs[it.key] = arrangementGraph
                 arrangementGraph.canvas.layoutY = 100.0*it.key
                 graphCanvases.children.addAll(arrangementGraph.canvas)

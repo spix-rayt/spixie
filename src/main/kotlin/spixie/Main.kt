@@ -93,6 +93,9 @@ class Main : Application() {
                 if(event.code == KeyCode.D){
                     Main.arrangementWindow.selectionBlock.duplicate()
                 }
+                if(event.code == KeyCode.R){
+                    Main.arrangementWindow.selectionBlock.reverse()
+                }
             }
 
             if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){

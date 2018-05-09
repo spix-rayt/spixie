@@ -17,6 +17,7 @@ import spixie.static.*
 import spixie.visual_editor.ParticleArray
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
@@ -116,10 +117,13 @@ class RenderManager {
                             "-f", "image2pipe",
                             "-framerate", "60",
                             "-i", "-",
+                            "-i","test.aiff",
                             "-c:v", "libx264",
                             "-preset", "slow",
                             "-crf", "17",
                             "-pix_fmt", "yuv420p",
+                            "-c:a","aac",
+                            "-shortest",
                             "out.mp4"
                     )
             )

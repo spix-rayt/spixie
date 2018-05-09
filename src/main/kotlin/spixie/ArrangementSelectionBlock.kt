@@ -58,13 +58,15 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
 
     fun buildGraph(){
         val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
-        val graphBuilder = GraphBuilder(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt(), graph)
+        val start = timeStart.multiply(100).toInt()
+        val end = timeEnd.multiply(100).toInt()
+        val graphBuilder = GraphBuilder(start, if(end>start) end else start+1, graph)
         graphBuilder.layoutX = layoutX
         graphBuilder.layoutY = layoutY + height+10.0
         Main.arrangementWindow.graphBuilderGroup.children.addAll(graphBuilder)
     }
 
-    var pointsCopy = ArrayList<Point>()
+    var pointsCopy = floatArrayOf()
     var copyLength = 0
 
     fun copy(){
@@ -96,6 +98,12 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
         timeStart = timeStart.add(l)
         graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
         graph.data.paste(timeStart.multiply(100).toInt(), p)
+        Main.arrangementWindow.needUpdateAllGraphs = true
+    }
+
+    fun reverse(){
+        val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
+        graph.data.reverse(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
         Main.arrangementWindow.needUpdateAllGraphs = true
     }
 }
