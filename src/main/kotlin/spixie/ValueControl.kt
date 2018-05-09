@@ -17,13 +17,13 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
 
     val value = Value(initial)
 
-    private var min = 0.0
+    private var min = Double.NEGATIVE_INFINITY
     fun limitMin(min: Double): ValueControl{
         this.min = min
         return this
     }
 
-    private var max = Double.MAX_VALUE
+    private var max = Double.POSITIVE_INFINITY
     fun limitMax(max:Double): ValueControl{
         this.max = max
         return this

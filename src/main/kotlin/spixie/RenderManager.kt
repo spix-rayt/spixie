@@ -4,12 +4,11 @@ import io.reactivex.*
 import io.reactivex.Observable
 import io.reactivex.functions.BiFunction
 import io.reactivex.functions.Function3
+import io.reactivex.rxjavafx.observables.JavaFxObservable
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
-import io.reactivex.subjects.CompletableSubject
-import javafx.animation.AnimationTimer
 import javafx.application.Platform
-import javafx.embed.swing.SwingFXUtils
+import javafx.geometry.Bounds
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
@@ -17,11 +16,7 @@ import spixie.static.*
 import spixie.visual_editor.ParticleArray
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.ThreadLocalRandom
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
@@ -38,13 +33,14 @@ class RenderManager {
     var scaleDown:Int = 2
         set(value) {
             field = value
-            clearCache()
+            forceRender.onNext(Unit)
         }
 
     private fun resizeIfNotCorrect(width: Int, height: Int) {
         if (openCLRenderer.realWidth != width || openCLRenderer.realHeight != height) {
             openCLRenderer.setSize(width,height)
-            clearCache()
+            cache.clear()
+            frameCache.clear()
         }
     }
 
@@ -64,16 +60,16 @@ class RenderManager {
             }
         }
 
-        Observable.combineLatest(time.timeChanges.distinctUntilChanged(), forceRender, BiFunction { t:Double, _:Unit -> t })
+        Observable.combineLatest(time.timeChanges.distinctUntilChanged(), forceRender, JavaFxObservable.valuesOf(imageView.layoutBoundsProperty()), Function3 { t:Double, _:Unit, bounds:Bounds -> t to bounds })
                 .toFlowable(BackpressureStrategy.LATEST)
                 .observeOn(renderThread, false, 1)
-                .subscribe { t ->
+                .subscribe { (t, bounds) ->
                     try {
                         if (!renderingToFile && !Main.audio.isPlaying()) {
+                            resizeIfNotCorrect(bounds.width.toInt()/scaleDown, bounds.height.toInt()/scaleDown)
                             val particles = Main.arrangementWindow.visualEditor.render(t)
                             val imageCached = cache[particles.hash]
                             if(imageCached == null){
-                                resizeIfNotCorrect(imageView.fitWidth.toInt()/scaleDown, imageView.fitHeight.toInt()/scaleDown)
                                 val image = openclRender(particles).toPNGByteArray()
                                 cache.put(particles.hash, image)
                                 frameCache.put(t, image)
@@ -100,7 +96,9 @@ class RenderManager {
     private fun openclRender(particleArray: ParticleArray):BufferedImage {
         val renderBufferBuilder = RenderBufferBuilder(particleArray.array.size)
         particleArray.array.forEach { particle ->
-            renderBufferBuilder.addParticle(particle.x, particle.y, particle.size, particle.red, particle.green, particle.blue, particle.alpha)
+            if(particle.matrix.m32()>=-999){
+                renderBufferBuilder.addParticle(particle.matrix.m30()/((particle.matrix.m32()+1000)/1000), particle.matrix.m31()/((particle.matrix.m32()+1000)/1000), particle.size/((particle.matrix.m32()+1000)/1000), particle.red, particle.green, particle.blue, particle.alpha)
+            }
         }
         return openCLRenderer.render(renderBufferBuilder.complete())
     }

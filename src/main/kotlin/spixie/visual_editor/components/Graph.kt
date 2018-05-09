@@ -10,7 +10,7 @@ import java.io.ObjectInput
 import java.io.ObjectOutput
 
 class Graph: Component(), Externalizable {
-    val valueControl = ValueControl(0.0, 1.0, "Graph ID")
+    val valueControl = ValueControl(0.0, 1.0, "Graph ID").limitMin(0.0)
     val rangeFromControl = ValueControl(0.0, 0.1, "From")
     val rangeToControl = ValueControl(0.0, 0.1, "To")
     init {
