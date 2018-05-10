@@ -1,9 +1,10 @@
 package spixie
 
+import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.layout.Region
 import org.apache.commons.math3.fraction.Fraction
 
-class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
+class ArrangementSelectionBlock(val zoom:BehaviorSubject<Fraction>): Region() {
     var strictWidth:Double
         get() = width
         set(value) {
@@ -21,13 +22,13 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
     var timeStart = Fraction(0)
         set(value) {
             field = value
-            updateZoom()
+            updateLayout()
             Main.arrangementWindow.graphBuilderGroup.children.clear()
         }
     var timeEnd = Fraction(0)
         set(value) {
             field = value
-            updateZoom()
+            updateLayout()
             Main.arrangementWindow.graphBuilderGroup.children.clear()
         }
 
@@ -39,13 +40,15 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
         }
 
     init {
-        updateZoom()
+        zoom.subscribe {
+            updateLayout()
+        }
         strictHeight = 100.0
     }
 
-    fun updateZoom(){
-        strictWidth = Fraction(100, 64).multiply(timeEnd.subtract(timeStart)).multiply(zoom.value).toDouble()
-        layoutX = Fraction(100, 64).multiply(timeStart).multiply(zoom.value).toDouble()
+    private fun updateLayout(){
+        strictWidth = Fraction(100, 64).multiply(timeEnd.subtract(timeStart)).multiply(zoom.value!!).toDouble()
+        layoutX = Fraction(100, 64).multiply(timeStart).multiply(zoom.value!!).toDouble()
     }
 
     private fun newGraph(): ArrangementGraph {
@@ -61,17 +64,20 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
         val start = timeStart.multiply(100).toInt()
         val end = timeEnd.multiply(100).toInt()
         val graphBuilder = GraphBuilder(start, if(end>start) end else start+1, graph)
-        graphBuilder.layoutX = layoutX
-        graphBuilder.layoutY = layoutY + height+10.0
+        val subscribe = zoom.subscribe {
+            graphBuilder.layoutX = layoutX
+            graphBuilder.layoutY = layoutY + height + 10.0
+        }
+        graphBuilder.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
         Main.arrangementWindow.graphBuilderGroup.children.addAll(graphBuilder)
     }
 
-    var pointsCopy = floatArrayOf()
+    var copyData = floatArrayOf() to mapOf<Int, Pair<Float, Float>>()
     var copyLength = 0
 
     fun copy(){
         Main.arrangementWindow.graphs[line]?.let { graph ->
-            pointsCopy = graph.data.copy(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+            copyData = graph.data.copy(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
             copyLength = timeEnd.multiply(100).toInt() - timeStart.multiply(100).toInt()
         }
     }
@@ -79,7 +85,7 @@ class ArrangementSelectionBlock(val zoom:FractionImmutablePointer): Region() {
     fun paste(){
         val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
         graph.data.del(timeStart.multiply(100).toInt(), timeStart.multiply(100).toInt() + copyLength)
-        graph.data.paste(timeStart.multiply(100).toInt(), pointsCopy)
+        graph.data.paste(timeStart.multiply(100).toInt(), copyData)
         Main.arrangementWindow.needUpdateAllGraphs = true
     }
 

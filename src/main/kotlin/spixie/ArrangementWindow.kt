@@ -1,5 +1,6 @@
 package spixie
 
+import io.reactivex.subjects.BehaviorSubject
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
@@ -18,6 +19,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import kotlin.math.roundToInt
 
 class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     val content = Group()
@@ -26,7 +28,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     val graphCanvases = Group()
     val visualEditor = VisualEditor()
     val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
-    val zoom = FractionImmutablePointer(Fraction(64))
+    val zoom = BehaviorSubject.createDefault(Fraction(64))
     val selectionBlock = ArrangementSelectionBlock(zoom)
     val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
     var timePointerCentering = false
@@ -41,8 +43,8 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
 
     fun redrawWaveform() {
         val newWaveformLayoutX = -content.layoutX - 100
-        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
-        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
+        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble()
+        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble()
 
         val startSecond = startTime*3600/Main.renderManager.bpm.value.value/60
         val endSecond = endTime*3600/Main.renderManager.bpm.value.value/60
@@ -79,7 +81,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     }
 
     fun updateGrid(){
-        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.25%, transparent 0.25%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.25%, transparent 0.25%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.25%, transparent 0.25%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.25%, transparent 0.25%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000019 1%, transparent 1%);"
+        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000019 1%, transparent 1%);"
     }
 
     var needUpdateAllGraphs = false
@@ -103,8 +105,8 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
 
     fun updateGraph(only: ArrangementGraph?){
         val newGraphsLayoutX = -content.layoutX - 100
-        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value.toDouble()
-        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value.toDouble()
+        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble()
+        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble()
         val redraw = { graph: ArrangementGraph ->
             val canvas = graph.canvas
             canvas.layoutX = newGraphsLayoutX
@@ -162,7 +164,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             updateCursor(event)
             if(event.isControlDown){
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
-                Main.renderManager.time.time = screenToLocal.x*64/100.0/zoom.value.toDouble()
+                Main.renderManager.time.time = screenToLocal.x*64/100.0/zoom.value!!.toDouble()
             }
         })
 
@@ -185,13 +187,13 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                             if(restartAudio){
                                 Main.audio.pause()
                             }
-                            Main.renderManager.time.time = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
+                            Main.renderManager.time.time = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
                             if(restartAudio){
                                 Main.audio.play(Duration.seconds(Main.renderManager.time.frame/60.0))
                             }
                         }
-                        val time1 = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
-                        val time2 = (pressedCursorX-0.5)*64/100.0/zoom.value.toDouble()
+                        val time1 = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
+                        val time2 = (pressedCursorX-0.5)*64/100.0/zoom.value!!.toDouble()
                         if(time1 < time2){
                             selectionBlock.timeStart = Fraction(time1)
                             selectionBlock.timeEnd = Fraction(time2)
@@ -210,11 +212,11 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
 
         setOnScroll { event ->
             if(event.deltaY<0){
-                if(zoom.value.compareTo(Fraction.ONE) != 0){
-                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
-                    zoom.value = zoom.value.divide(2)
-                    var cursorNewX = cursorTime*zoom.value.toDouble()*100.0/64 + 0.5
-                    content.layoutX += cursor.startX - cursorNewX
+                if(zoom.value!!.compareTo(Fraction.ONE) != 0){
+                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
+                    zoom.onNext(zoom.value!!.divide(2))
+                    var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
+                    content.layoutX += (cursor.startX - cursorNewX).roundToInt()
                     if(content.layoutX > 0) {
                         cursorNewX += content.layoutX
                         content.layoutX = 0.0
@@ -225,15 +227,15 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                     needRedrawWaveform = true
                     needUpdateAllGraphs = true
                     updateTimePointer()
-                    selectionBlock.updateZoom()
+
                 }
             }
             if(event.deltaY>0){
-                if(zoom.value.compareTo(Fraction(4096)) != 0){
-                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value.toDouble()
-                    zoom.value = zoom.value.multiply(2)
-                    var cursorNewX = cursorTime*zoom.value.toDouble()*100.0/64 + 0.5
-                    content.layoutX += cursor.startX - cursorNewX
+                if(zoom.value!!.compareTo(Fraction(4096)) != 0){
+                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
+                    zoom.onNext(zoom.value!!.multiply(2))
+                    var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
+                    content.layoutX += (cursor.startX - cursorNewX).roundToInt()
                     if(content.layoutX > 0) {
                         cursorNewX += content.layoutX
                         content.layoutX = 0.0
@@ -244,7 +246,6 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                     needRedrawWaveform = true
                     needUpdateAllGraphs = true
                     updateTimePointer()
-                    selectionBlock.updateZoom()
                 }
             }
             event.consume()
@@ -285,7 +286,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                 }
         )
 
-        objectOutputStream.writeObject(graphs.map { it.key to it.value.data.points }.toMap())
+        objectOutputStream.writeObject(graphs.map { it.key to (it.value.data.points to it.value.data.jumpPoints) }.toMap())
 
         objectOutputStream.close()
         return byteArrayOutputStream.toByteArray()
@@ -310,10 +311,11 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             }
             visualEditor.reconnectPins()
 
-            val graphPoints = objectInputStream.readObject() as Map<Int, FloatArray>
+            val graphPoints = objectInputStream.readObject() as Map<Int, Pair<FloatArray, Map<Int, Pair<Float, Float>>>>
             graphPoints.forEach {
                 val arrangementGraph = ArrangementGraph()
-                arrangementGraph.data.points = it.value
+                arrangementGraph.data.points = it.value.first
+                arrangementGraph.data.jumpPoints.putAll(it.value.second)
                 graphs[it.key] = arrangementGraph
                 arrangementGraph.canvas.layoutY = 100.0*it.key
                 graphCanvases.children.addAll(arrangementGraph.canvas)
@@ -333,7 +335,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     }
 
     private fun updateTimePointer(){
-        val x = Math.round(zoom.value.toDouble() / 64.0 * Main.renderManager.time.time * 100.0).toDouble()
+        val x = Math.round(zoom.value!!.toDouble() / 64.0 * Main.renderManager.time.time * 100.0).toDouble()
         timePointer.startX = x
         timePointer.endX = x
         if(timePointerCentering){
