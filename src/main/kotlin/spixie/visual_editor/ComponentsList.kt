@@ -7,7 +7,6 @@ import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import spixie.visual_editor.components.Color
-import spixie.visual_editor.components.FloatingConstant
 import spixie.visual_editor.components.Graph
 import spixie.visual_editor.components.Test
 
@@ -19,7 +18,6 @@ class ComponentsList(x: Double, y:Double, val containerChildrens: ObservableList
     init {
         treeView.apply {
             root.children.add(TreeItem(ComponentListItem(Test::class.java)))
-            root.children.add(TreeItem(ComponentListItem(FloatingConstant::class.java)))
             root.children.add(TreeItem(ComponentListItem(Color::class.java)))
             root.children.add(TreeItem(ComponentListItem(Graph::class.java)))
             expandChildItems(root)

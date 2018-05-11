@@ -55,13 +55,13 @@ open class Component:Region(), Externalizable {
         inputPins.forEachIndexed { index, pin ->
             pin.layoutX = 0.0
             pin.layoutY = index*32.0
-            pin.relocateNodes()
+            pin.updateUI()
         }
 
         outputPins.forEachIndexed { index, pin ->
             pin.layoutX = 256.0 + 96.0 - 128.0
             pin.layoutY = index*32.0
-            pin.relocateNodes()
+            pin.updateUI()
         }
 
 
@@ -76,11 +76,18 @@ open class Component:Region(), Externalizable {
     override fun writeExternal(o: ObjectOutput) {
         o.writeDouble(layoutX)
         o.writeDouble(layoutY)
+        o.writeObject(inputPins.map { it.valueControl?.value?.value })
         o.writeInt(serializationIndex)
     }
 
     override fun readExternal(o: ObjectInput) {
         magneticRelocate(o.readDouble(), o.readDouble())
+        val inputPinsValues = o.readObject() as List<Double?>
+        inputPinsValues.zip(inputPins).forEach {
+            it.first?.let { v ->
+                it.second?.valueControl?.set(v)
+            }
+        }
         serializationIndex = o.readInt()
     }
 }

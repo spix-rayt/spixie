@@ -27,13 +27,13 @@ class RenderManager {
     private val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
     private val cache = ReferenceMap<Long, ByteArray>()
     private val frameCache = ReferenceMap<Double, ByteArray>()
-    val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
+    private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
     @Volatile var autoRenderNextFrame = false
 
     var scaleDown:Int = 2
         set(value) {
             field = value
-            forceRender.onNext(Unit)
+            requestRender()
         }
 
     private fun resizeIfNotCorrect(width: Int, height: Int) {
@@ -88,9 +88,13 @@ class RenderManager {
                             }
                         }
                     } catch (e: ConcurrentModificationException) {
-                        forceRender.onNext(Unit)
+                        requestRender()
                     }
                 }
+    }
+
+    fun requestRender(){
+        forceRender.onNext(Unit)
     }
 
     private fun openclRender(particleArray: ParticleArray):BufferedImage {
@@ -159,7 +163,7 @@ class RenderManager {
         Completable.fromAction {
             cache.clear()
             frameCache.clear()
-            forceRender.onNext(Unit)
+            requestRender()
         }.subscribeOn(renderThread).subscribe()
     }
 

@@ -11,9 +11,10 @@ import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.scene.shape.Circle
 import spixie.Main
+import spixie.ValueControl
 import spixie.static.DragAndDropType
 
-class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: String, val type: Class<T>): HBox() {
+class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: String, val type: Class<T>, val valueControl: ValueControl?): HBox() {
     val backgroundCircle = Circle(16.0, 16.0, 5.0, Color.BLACK)
     val selectionCircle = Circle(16.0, 16.0, 4.0, Color.WHITE)
     val circle = StackPane(backgroundCircle, selectionCircle).apply {
@@ -34,6 +35,8 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
             minHeight = 32.0
             maxHeight = 32.0
         }
+
+        valueControl?.value?.changes?.subscribe { Main.renderManager.requestRender() }
 
         setOnContextMenuRequested { event->
             ContextMenu(
@@ -128,13 +131,22 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
     }
 
     fun receiveValue(): T? {
-        return Main.arrangementWindow.visualEditor.inputToOutputConnection[this]?.getValue?.invoke() as? T
+        val valueFromConnection = Main.arrangementWindow.visualEditor.inputToOutputConnection[this]?.getValue?.invoke() as? T
+        return if(valueFromConnection == null && type == Double::class.java && valueControl != null){
+            valueControl.value.value as? T
+        }else{
+            valueFromConnection
+        }
     }
 
-    fun relocateNodes(){
+    fun updateUI(){
         if(isInputPin()){
             label.alignment = Pos.CENTER_LEFT
-            children.setAll(circle, label)
+            if(valueControl == null){
+                children.setAll(circle, label)
+            }else{
+                children.setAll(circle, label, valueControl)
+            }
         }
 
         if(isOutputPin()){

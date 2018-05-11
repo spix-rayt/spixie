@@ -81,7 +81,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     }
 
     fun updateGrid(){
-        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000019 1%, transparent 1%);"
+        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
     }
 
     var needUpdateAllGraphs = false

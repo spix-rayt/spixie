@@ -113,7 +113,7 @@ class Main : Application() {
                     if(renderManager.autoRenderNextFrame != true){
                         renderManager.autoRenderNextFrame = true
                         renderManager.time.frame = renderManager.time.frame
-                        renderManager.forceRender.onNext(Unit)
+                        renderManager.requestRender()
                     }
                 }
                 if(event.code == KeyCode.SPACE){

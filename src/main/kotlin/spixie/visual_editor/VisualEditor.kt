@@ -69,7 +69,7 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
         inputToOutputConnection.forEach { input, output ->
             connectPins(output, input)
         }
-        Main.renderManager.forceRender.onNext(Unit)
+        Main.renderManager.requestRender()
     }
 
     fun homeLayout(){

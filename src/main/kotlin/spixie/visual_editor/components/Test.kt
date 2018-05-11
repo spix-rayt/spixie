@@ -1,6 +1,7 @@
 package spixie.visual_editor.components
 
 import org.joml.*
+import spixie.ValueControl
 import spixie.visual_editor.Particle
 import spixie.visual_editor.Component
 import spixie.visual_editor.ComponentPin
@@ -8,13 +9,13 @@ import spixie.visual_editor.ParticleArray
 import java.lang.Math
 
 class Test: Component() {
-    val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java)
-    val inLength = ComponentPin(this, null, "Length",Double::class.java)
-    val inRotateX = ComponentPin(this, null, "RotateX", Double::class.java)
-    val inRotateY = ComponentPin(this, null, "RotateY", Double::class.java)
-    val inRotateZ = ComponentPin(this, null, "RotateZ", Double::class.java)
-    val inSize = ComponentPin(this, null, "Size", Double::class.java)
-    val inCount = ComponentPin(this, null, "Count", Double::class.java)
+    val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
+    val inLength = ComponentPin(this, null, "Length",Double::class.java, ValueControl(0.0, 5.00, "").limitMin(0.0))
+    val inRotateX = ComponentPin(this, null, "RotateX", Double::class.java, ValueControl(0.0, 0.01, ""))
+    val inRotateY = ComponentPin(this, null, "RotateY", Double::class.java, ValueControl(0.0, 0.01, ""))
+    val inRotateZ = ComponentPin(this, null, "RotateZ", Double::class.java, ValueControl(0.0, 0.01, ""))
+    val inSize = ComponentPin(this, null, "Size", Double::class.java, ValueControl(20.0, 0.1, "").limitMin(0.0))
+    val inCount = ComponentPin(this, null, "Count", Double::class.java, ValueControl(1.0, 1.0, "").limitMin(0.0))
 
 
     val outParticles = ComponentPin(this, {
@@ -41,7 +42,7 @@ class Test: Component() {
                     }
                 }
         )
-    }, "Particles", ParticleArray::class.java)
+    }, "Particles", ParticleArray::class.java, null)
 
     init {
         inputPins.add(inParticles)

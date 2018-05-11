@@ -1,15 +1,16 @@
 package spixie.visual_editor.components
 
+import spixie.ValueControl
 import spixie.visual_editor.Component
 import spixie.visual_editor.ComponentPin
 import spixie.visual_editor.ParticleArray
 
 class Color: Component() {
-    val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java)
-    val inRed = ComponentPin(this, null, "Red", Double::class.java)
-    val inGreen = ComponentPin(this, null, "Green", Double::class.java)
-    val inBlue = ComponentPin(this, null, "Blue", Double::class.java)
-    val inAlpha = ComponentPin(this, null, "Alpha", Double::class.java)
+    val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
+    val inRed = ComponentPin(this, null, "Red", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
+    val inGreen = ComponentPin(this, null, "Green", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
+    val inBlue = ComponentPin(this, null, "Blue", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
+    val inAlpha = ComponentPin(this, null, "Alpha", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
 
     val outParticles = ComponentPin(this, {
         val particles = inParticles.receiveValue()
@@ -30,7 +31,7 @@ class Color: Component() {
         } else {
             ParticleArray()
         }
-    }, "Particles", ParticleArray::class.java)
+    }, "Particles", ParticleArray::class.java, null)
 
     init {
         inputPins.add(inParticles)

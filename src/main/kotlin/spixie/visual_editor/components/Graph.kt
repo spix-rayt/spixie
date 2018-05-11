@@ -17,12 +17,12 @@ class Graph: Component(), Externalizable {
         outputPins.add(ComponentPin(this, {
             (Main.arrangementWindow.graphs[valueControl.value.value.toInt()]?.data?.getValue(Main.arrangementWindow.visualEditor.time)
                     ?: 0.0) * (rangeToControl.value.value - rangeFromControl.value.value) + rangeFromControl.value.value
-        }, "Graph", Double::class.java))
+        }, "Graph", Double::class.java, null))
         updateVisual()
         content.children.addAll(VBox(valueControl, rangeFromControl, rangeToControl))
 
         valueControl.value.changes.subscribe {
-            Main.renderManager.forceRender.onNext(Unit)
+            Main.renderManager.requestRender()
         }
     }
 
