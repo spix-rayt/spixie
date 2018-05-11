@@ -7,17 +7,16 @@ import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
 class OpenCLRenderer {
-    val context:CLContext
-    val device:CLDevice
-    val program:CLProgram
-    var clImageOut:CLBuffer<IntBuffer>
-    var width = 1
-    var height = 1
+    private val context:CLContext = CLContext.create()
+    private val device:CLDevice
+    private val program:CLProgram
+    private var clImageOut:CLBuffer<IntBuffer>
+    private var width = 1
+    private var height = 1
     var realWidth = 1
     var realHeight = 1
 
     init {
-        context = CLContext.create()
         device = context.maxFlopsDevice
         program = context.createProgram(javaClass.getResourceAsStream("/kernel.cl")).build()
         clImageOut = context.createIntBuffer(width*height*4, CLMemory.Mem.WRITE_ONLY)

@@ -1,4 +1,4 @@
-package spixie.visual_editor
+package spixie.visualEditor
 
 import javafx.geometry.Pos
 import javafx.scene.control.ContextMenu
@@ -14,9 +14,9 @@ import spixie.Main
 import spixie.ValueControl
 import spixie.static.DragAndDropType
 
-class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: String, val type: Class<T>, val valueControl: ValueControl?): HBox() {
-    val backgroundCircle = Circle(16.0, 16.0, 5.0, Color.BLACK)
-    val selectionCircle = Circle(16.0, 16.0, 4.0, Color.WHITE)
+class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: String, private val type: Class<T>, val valueControl: ValueControl?): HBox() {
+    private val backgroundCircle = Circle(16.0, 16.0, 5.0, Color.BLACK)
+    private val selectionCircle = Circle(16.0, 16.0, 4.0, Color.WHITE)
     val circle = StackPane(backgroundCircle, selectionCircle).apply {
         minWidth = 32.0
         maxWidth = 32.0
@@ -25,7 +25,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
         maxHeight = 32.0
     }
 
-    val label = Label(name)
+    private val label = Label(name)
 
     init {
         label.apply {
@@ -36,7 +36,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
             maxHeight = 32.0
         }
 
-        valueControl?.value?.changes?.subscribe { Main.renderManager.requestRender() }
+        valueControl?.changes?.subscribe { Main.renderManager.requestRender() }
 
         setOnContextMenuRequested { event->
             ContextMenu(
@@ -74,16 +74,16 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
             setOnDragDetected { event ->
                 if(event.button == MouseButton.PRIMARY){
                     val startDragAndDrop = startDragAndDrop(TransferMode.LINK)
-                    startDragAndDrop.setContent(mapOf(DragAndDropType.INTERNALOBJECT to ""))
-                    Main.internalObject = this@ComponentPin
+                    startDragAndDrop.setContent(mapOf(DragAndDropType.PIN to ""))
+                    Main.dragAndDropObject = this@ComponentPin
 
                     event.consume()
                 }
             }
 
             setOnDragOver { event ->
-                if(event.gestureSource != this && event.dragboard.hasContent(DragAndDropType.INTERNALOBJECT)){
-                    (Main.internalObject as? ComponentPin<*>)?.let { dragged ->
+                if(event.gestureSource != this && event.dragboard.hasContent(DragAndDropType.PIN)){
+                    (Main.dragAndDropObject as? ComponentPin<*>)?.let { dragged ->
                         if(dragged.component != this@ComponentPin.component && dragged.type == this@ComponentPin.type){
                             if(dragged.isInputPin() && this@ComponentPin.isOutputPin() || dragged.isOutputPin() && this@ComponentPin.isInputPin()){
                                 event.acceptTransferModes(TransferMode.LINK)
@@ -104,9 +104,9 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
                 val dragboard = event.dragboard
                 var success = false
 
-                if(dragboard.hasContent(DragAndDropType.INTERNALOBJECT)){
+                if(dragboard.hasContent(DragAndDropType.PIN)){
                     success = true
-                    (Main.internalObject as? ComponentPin<*>)?.let { dragged ->
+                    (Main.dragAndDropObject as? ComponentPin<*>)?.let { dragged ->
                         if(dragged.component.inputPins.contains(dragged)){
                             Main.arrangementWindow.visualEditor.inputToOutputConnection[dragged] = this@ComponentPin
                         }else{
@@ -122,18 +122,18 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
         }
     }
 
-    fun isInputPin(): Boolean {
+    private fun isInputPin(): Boolean {
         return component.inputPins.contains(this)
     }
 
-    fun isOutputPin(): Boolean {
+    private fun isOutputPin(): Boolean {
         return component.outputPins.contains(this)
     }
 
     fun receiveValue(): T? {
         val valueFromConnection = Main.arrangementWindow.visualEditor.inputToOutputConnection[this]?.getValue?.invoke() as? T
         return if(valueFromConnection == null && type == Double::class.java && valueControl != null){
-            valueControl.value.value as? T
+            valueControl.value as? T
         }else{
             valueFromConnection
         }

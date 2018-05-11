@@ -1,4 +1,4 @@
-package spixie.visual_editor
+package spixie.visualEditor
 
 class ComponentListItem(val clazz: Class<*>) {
     override fun toString(): String {

@@ -21,6 +21,6 @@ class RenderBufferBuilder(particles:Int) {
     }
 
     companion object {
-        val PARTICLE_FLOAT_SIZE = 7
+        const val PARTICLE_FLOAT_SIZE = 7
     }
 }

@@ -2,7 +2,6 @@ package spixie
 
 import io.reactivex.*
 import io.reactivex.Observable
-import io.reactivex.functions.BiFunction
 import io.reactivex.functions.Function3
 import io.reactivex.rxjavafx.observables.JavaFxObservable
 import io.reactivex.schedulers.Schedulers
@@ -13,7 +12,7 @@ import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
 import spixie.static.*
-import spixie.visual_editor.ParticleArray
+import spixie.visualEditor.ParticleArray
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.util.*
@@ -22,8 +21,8 @@ import kotlin.math.roundToInt
 
 class RenderManager {
     val time = TimeProperty(160.0)
-    var bpm = ValueControl(160.0, 1.0, "BPM")
-    @Volatile var renderingToFile = false
+    val bpm = ValueControl(160.0, 1.0, "BPM")
+    @Volatile private var renderingToFile = false
     private val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
     private val cache = ReferenceMap<Long, ByteArray>()
     private val frameCache = ReferenceMap<Double, ByteArray>()
@@ -44,7 +43,7 @@ class RenderManager {
         }
     }
 
-    val renderThread = Schedulers.newThread()
+    private val renderThread = Schedulers.newThread()
 
     var perFrame = {  }
 
@@ -52,7 +51,7 @@ class RenderManager {
         perFrame = {
             if(Main.audio.isPlaying()){
                 val seconds = Main.audio.getTime()
-                time.time = frameToTime((seconds*60).roundToInt(), Main.renderManager.bpm.value.value)
+                time.time = frameToTime((seconds*60).roundToInt(), Main.renderManager.bpm.value)
                 frameCache[time.time]?.let {
                     val byteArrayInputStream = ByteArrayInputStream(it)
                     imageView.image = Image(byteArrayInputStream)
@@ -71,10 +70,10 @@ class RenderManager {
                             val imageCached = cache[particles.hash]
                             if(imageCached == null){
                                 val image = openclRender(particles).toPNGByteArray()
-                                cache.put(particles.hash, image)
-                                frameCache.put(t, image)
+                                cache[particles.hash] = image
+                                frameCache[t] = image
                             }else{
-                                frameCache.put(t, imageCached)
+                                frameCache[t] = imageCached
                             }
                             runInUIAndWait {
                                 frameCache[t]?.let {
@@ -107,7 +106,7 @@ class RenderManager {
         return openCLRenderer.render(renderBufferBuilder.complete())
     }
 
-    fun renderToFile(frameRenderedToFileEventHandler: FrameRenderedToFileEvent, renderToFileCompleted: RenderToFileCompleted) {
+    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit) {
         renderingToFile = true
         Thread(Runnable {
             openCLRenderer.setSize(1920, 1080)
@@ -139,7 +138,7 @@ class RenderManager {
                     break
                 }
 
-                val bufferedImage = openclRender(Main.arrangementWindow.visualEditor.render(frameToTime(frame, bpm.value.value)))
+                val bufferedImage = openclRender(Main.arrangementWindow.visualEditor.render(frameToTime(frame, bpm.value)))
                 val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
                 bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
                 ImageIO.write(bufferedImage1, "png", outputStream)
@@ -147,7 +146,7 @@ class RenderManager {
                 inputStream.printAvailable()
                 errorStream.printAvailable()
 
-                Platform.runLater { frameRenderedToFileEventHandler.handle(frame + 1, countFrames) }
+                Platform.runLater { frameRenderedToFileEventHandler(frame + 1, countFrames) }
             }
             outputStream.close()
             process.waitFor()
@@ -155,7 +154,7 @@ class RenderManager {
             errorStream.printAvailable()
             println("Process finished with exit code ${process.exitValue()}")
             renderingToFile = false
-            Platform.runLater { renderToFileCompleted.handle() }
+            Platform.runLater { renderToFileCompleted() }
         }).start()
     }
 
@@ -165,13 +164,5 @@ class RenderManager {
             frameCache.clear()
             requestRender()
         }.subscribeOn(renderThread).subscribe()
-    }
-
-    interface FrameRenderedToFileEvent {
-        fun handle(currentFrame: Int, framesCount: Int)
-    }
-
-    interface RenderToFileCompleted {
-        fun handle()
     }
 }

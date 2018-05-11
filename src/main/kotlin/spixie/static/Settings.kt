@@ -9,7 +9,7 @@ data class Props(
         val ffmpeg:String
 ){
     companion object {
-        fun default(): Props {
+        private fun default(): Props {
             return Props(
                     "ffmpeg"
             )
@@ -17,14 +17,14 @@ data class Props(
 
         fun load(): Props {
             val settingsFile = File("settings.json")
-            if(settingsFile.exists()){
+            return if(settingsFile.exists()){
                 try{
-                    return Gson().fromJson<Props>(settingsFile.bufferedReader().use { it.readText() }, Settings::class.java)
+                    Gson().fromJson<Props>(settingsFile.bufferedReader().use { it.readText() }, Settings::class.java)
                 }catch (e:Exception){
-                    return default()
+                    default()
                 }
             }else{
-                return default()
+                default()
             }
         }
     }

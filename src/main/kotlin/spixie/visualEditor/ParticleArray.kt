@@ -1,10 +1,10 @@
-package spixie.visual_editor
+package spixie.visualEditor
 
-import spixie.static.magic
+import spixie.static.MAGIC
 import spixie.static.mix
 
 data class ParticleArray(val array: List<Particle> = arrayListOf()) {
-    val hash = array.fold(magic.toLong()) { acc, particle ->
+    val hash = array.fold(MAGIC.toLong()) { acc, particle ->
         acc mix particle.spixieHash()
     }
 }

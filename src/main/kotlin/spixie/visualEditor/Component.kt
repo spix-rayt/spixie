@@ -1,4 +1,4 @@
-package spixie.visual_editor
+package spixie.visualEditor
 
 import javafx.geometry.Point2D
 import javafx.scene.Group
@@ -15,7 +15,7 @@ open class Component:Region(), Externalizable {
     val outputPins = arrayListOf<ComponentPin<*>>()
     val content = Group()
 
-    var dragDelta = Point2D(0.0, 0.0)
+    private var dragDelta = Point2D(0.0, 0.0)
 
     init {
         style = "-fx-border-color: #9A12B3FF; -fx-border-width: 1; -fx-background-color: #FFFFFFFF;"
@@ -76,7 +76,7 @@ open class Component:Region(), Externalizable {
     override fun writeExternal(o: ObjectOutput) {
         o.writeDouble(layoutX)
         o.writeDouble(layoutY)
-        o.writeObject(inputPins.map { it.valueControl?.value?.value })
+        o.writeObject(inputPins.map { it.valueControl?.value })
         o.writeInt(serializationIndex)
     }
 
@@ -85,7 +85,7 @@ open class Component:Region(), Externalizable {
         val inputPinsValues = o.readObject() as List<Double?>
         inputPinsValues.zip(inputPins).forEach {
             it.first?.let { v ->
-                it.second?.valueControl?.set(v)
+                it.second.valueControl?.value = v
             }
         }
         serializationIndex = o.readInt()

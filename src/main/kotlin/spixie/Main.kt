@@ -24,14 +24,14 @@ class Main : Application() {
     @Throws(Exception::class)
     override fun start(stage: Stage) {
         val root = Group()
-        val imageView = ImageView()
+        val imageView = ImageView().apply {
+            style="-fx-background:transparent;"
+            isSmooth = true
+            isPreserveRatio = false
+            isCache = false
+            cacheHint = CacheHint.SPEED
+        }
         val imagePane = Pane()
-        imageView.style="-fx-background:transparent;"
-        imageView.isSmooth = true
-        imageView.isPreserveRatio = false
-        imageView.isCache = false
-        imageView.cacheHint = CacheHint.SPEED
-
 
         imagePane.children.addAll(imageView)
         root.children.addAll(imagePane)
@@ -41,17 +41,20 @@ class Main : Application() {
         scene.stylesheets.add("style.css")
         imageView.fitWidthProperty().bind(scene.widthProperty())
         imageView.fitHeightProperty().bind(scene.heightProperty())
-        stage.title = "Render"
-        stage.scene = scene
-        stage.isMaximized = true
-        stage.fullScreenExitKeyCombination = KeyCombination.NO_MATCH
-        stage.show()
-        stage.isFullScreen = true
+
+        stage.apply {
+            title = "Render"
+            this.scene = scene
+            isMaximized = true
+            fullScreenExitKeyCombination = KeyCombination.NO_MATCH
+            show()
+            isFullScreen = true
+        }
 
         workingWindow.prefWidthProperty().bind(scene.widthProperty())
         workingWindow.prefHeightProperty().bind(scene.heightProperty())
         root.children.addAll(workingWindow)
-        workingWindow.nextOpen(arrangementWindow)
+        workingWindow.open(arrangementWindow)
 
         val windowOpacity = arrayOf(1.0f)
         workingWindow.style = "-fx-opacity: " + windowOpacity[0]
@@ -84,18 +87,6 @@ class Main : Application() {
                     windowOpacity[0] = 0.0f
                     workingWindow.style = "-fx-opacity: " + windowOpacity[0]
                 }
-                if(event.code == KeyCode.C){
-                    Main.arrangementWindow.selectionBlock.copy()
-                }
-                if(event.code == KeyCode.V){
-                    Main.arrangementWindow.selectionBlock.paste()
-                }
-                if(event.code == KeyCode.D){
-                    Main.arrangementWindow.selectionBlock.duplicate()
-                }
-                if(event.code == KeyCode.R){
-                    Main.arrangementWindow.selectionBlock.reverse()
-                }
             }
 
             if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
@@ -125,18 +116,6 @@ class Main : Application() {
                         audio.play(Duration.seconds(renderManager.time.frame/60.0))
                     }
                 }
-                if(event.code == KeyCode.C){
-                    arrangementWindow.timePointerCentering = true
-                }
-                if(event.code == KeyCode.V){
-                    Main.workingWindow.nextOpen(Main.arrangementWindow.visualEditor)
-                }
-                if(event.code == KeyCode.Q){
-                    Main.arrangementWindow.selectionBlock.buildGraph()
-                }
-                if(event.code == KeyCode.DELETE){
-                    Main.arrangementWindow.selectionBlock.del()
-                }
             }
         }
 
@@ -146,9 +125,6 @@ class Main : Application() {
             }
             if(event.code == KeyCode.P){
                 renderManager.autoRenderNextFrame = false
-            }
-            if(event.code == KeyCode.C){
-                arrangementWindow.timePointerCentering = false
             }
         }
 
@@ -185,10 +161,10 @@ class Main : Application() {
         val arrangementWindow = ArrangementWindow()
         val audio = Audio()
 
-        var internalObject: Any = Any()
-
-        @JvmStatic fun main(args: Array<String>) {
-            launch(Main::class.java)
-        }
+        var dragAndDropObject: Any = Any()
     }
+}
+
+fun main(args: Array<String>) {
+    Application.launch(Main::class.java)
 }

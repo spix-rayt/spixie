@@ -1,5 +1,6 @@
 package spixie
 
+import io.reactivex.subjects.PublishSubject
 import javafx.event.EventHandler
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
@@ -15,7 +16,13 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
     private val textFieldValue = TextField()
     private var dragged = false
 
-    val value = Value(initial)
+    var value = 0.0
+        set(value) {
+            field = value.coerceIn(min, max)
+            labelValue.text = field.toString()
+            changes.onNext(field)
+        }
+    val changes = PublishSubject.create<Double>()
 
     private var min = Double.NEGATIVE_INFINITY
     fun limitMin(min: Double): ValueControl{
@@ -29,22 +36,14 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         return this
     }
 
-    fun set(value: Double) {
-        when {
-            value < min -> this.value.value = min
-            value > max -> this.value.value = max
-            else -> this.value.value = value
-        }
-    }
-
     override fun toString(): String {
-        return name
+        return "ValueControl($name ${value})"
     }
 
     init {
         this.mul = mul
         if(name.isNotEmpty()){
-            labelName.text = name + ": "
+            labelName.text = "$name: "
         }else{
             labelName.text = ""
         }
@@ -54,7 +53,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         labelValue.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                startDragValue = Fraction(value.value).add(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt()))
+                startDragValue = Fraction(value).add(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt()))
                 dragged = false
             }
         }
@@ -62,7 +61,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         labelValue.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                set(startDragValue.subtract(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt())).toDouble())
+                value = startDragValue.subtract(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt())).toDouble()
                 dragged = true
             }
         }
@@ -82,7 +81,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         textFieldValue.focusedProperty().addListener { _, _, t1 ->
             if (!t1) {
                 try {
-                    set(java.lang.Double.parseDouble(textFieldValue.text))
+                    value = java.lang.Double.parseDouble(textFieldValue.text)
                 } catch (e: NumberFormatException) {
                 }
 
@@ -98,10 +97,6 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
             }
         }
         children.addAll(labelName, labelValue)
-
-        value.changes.subscribe { newValue ->
-            labelValue.text = newValue.toString()
-        }
-        set(initial)
+        value = initial
     }
 }

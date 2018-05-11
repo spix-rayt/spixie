@@ -1,7 +1,11 @@
 package spixie.static
 
 import javafx.application.Platform
+import javafx.scene.Group
 import javafx.scene.input.DataFormat
+import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
+import javafx.scene.layout.Pane
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -42,19 +46,19 @@ fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     x = x xor (x ushr 35)
     x = x xor (x shl 4)
     x = x and 0x7FFFFFFFFFFFFFFF
-    return ((x % 0xFFFFFFFFFFFFFFF).toFloat()/0xFFFFFFFFFFFFFFF);
+    return ((x % 0xFFFFFFFFFFFFFFF).toFloat()/0xFFFFFFFFFFFFFFF)
 }
 
 fun frameToTime(frame:Int, bpm:Double): Double {
     return bpm/3600*frame
 }
 
-val magic = 0x5bd1e995
+const val MAGIC = 0x5bd1e995
 infix fun Long.mix(n:Long):Long{
-    var q1 = this * magic
+    var q1 = this * MAGIC
     q1 = q1 xor (q1 ushr 48)
-    q1 *= magic
-    var q2 = n * magic
+    q1 *= MAGIC
+    val q2 = n * MAGIC
     return q1 xor q2
 }
 
@@ -95,18 +99,46 @@ fun runInUIAndWait(work: () -> Unit){
 }
 
 fun Int.roundUp(multiplicity: Int): Int{
-    var r = this % multiplicity
-    if(r == 0){
-        return this
+    val r = this % multiplicity
+    return if(r == 0){
+        this
     }else{
-        return this + multiplicity - r
+        this + multiplicity - r
     }
 }
 
 fun linearInterpolate(y1: Double, y2:Double, t:Double): Double {
-    return (y1*(1.0-t)+y2*t);
+    return (y1*(1.0-t)+y2*t)
+}
+
+fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
+    var mouseXOnStartDrag = 0.0
+    var mouseYOnStartDrag = 0.0
+    var layoutXOnStartDrag = 0.0
+    var layoutYOnStartDrag = 0.0
+
+    setOnMousePressed { event ->
+        if(event.button == MouseButton.MIDDLE){
+            mouseXOnStartDrag = event.screenX
+            mouseYOnStartDrag = event.screenY
+            layoutXOnStartDrag = content.layoutX
+            layoutYOnStartDrag = content.layoutY
+        }
+    }
+
+    addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
+        if(event.isMiddleButtonDown){
+            if(allDirections){
+                content.layoutX = layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag)
+                content.layoutY = layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag)
+            }else{
+                content.layoutX = minOf(layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag), 0.0)
+                content.layoutY = minOf(layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag), 0.0)
+            }
+        }
+    })
 }
 
 object DragAndDropType {
-    val INTERNALOBJECT = DataFormat("INTERNALOBJECT")
+    val PIN = DataFormat("PIN")
 }

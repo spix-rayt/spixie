@@ -1,4 +1,3 @@
 package spixie
 
-interface WorkingWindowOpenableContent {
-}
+interface WorkingWindowOpenableContent

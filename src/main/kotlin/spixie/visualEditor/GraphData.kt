@@ -1,4 +1,4 @@
-package spixie.visual_editor
+package spixie.visualEditor
 
 import spixie.static.linearInterpolate
 

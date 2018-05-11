@@ -1,4 +1,4 @@
-package spixie.visual_editor
+package spixie.visualEditor
 
 
 import javafx.collections.ObservableList
@@ -6,14 +6,14 @@ import javafx.scene.Node
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
-import spixie.visual_editor.components.Color
-import spixie.visual_editor.components.Graph
-import spixie.visual_editor.components.Test
+import spixie.visualEditor.components.Color
+import spixie.visualEditor.components.Graph
+import spixie.visualEditor.components.Test
 
-class ComponentsList(x: Double, y:Double, val containerChildrens: ObservableList<Node>, val result: (component: Component) -> Unit): BorderPane() {
-    val treeView = TreeView<Any>(TreeItem("Components"))
-    val scrollPane = ScrollPane(treeView)
-    val textField = TextField()
+class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, private val result: (component: Component) -> Unit): BorderPane() {
+    private val treeView = TreeView<Any>(TreeItem("Components"))
+    private val scrollPane = ScrollPane(treeView)
+    private val textField = TextField()
 
     init {
         treeView.apply {
@@ -67,7 +67,7 @@ class ComponentsList(x: Double, y:Double, val containerChildrens: ObservableList
         textField.requestFocus()
     }
 
-    fun createSelected(){
+    private fun createSelected(){
         val value = treeView.selectionModel.selectedItem?.value
         if (value is ComponentListItem) {
             result(value.clazz.newInstance() as @kotlin.ParameterName(name = "component") Component)
@@ -75,7 +75,7 @@ class ComponentsList(x: Double, y:Double, val containerChildrens: ObservableList
         }
     }
 
-    fun expandChildItems(item: TreeItem<*>){
+    private fun expandChildItems(item: TreeItem<*>){
         item.isExpanded = true
         item.children.forEach {
             if(!it.isLeaf){

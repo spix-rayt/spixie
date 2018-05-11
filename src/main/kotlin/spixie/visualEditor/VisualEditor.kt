@@ -1,23 +1,24 @@
-package spixie.visual_editor
+package spixie.visualEditor
 
-import javafx.application.Platform
 import javafx.scene.Group
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
-import javafx.scene.input.MouseEvent
+import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Pane
 import javafx.scene.paint.Color
 import javafx.scene.shape.CubicCurve
 import javafx.stage.Screen
 import spixie.Main
 import spixie.WorkingWindowOpenableContent
-import spixie.visual_editor.components.Result
+import spixie.static.initCustomPanning
+import spixie.visualEditor.components.Result
 import kotlin.math.absoluteValue
 
-class VisualEditor: Pane(), WorkingWindowOpenableContent {
-    val content = Group()
+class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
+    private val contentPane = Pane()
+    private val content = Group()
     val components = Group()
-    val connects = Group()
+    private val connects = Group()
     val inputToOutputConnection = hashMapOf<ComponentPin<*>, ComponentPin<*>>()
     var time = 0.0
     private set
@@ -25,10 +26,10 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
     init {
         style = "-fx-background-color: #FFFFFFFF;"
 
-        initCustomPanning()
+        contentPane.initCustomPanning(content, true)
         homeLayout()
 
-        children.addAll(content)
+        center = contentPane.apply { children.addAll(content) }
 
         setOnMouseClicked { event ->
             if(event.button == MouseButton.SECONDARY){
@@ -51,6 +52,13 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
         }
 
         content.children.addAll(components, connects)
+
+        content.layoutXProperty().addListener { _, _, _ ->
+            updateBackgroundGrid()
+        }
+        content.layoutYProperty().addListener { _, _, _ ->
+            updateBackgroundGrid()
+        }
     }
 
     fun render(time:Double): ParticleArray {
@@ -72,14 +80,14 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
         Main.renderManager.requestRender()
     }
 
-    fun homeLayout(){
+    private fun homeLayout(){
         val visualBounds = Screen.getPrimary().visualBounds
         content.layoutX = visualBounds.width/2
         content.layoutY = visualBounds.height/2
         updateBackgroundGrid()
     }
 
-    fun connectPins(pin1: ComponentPin<*>, pin2: ComponentPin<*>){
+    private fun connectPins(pin1: ComponentPin<*>, pin2: ComponentPin<*>){
         val cubicCurve = CubicCurve()
         val aBounds = pin1.component.localToParent(pin1.component.content.localToParent(pin1.localToParent(pin1.circle.boundsInParent)))
         val bBounds = pin2.component.localToParent(pin2.component.content.localToParent(pin2.localToParent(pin2.circle.boundsInParent)))
@@ -97,31 +105,6 @@ class VisualEditor: Pane(), WorkingWindowOpenableContent {
         connects.children.add(cubicCurve)
 
         cubicCurve.isMouseTransparent = true
-    }
-
-    private fun initCustomPanning(){
-        var mouseXOnStartDrag = 0.0
-        var mouseYOnStartDrag = 0.0
-        var layoutXOnStartDrag = 0.0
-        var layoutYOnStartDrag = 0.0
-
-        addEventHandler(MouseEvent.MOUSE_PRESSED, { event ->
-            if(event.button == MouseButton.MIDDLE){
-                mouseXOnStartDrag = event.screenX
-                mouseYOnStartDrag = event.screenY
-                layoutXOnStartDrag = content.layoutX
-                layoutYOnStartDrag = content.layoutY
-            }
-        })
-
-        addEventHandler(MouseEvent.MOUSE_DRAGGED, { event ->
-            if(event.isMiddleButtonDown){
-                content.layoutX = layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag)
-                content.layoutY = layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag)
-
-                updateBackgroundGrid()
-            }
-        })
     }
 
     private fun updateBackgroundGrid(){

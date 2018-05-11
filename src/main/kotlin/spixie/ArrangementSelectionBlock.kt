@@ -4,15 +4,15 @@ import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.layout.Region
 import org.apache.commons.math3.fraction.Fraction
 
-class ArrangementSelectionBlock(val zoom:BehaviorSubject<Fraction>): Region() {
-    var strictWidth:Double
+class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Region() {
+    private var strictWidth:Double
         get() = width
         set(value) {
             minWidth = value
             maxWidth = value
         }
 
-    var strictHeight:Double
+    private var strictHeight:Double
         get() = height
         set(value) {
             minHeight = value
@@ -72,8 +72,8 @@ class ArrangementSelectionBlock(val zoom:BehaviorSubject<Fraction>): Region() {
         Main.arrangementWindow.graphBuilderGroup.children.addAll(graphBuilder)
     }
 
-    var copyData = floatArrayOf() to mapOf<Int, Pair<Float, Float>>()
-    var copyLength = 0
+    private var copyData = floatArrayOf() to mapOf<Int, Pair<Float, Float>>()
+    private var copyLength = 0
 
     fun copy(){
         Main.arrangementWindow.graphs[line]?.let { graph ->

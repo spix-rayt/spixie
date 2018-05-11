@@ -1,24 +1,23 @@
-package spixie.visual_editor.components
+package spixie.visualEditor.components
 
-import org.joml.*
 import spixie.ValueControl
-import spixie.visual_editor.Particle
-import spixie.visual_editor.Component
-import spixie.visual_editor.ComponentPin
-import spixie.visual_editor.ParticleArray
+import spixie.visualEditor.Particle
+import spixie.visualEditor.Component
+import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ParticleArray
 import java.lang.Math
 
 class Test: Component() {
-    val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
-    val inLength = ComponentPin(this, null, "Length",Double::class.java, ValueControl(0.0, 5.00, "").limitMin(0.0))
-    val inRotateX = ComponentPin(this, null, "RotateX", Double::class.java, ValueControl(0.0, 0.01, ""))
-    val inRotateY = ComponentPin(this, null, "RotateY", Double::class.java, ValueControl(0.0, 0.01, ""))
-    val inRotateZ = ComponentPin(this, null, "RotateZ", Double::class.java, ValueControl(0.0, 0.01, ""))
-    val inSize = ComponentPin(this, null, "Size", Double::class.java, ValueControl(20.0, 0.1, "").limitMin(0.0))
-    val inCount = ComponentPin(this, null, "Count", Double::class.java, ValueControl(1.0, 1.0, "").limitMin(0.0))
+    private val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
+    private val inLength = ComponentPin(this, null, "Length",Double::class.java, ValueControl(0.0, 5.00, "").limitMin(0.0))
+    private val inRotateX = ComponentPin(this, null, "RotateX", Double::class.java, ValueControl(0.0, 0.01, ""))
+    private val inRotateY = ComponentPin(this, null, "RotateY", Double::class.java, ValueControl(0.0, 0.01, ""))
+    private val inRotateZ = ComponentPin(this, null, "RotateZ", Double::class.java, ValueControl(0.0, 0.01, ""))
+    private val inSize = ComponentPin(this, null, "Size", Double::class.java, ValueControl(20.0, 0.1, "").limitMin(0.0))
+    private val inCount = ComponentPin(this, null, "Count", Double::class.java, ValueControl(1.0, 1.0, "").limitMin(0.0))
 
 
-    val outParticles = ComponentPin(this, {
+    private val outParticles = ComponentPin(this, {
         val p = inParticles.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
         val len = inLength.receiveValue() ?: 0.0
         val rx = inRotateX.receiveValue() ?: 0.0

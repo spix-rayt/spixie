@@ -3,7 +3,6 @@ package spixie
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.util.Duration
-import spixie.static.runInUIAndWait
 import java.io.DataInputStream
 import java.io.File
 import javax.sound.sampled.AudioSystem
@@ -28,9 +27,7 @@ class Audio {
 
     fun pause(){
         play = false
-        mediaPlayer?.let {
-            it.pause()
-        }
+        mediaPlayer?.pause()
     }
 
     fun isPlaying(): Boolean {
@@ -77,7 +74,7 @@ class Audio {
 
 
             try {
-                mediaPlayer?.let { it.stop() }
+                mediaPlayer?.stop()
                 media = Media(file.toURI().toString())
                 mediaPlayer = MediaPlayer(media)
                 ready=false

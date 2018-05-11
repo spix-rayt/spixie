@@ -6,14 +6,14 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import spixie.static.linearInterpolate
-import spixie.visual_editor.GraphData
+import spixie.visualEditor.GraphData
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sign
 import kotlin.math.tanh
 
-class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pane() {
+class GraphBuilder(private val start:Int, private val end:Int, private val graph: ArrangementGraph): Pane() {
     init {
         assert(end > start)
 
@@ -44,7 +44,7 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
 
         mode(start, end, listOf(startValue, frequencyValue)){
             for(i in start..end){
-                val t = (((i - start) / 100.0) *frequencyValue.value.value + (startValue.value.value/2+0.75)*4) * Math.PI / 2
+                val t = (((i - start) / 100.0) *frequencyValue.value + (startValue.value/2+0.75)*4) * Math.PI / 2
                 graph.data.points[i] = ((Math.sin(t)+1.0)/2).toFloat()
             }
         }
@@ -57,9 +57,9 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
         mode(start, end, listOf(startValue, curvatureValue, endValue)) {
             for(i in start..end){
                 val t = (i - start) / (end - start).toDouble()
-                val cy = startValue.value.value + (endValue.value.value - startValue.value.value)*curvatureValue.value.value
-                val y1 = linearInterpolate(startValue.value.value, cy, t)
-                val y2 = linearInterpolate(cy, endValue.value.value, t)
+                val cy = startValue.value + (endValue.value - startValue.value)*curvatureValue.value
+                val y1 = linearInterpolate(startValue.value, cy, t)
+                val y2 = linearInterpolate(cy, endValue.value, t)
                 graph.data.points[i] = linearInterpolate(y1, y2, t).toFloat()
             }
         }
@@ -71,11 +71,11 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
         val endValue = ValueControl(graph.data.getLeftValue(end).toDouble(), 0.001, "End").limitMin(0.0).limitMax(1.0)
 
         mode(start, end, listOf(startValue, stretchValue, endValue)){
-            val min = min(startValue.value.value, endValue.value.value)
-            val max = max(startValue.value.value, endValue.value.value)
+            val min = min(startValue.value, endValue.value)
+            val max = max(startValue.value, endValue.value)
             for(i in start..end){
-                val t = ((i - start) / (end - start).toDouble()*2-1)*stretchValue.value.value* sign(endValue.value.value - startValue.value.value)
-                graph.data.points[i] = (((tanh(t)+tanh(stretchValue.value.value))/(tanh(stretchValue.value.value)*2)*(max-min))+min).toFloat()
+                val t = ((i - start) / (end - start).toDouble()*2-1)*stretchValue.value* sign(endValue.value - startValue.value)
+                graph.data.points[i] = (((tanh(t)+tanh(stretchValue.value))/(tanh(stretchValue.value)*2)*(max-min))+min).toFloat()
             }
         }
     }
@@ -84,7 +84,7 @@ class GraphBuilder(val start:Int, val end:Int, val graph: ArrangementGraph): Pan
         children.clear()
         val startLeftValue = graph.data.getLeftValue(start).toDouble()
         val endRightValue = graph.data.getRightValue(end).toDouble()
-        Observable.merge(valueControls.map { it.value.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
+        Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
             graph.data.resizeIfNeed(end+1)
             updateData()
             graph.data.setJumpPoint(start, startLeftValue.toFloat() to graph.data.points[start])

@@ -9,32 +9,30 @@ import javafx.scene.layout.BorderPane
 import java.util.*
 
 class WorkingWindow : BorderPane() {
+    private val menuBar = ToolBar()
+
     init {
-        val menuBar = ToolBar()
         val renderButton = Button("Render")
         renderButton.onMouseClicked = EventHandler<MouseEvent> {
             this@WorkingWindow.isDisable = true
-            Main.renderManager.renderToFile(object: RenderManager.FrameRenderedToFileEvent{
-                override fun handle(currentFrame: Int, framesCount: Int) {
-                    renderButton.text = currentFrame.toString() + " / " + framesCount
-                }
-            }, object: RenderManager.RenderToFileCompleted{
-                override fun handle() {
-                    renderButton.text = "Render"
-                    this@WorkingWindow.isDisable = false
-                }
+            Main.renderManager.renderToFile({ currentFrame, framesCount ->
+                renderButton.text = currentFrame.toString() + " / " + framesCount
+            }, {
+                renderButton.text = "Render"
+                this@WorkingWindow.isDisable = false
             })
         }
         renderButton.isFocusTraversable = false
-        val slider = Slider(1.0,6.0,2.0)
-        slider.isShowTickMarks = true
-        slider.majorTickUnit = 1.0
-        slider.minorTickCount = 0
-        slider.isSnapToTicks = true
-        slider.valueProperty().addListener { _, _, newValue ->
-            Main.renderManager.scaleDown = newValue.toInt()
+        val slider = Slider(1.0,6.0,2.0).apply {
+            isShowTickMarks = true
+            majorTickUnit = 1.0
+            minorTickCount = 0
+            isSnapToTicks = true
+            valueProperty().addListener { _, _, newValue ->
+                Main.renderManager.scaleDown = newValue.toInt()
+            }
+            isFocusTraversable = false
         }
-        slider.isFocusTraversable = false
 
         val clearCacheButton = Button("Clear cache")
         clearCacheButton.setOnAction {
@@ -44,33 +42,31 @@ class WorkingWindow : BorderPane() {
 
         val timeLabel = ValueLabel("Time")
         Main.renderManager.time.timeChanges.subscribe { time ->
-            timeLabel.value.value = Math.round(time*1000)/1000.0
+            timeLabel.value = Math.round(time*1000)/1000.0
         }
         menuBar.items.addAll(renderButton, slider, clearCacheButton, timeLabel)
-        top = menuBar
-
 
         setOnKeyPressed { event ->
             if(event.code == KeyCode.ESCAPE){
                 if(centerStack.size > 0){
                     val last = centerStack.removeLast()
                     center = last as Node
+                    center.requestFocus()
+                    (center as? BorderPane)?.top = menuBar
                 }
                 event.consume()
             }
         }
-
-        isFocusTraversable = true
-        isFocused = true
     }
 
-    val centerStack = LinkedList<WorkingWindowOpenableContent>()
+    private val centerStack = LinkedList<WorkingWindowOpenableContent>()
 
-    fun nextOpen(workingWindowOpenableContent: WorkingWindowOpenableContent){
-        if(center != null){
+    fun open(workingWindowOpenableContent: WorkingWindowOpenableContent){
+        if(center != null && center != workingWindowOpenableContent){
             centerStack.add(center as WorkingWindowOpenableContent)
         }
         center = workingWindowOpenableContent as Node
         center.requestFocus()
+        (center as? BorderPane)?.top = menuBar
     }
 }

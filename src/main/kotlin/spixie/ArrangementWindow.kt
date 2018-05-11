@@ -1,19 +1,23 @@
 package spixie
 
 import io.reactivex.subjects.BehaviorSubject
+import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
+import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
+import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Pane
 import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.math3.fraction.Fraction
+import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
-import spixie.visual_editor.Component
-import spixie.visual_editor.VisualEditor
+import spixie.visualEditor.Component
+import spixie.visualEditor.VisualEditor
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -21,16 +25,17 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import kotlin.math.roundToInt
 
-class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
-    val content = Group()
+class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
+    private val contentPane = Pane()
+    private val content = Group()
     val graphBuilderGroup = Group()
-    val grid = Group()
+    private val grid = Group()
     val graphCanvases = Group()
     val visualEditor = VisualEditor()
-    val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
-    val zoom = BehaviorSubject.createDefault(Fraction(64))
-    val selectionBlock = ArrangementSelectionBlock(zoom)
-    val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
+    private val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
+    private val zoom = BehaviorSubject.createDefault(Fraction(64))
+    private val selectionBlock = ArrangementSelectionBlock(zoom)
+    private val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
     var timePointerCentering = false
         set(value) {
             field = value
@@ -38,16 +43,16 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                 updateTimePointer()
             }
         }
-    val waveform = Canvas(1.0, 300.0)
+    private val waveform = Canvas(1.0, 300.0)
     val graphs = HashMap<Int, ArrangementGraph>()
 
-    fun redrawWaveform() {
+    private fun redrawWaveform() {
         val newWaveformLayoutX = -content.layoutX - 100
         val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble()
         val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble()
 
-        val startSecond = startTime*3600/Main.renderManager.bpm.value.value/60
-        val endSecond = endTime*3600/Main.renderManager.bpm.value.value/60
+        val startSecond = startTime*3600/Main.renderManager.bpm.value/60
+        val endSecond = endTime*3600/Main.renderManager.bpm.value/60
 
         val secondsInPixel = (endSecond - startSecond) / waveform.width
 
@@ -60,7 +65,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             var from = 0
             for(x in 0 until bufferedImage.width){
                 var maxrms = 0.0f
-                var to = Math.round((startSecond + x * secondsInPixel)*100).toInt()
+                val to = Math.round((startSecond + x * secondsInPixel)*100).toInt()
                 if(from > to){
                     from = to
                 }
@@ -80,12 +85,12 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
         waveform.layoutX = newWaveformLayoutX
     }
 
-    fun updateGrid(){
-        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
+    private fun updateGrid(){
+        contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
     }
 
     var needUpdateAllGraphs = false
-    var needUpdateGrid = false
+    private var needUpdateGrid = false
     var needRedrawWaveform = false
 
     fun perFrame(){
@@ -138,7 +143,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     }
 
     init {
-        widthProperty().addListener { _, _, newValue ->
+        contentPane.widthProperty().addListener { _, _, newValue ->
             waveform.width = newValue.toDouble() + 200.0
             for (graph in graphs) {
                 graph.value.canvas.width = newValue.toDouble() + 200.0
@@ -147,9 +152,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             needUpdateAllGraphs = true
         }
 
-        initCustomPanning()
-
-
+        contentPane.initCustomPanning(content, false)
 
         timePointer.strokeWidth = 4.0
         Main.renderManager.time.timeChanges.subscribe {
@@ -176,6 +179,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                 mousePressedCursorX = cursor.startX
                 mousePressedLine = (content.screenToLocal(event.screenX, event.screenY).y/100.0).toInt()
             }
+            requestFocus()
         })
 
         addEventHandler(MouseEvent.MOUSE_RELEASED, { event ->
@@ -208,6 +212,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                     }
                 }
             }
+            requestFocus()
         })
 
         setOnScroll { event ->
@@ -251,12 +256,49 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             event.consume()
         }
 
+        setOnKeyPressed { event ->
+            if(event.isControlDown && !event.isAltDown && !event.isShiftDown){
+                if(event.code == KeyCode.C){
+                    selectionBlock.copy()
+                }
+                if(event.code == KeyCode.V){
+                    selectionBlock.paste()
+                }
+                if(event.code == KeyCode.D){
+                    selectionBlock.duplicate()
+                }
+                if(event.code == KeyCode.R){
+                    selectionBlock.reverse()
+                }
+            }
+            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
+                if(event.code == KeyCode.C){
+                    timePointerCentering = true
+                }
+                if(event.code == KeyCode.V){
+                    Main.workingWindow.open(visualEditor)
+                }
+                if(event.code == KeyCode.Q){
+                    selectionBlock.buildGraph()
+                }
+                if(event.code == KeyCode.DELETE){
+                    selectionBlock.del()
+                }
+            }
+        }
+
+        setOnKeyReleased { event ->
+            if(event.code == KeyCode.C){
+                timePointerCentering = false
+            }
+        }
+
         needUpdateGrid = true
 
         content.children.addAll(waveform, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
-        children.addAll(content)
+        center = contentPane.apply { children.addAll(content) }
 
-        clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
+        contentPane.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
             needRedrawWaveform = true
@@ -341,28 +383,5 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
         if(timePointerCentering){
             content.layoutX = -(timePointer.startX - width/5)
         }
-    }
-
-    private fun initCustomPanning(){
-        var mouseXOnStartDrag = 0.0
-        var mouseYOnStartDrag = 0.0
-        var layoutXOnStartDrag = 0.0
-        var layoutYOnStartDrag = 0.0
-
-        setOnMousePressed { event ->
-            if(event.button == MouseButton.MIDDLE){
-                mouseXOnStartDrag = event.screenX
-                mouseYOnStartDrag = event.screenY
-                layoutXOnStartDrag = content.layoutX
-                layoutYOnStartDrag = content.layoutY
-            }
-        }
-
-        addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
-            if(event.isMiddleButtonDown){
-                content.layoutX = minOf(layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag), 0.0)
-                content.layoutY = minOf(layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag), 0.0)
-            }
-        })
     }
 }
