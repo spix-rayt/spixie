@@ -1,4 +1,4 @@
-package spixie
+package spixie.renderer
 
 import java.nio.FloatBuffer
 

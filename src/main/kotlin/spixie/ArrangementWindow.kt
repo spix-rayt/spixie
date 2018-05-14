@@ -7,7 +7,6 @@ import javafx.scene.canvas.Canvas
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
-import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Pane
 import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
@@ -25,8 +24,7 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import kotlin.math.roundToInt
 
-class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
-    private val contentPane = Pane()
+class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     private val content = Group()
     val graphBuilderGroup = Group()
     private val grid = Group()
@@ -86,7 +84,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
     }
 
     private fun updateGrid(){
-        contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
+        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
     }
 
     var needUpdateAllGraphs = false
@@ -143,7 +141,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
     }
 
     init {
-        contentPane.widthProperty().addListener { _, _, newValue ->
+        widthProperty().addListener { _, _, newValue ->
             waveform.width = newValue.toDouble() + 200.0
             for (graph in graphs) {
                 graph.value.canvas.width = newValue.toDouble() + 200.0
@@ -152,7 +150,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             needUpdateAllGraphs = true
         }
 
-        contentPane.initCustomPanning(content, false)
+        initCustomPanning(content, false)
 
         timePointer.strokeWidth = 4.0
         Main.renderManager.time.timeChanges.subscribe {
@@ -296,9 +294,9 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         needUpdateGrid = true
 
         content.children.addAll(waveform, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
-        center = contentPane.apply { children.addAll(content) }
+        children.addAll(content)
 
-        contentPane.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
+        clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
             needRedrawWaveform = true

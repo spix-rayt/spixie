@@ -12,6 +12,9 @@ import javafx.geometry.Bounds
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
+import spixie.renderer.OpenCLRenderer
+import spixie.renderer.RenderBufferBuilder
+import spixie.renderer.Renderer
 import spixie.static.*
 import spixie.visualEditor.ParticleArray
 import java.awt.image.BufferedImage
@@ -24,7 +27,7 @@ class RenderManager {
     val time = TimeProperty(160.0)
     val bpm = ValueControl(160.0, 1.0, "BPM")
     @Volatile private var renderingToFile = false
-    private val openCLRenderer:OpenCLRenderer = OpenCLRenderer()
+    private val renderer: Renderer = OpenCLRenderer()
     private val cache = ReferenceMap<Long, ByteArray>()
     private val frameCache = ReferenceMap<Double, ByteArray>()
     private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
@@ -37,8 +40,9 @@ class RenderManager {
         }
 
     private fun resizeIfNotCorrect(width: Int, height: Int) {
-        if (openCLRenderer.realWidth != width || openCLRenderer.realHeight != height) {
-            openCLRenderer.setSize(width,height)
+        val (currentWidth, currentHeight) = renderer.getSize()
+        if (currentWidth != width || currentHeight != height) {
+            renderer.setSize(width,height)
             cache.clear()
             frameCache.clear()
         }
@@ -70,7 +74,7 @@ class RenderManager {
                             val particles = Main.arrangementWindow.visualEditor.render(t)
                             val imageCached = cache[particles.hash]
                             if(imageCached == null){
-                                val image = openclRender(particles).toPNGByteArray()
+                                val image = render(particles).toPNGByteArray()
                                 cache[particles.hash] = image
                                 frameCache[t] = image
                             }else{
@@ -99,20 +103,20 @@ class RenderManager {
         forceRender.onNext(Unit)
     }
 
-    private fun openclRender(particleArray: ParticleArray):BufferedImage {
+    private fun render(particleArray: ParticleArray):BufferedImage {
         val renderBufferBuilder = RenderBufferBuilder(particleArray.array.size)
         particleArray.array.forEach { particle ->
             if(particle.matrix.m32()>=-999){
                 renderBufferBuilder.addParticle(particle.matrix.m30()/((particle.matrix.m32()+1000)/1000), particle.matrix.m31()/((particle.matrix.m32()+1000)/1000), particle.size/((particle.matrix.m32()+1000)/1000), particle.red, particle.green, particle.blue, particle.alpha)
             }
         }
-        return openCLRenderer.render(renderBufferBuilder.complete())
+        return renderer.render(renderBufferBuilder.complete())
     }
 
     fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit) {
         renderingToFile = true
         Thread(Runnable {
-            openCLRenderer.setSize(1920, 1080)
+            renderer.setSize(1920, 1080)
             val countFrames = time.frame + 1
             val processBuilder = ProcessBuilder(
                     listOf(
@@ -141,7 +145,7 @@ class RenderManager {
                     break
                 }
 
-                val bufferedImage = openclRender(Main.arrangementWindow.visualEditor.render(frameToTime(frame, bpm.value)))
+                val bufferedImage = render(Main.arrangementWindow.visualEditor.render(frameToTime(frame, bpm.value)))
                 val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
                 bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
                 ImageIO.write(bufferedImage1, "png", outputStream)

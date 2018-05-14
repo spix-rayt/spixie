@@ -2,16 +2,18 @@ package spixie
 
 import javafx.event.EventHandler
 import javafx.scene.Node
-import javafx.scene.control.*
+import javafx.scene.control.Button
+import javafx.scene.control.Slider
+import javafx.scene.control.ToolBar
 import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import java.util.*
 
 class WorkingWindow : BorderPane() {
-    private val menuBar = ToolBar()
-
     init {
+        val menuBar = ToolBar()
         val renderButton = Button("Render")
         renderButton.onMouseClicked = EventHandler<MouseEvent> {
             this@WorkingWindow.isDisable = true
@@ -46,13 +48,19 @@ class WorkingWindow : BorderPane() {
         }
         menuBar.items.addAll(renderButton, slider, clearCacheButton, timeLabel)
 
+        menuBar.addEventHandler(KeyEvent.ANY){ event ->
+            center.fireEvent(event.copyFor(center, center))
+            event.consume()
+        }
+
+        top = menuBar
+
         setOnKeyPressed { event ->
             if(event.code == KeyCode.ESCAPE){
                 if(centerStack.size > 0){
                     val last = centerStack.removeLast()
                     center = last as Node
                     center.requestFocus()
-                    (center as? BorderPane)?.top = menuBar
                 }
                 event.consume()
             }
@@ -67,6 +75,5 @@ class WorkingWindow : BorderPane() {
         }
         center = workingWindowOpenableContent as Node
         center.requestFocus()
-        (center as? BorderPane)?.top = menuBar
     }
 }
