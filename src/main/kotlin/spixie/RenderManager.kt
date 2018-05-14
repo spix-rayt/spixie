@@ -12,7 +12,7 @@ import javafx.geometry.Bounds
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
-import spixie.renderer.OpenCLRenderer
+import spixie.renderer.AparapiRenderer
 import spixie.renderer.RenderBufferBuilder
 import spixie.renderer.Renderer
 import spixie.static.*
@@ -27,7 +27,7 @@ class RenderManager {
     val time = TimeProperty(160.0)
     val bpm = ValueControl(160.0, 1.0, "BPM")
     @Volatile private var renderingToFile = false
-    private val renderer: Renderer = OpenCLRenderer()
+    private val renderer: Renderer = AparapiRenderer()
     private val cache = ReferenceMap<Long, ByteArray>()
     private val frameCache = ReferenceMap<Double, ByteArray>()
     private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()

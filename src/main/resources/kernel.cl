@@ -1,6 +1,4 @@
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-
-kernel void RenderParticles(global float *particles, int width, int height, int realWidth, int particlesCount, global int *outImage) {
+__kernel void renderParticles(__global float *particles, int width, int height, int realWidth, int particlesCount, __global int *outImage) {
     __local float p[256*7];
     __local float validp[256];
     int workGroup = get_group_id(0);
@@ -21,13 +19,13 @@ kernel void RenderParticles(global float *particles, int width, int height, int 
         barrier(CLK_LOCAL_MEM_FENCE);
         event_t ev1 = async_work_group_copy(p, particles + pBlock*256*7, 256*7, 0);
         wait_group_events(1, &ev1);
-        __local long j;
+        __local int j;
         if(localId == 0){
             j=0;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
         if(fabs(p[localId*7+1] - pixelPos.y) < p[localId*7+2]){
-            validp[atom_inc(&j)] = localId;
+            validp[atomic_inc(&j)] = localId;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
 

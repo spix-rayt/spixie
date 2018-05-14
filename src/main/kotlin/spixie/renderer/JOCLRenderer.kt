@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
-class OpenCLRenderer: Renderer {
+class JOCLRenderer: Renderer {
     private val context:CLContext = CLContext.create()
     private val device:CLDevice
     private val program:CLProgram
@@ -30,17 +30,17 @@ class OpenCLRenderer: Renderer {
 
         val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(256)
         if(particlesCount == 0){
-            return bufferedImage
+            return bufferedImage.getSubimage(0, 0, realWidth, realHeight)
         }
 
-        val clParticles = context.createFloatBuffer(particlesCount* RenderBufferBuilder.PARTICLE_FLOAT_SIZE, CLMemory.Mem.READ_ONLY)
+        val clParticles = context.createFloatBuffer(particlesCount * RenderBufferBuilder.PARTICLE_FLOAT_SIZE, CLMemory.Mem.READ_ONLY)
 
 
         clParticles.buffer.put(particlesArray)
         clParticles.buffer.rewind()
         clImageOut.buffer.rewind()
 
-        val kernel = program.createCLKernel("RenderParticles")
+        val kernel = program.createCLKernel("renderParticles")
         kernel.putArgs(clParticles)
         kernel.putArg(width)
         kernel.putArg(height)
