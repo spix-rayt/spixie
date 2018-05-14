@@ -39,6 +39,11 @@ class Main : Application() {
 
         val scene = Scene(root, 100.0, 100.0)
         scene.stylesheets.add("style.css")
+        scene.focusOwnerProperty().addListener { _, _, newValue ->
+            if(newValue == null){
+                Main.workingWindow.center.requestFocus()
+            }
+        }
         imageView.fitWidthProperty().bind(scene.widthProperty())
         imageView.fitHeightProperty().bind(scene.heightProperty())
 

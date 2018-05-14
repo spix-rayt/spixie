@@ -3,6 +3,7 @@ package spixie.visualEditor.components
 import spixie.ValueControl
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
 
 class Color: Component() {
@@ -13,24 +14,20 @@ class Color: Component() {
     private val inAlpha = ComponentPin(this, null, "Alpha", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
 
     private val outParticles = ComponentPin(this, {
-        val particles = inParticles.receiveValue()
-        val red = inRed.receiveValue()
-        val green = inGreen.receiveValue()
-        val blue = inBlue.receiveValue()
-        val alpha = inAlpha.receiveValue()
+        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
+        val red = inRed.receiveValue() ?: 0.0
+        val green = inGreen.receiveValue() ?: 0.0
+        val blue = inBlue.receiveValue() ?: 0.0
+        val alpha = inAlpha.receiveValue() ?: 0.0
 
-        if (particles != null && red != null && green != null && blue != null && alpha != null) {
-            ParticleArray(particles.array.map {
-                it.copy().apply {
-                    this.red = red.toFloat()
-                    this.green = green.toFloat()
-                    this.blue = blue.toFloat()
-                    this.alpha = alpha.toFloat()
-                }
-            })
-        } else {
-            ParticleArray()
-        }
+        ParticleArray(particles.array.map {
+            it.copy().apply {
+                this.red = red.toFloat()
+                this.green = green.toFloat()
+                this.blue = blue.toFloat()
+                this.alpha = alpha.toFloat()
+            }
+        })
     }, "Particles", ParticleArray::class.java, null)
 
     init {

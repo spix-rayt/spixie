@@ -1,8 +1,9 @@
 package spixie.visualEditor
 
-import org.joml.*
+import org.joml.Matrix4f
 import spixie.static.mix
 import spixie.static.raw
+import java.nio.FloatBuffer
 
 class Particle {
     var red:Float = 1.0f
@@ -19,6 +20,7 @@ class Particle {
             this.blue = this@Particle.blue
             this.alpha = this@Particle.alpha
             this.size = this@Particle.size
+            this.matrix.set(this@Particle.matrix)
         }
     }
 
@@ -44,5 +46,57 @@ class Particle {
                 matrix.m31().raw() mix
                 matrix.m32().raw() mix
                 matrix.m33().raw()
+    }
+
+    fun saveTo(floatBuffer: FloatBuffer) {
+        floatBuffer.put(red)
+        floatBuffer.put(green)
+        floatBuffer.put(blue)
+        floatBuffer.put(alpha)
+        floatBuffer.put(size)
+        floatBuffer.put(matrix.m00())
+        floatBuffer.put(matrix.m01())
+        floatBuffer.put(matrix.m02())
+        floatBuffer.put(matrix.m03())
+        floatBuffer.put(matrix.m10())
+        floatBuffer.put(matrix.m11())
+        floatBuffer.put(matrix.m12())
+        floatBuffer.put(matrix.m13())
+        floatBuffer.put(matrix.m20())
+        floatBuffer.put(matrix.m21())
+        floatBuffer.put(matrix.m22())
+        floatBuffer.put(matrix.m23())
+        floatBuffer.put(matrix.m30())
+        floatBuffer.put(matrix.m31())
+        floatBuffer.put(matrix.m32())
+        floatBuffer.put(matrix.m33())
+    }
+
+    fun loadFrom(floatBuffer: FloatBuffer){
+        red = floatBuffer.get()
+        green = floatBuffer.get()
+        blue = floatBuffer.get()
+        alpha = floatBuffer.get()
+        size = floatBuffer.get()
+        matrix.m00(floatBuffer.get())
+        matrix.m01(floatBuffer.get())
+        matrix.m02(floatBuffer.get())
+        matrix.m03(floatBuffer.get())
+        matrix.m10(floatBuffer.get())
+        matrix.m11(floatBuffer.get())
+        matrix.m12(floatBuffer.get())
+        matrix.m13(floatBuffer.get())
+        matrix.m20(floatBuffer.get())
+        matrix.m21(floatBuffer.get())
+        matrix.m22(floatBuffer.get())
+        matrix.m23(floatBuffer.get())
+        matrix.m30(floatBuffer.get())
+        matrix.m31(floatBuffer.get())
+        matrix.m32(floatBuffer.get())
+        matrix.m33(floatBuffer.get())
+    }
+
+    companion object {
+        const val PARTICLE_FLOATS = 21
     }
 }

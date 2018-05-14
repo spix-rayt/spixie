@@ -4,7 +4,10 @@ import io.reactivex.subjects.PublishSubject
 import javafx.event.EventHandler
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
-import javafx.scene.input.*
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
+import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
 import org.apache.commons.math3.fraction.Fraction
 
@@ -37,7 +40,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
     }
 
     override fun toString(): String {
-        return "ValueControl($name ${value})"
+        return "ValueControl($name $value)"
     }
 
     init {

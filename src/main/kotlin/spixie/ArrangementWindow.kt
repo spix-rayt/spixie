@@ -1,7 +1,6 @@
 package spixie
 
 import io.reactivex.subjects.BehaviorSubject
-import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
@@ -17,6 +16,7 @@ import org.apache.commons.math3.fraction.Fraction
 import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
 import spixie.visualEditor.Component
+import spixie.visualEditor.Module
 import spixie.visualEditor.VisualEditor
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -316,17 +316,8 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         val byteArrayOutputStream = ByteArrayOutputStream()
         val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
 
-        val components = visualEditor.components.children.filter { it is Component }.map { it as Component }
-        components.forEachIndexed { index, component -> component.serializationIndex = index }
-        objectOutputStream.writeObject(components)
-
-        objectOutputStream.writeObject(
-                visualEditor.inputToOutputConnection.map { entry ->
-                    val v1 = entry.key.component.serializationIndex to entry.key.component.inputPins.indexOf(entry.key)
-                    val v2 = entry.value.component.serializationIndex to entry.value.component.outputPins.indexOf(entry.value)
-                    v1 to v2
-                }
-        )
+        val modules = visualEditor.modules.map { it.toSerializable() }
+        objectOutputStream.writeObject(modules)
 
         objectOutputStream.writeObject(graphs.map { it.key to (it.value.data.points to it.value.data.jumpPoints) }.toMap())
 
@@ -336,22 +327,20 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
 
     fun load(objectInputStream: ObjectInputStream){
         try{
-            val components = objectInputStream.readObject() as List<Component>
-            visualEditor.components.children.setAll(components)
-            val idToComponent = components.map { it.serializationIndex to it }.toMap()
-
-            val connections = objectInputStream.readObject() as List<Pair<Pair<Int, Int>, Pair<Int, Int>>>
-            connections.forEach {
-                val (a,b) = it
-                val (componentInputIndex, inputIndex) = a
-                val (componentOutputIndex, outputIndex) = b
-                idToComponent[componentInputIndex]?.inputPins?.get(inputIndex)?.let { inputPin ->
-                    idToComponent[componentOutputIndex]?.outputPins?.get(outputIndex)?.let { outputPin ->
-                        visualEditor.inputToOutputConnection[inputPin] = outputPin
-                    }
+            visualEditor.modules.clear()
+            val modules = objectInputStream.readObject() as List<Triple<String, List<Component>, List<Pair<Pair<Int, Int>, Pair<Int, Int>>>>>
+            modules.forEach {
+                val module = Module(it.first).apply {
+                    fromSerializable(it)
+                    reconnectPins()
                 }
+                visualEditor.modules.add(module)
             }
-            visualEditor.reconnectPins()
+            visualEditor.modules.forEach { it.updateModuleComponents() }
+
+            visualEditor.modules.find { it.isMain }?.let {
+                visualEditor.loadModule(it)
+            }
 
             val graphPoints = objectInputStream.readObject() as Map<Int, Pair<FloatArray, Map<Int, Pair<Float, Float>>>>
             graphPoints.forEach {

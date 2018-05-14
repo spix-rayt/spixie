@@ -1,6 +1,7 @@
 package spixie
 
-import io.reactivex.*
+import io.reactivex.BackpressureStrategy
+import io.reactivex.Completable
 import io.reactivex.Observable
 import io.reactivex.functions.Function3
 import io.reactivex.rxjavafx.observables.JavaFxObservable
@@ -88,6 +89,8 @@ class RenderManager {
                         }
                     } catch (e: ConcurrentModificationException) {
                         requestRender()
+                    } catch (e: StackOverflowError) {
+                        println("Stack overflow")
                     }
                 }
     }

@@ -12,6 +12,6 @@ class Result : Component() {
     }
 
     fun getParticles(): ParticleArray{
-        return particlesInput.receiveValue() ?: ParticleArray()
+        return particlesInput.receiveValue() ?: ParticleArray(arrayListOf())
     }
 }

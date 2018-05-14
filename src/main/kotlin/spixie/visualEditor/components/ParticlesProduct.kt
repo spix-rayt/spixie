@@ -1,13 +1,12 @@
 package spixie.visualEditor.components
 
 import spixie.ValueControl
-import spixie.visualEditor.Particle
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
-import java.lang.Math
 
-class Test: Component() {
+class ParticlesProduct: Component() {
     private val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
     private val inLength = ComponentPin(this, null, "Length",Double::class.java, ValueControl(0.0, 5.00, "").limitMin(0.0))
     private val inRotateX = ComponentPin(this, null, "RotateX", Double::class.java, ValueControl(0.0, 0.01, ""))

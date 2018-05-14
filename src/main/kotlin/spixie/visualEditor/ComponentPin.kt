@@ -24,6 +24,11 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
         minHeight = 32.0
         maxHeight = 32.0
     }
+    var connection: ComponentPin<*>? = null
+        set(value) {
+            field = value
+            component.conneectionsChanged.onNext(Unit)
+        }
 
     private val label = Label(name)
 
@@ -42,13 +47,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
             ContextMenu(
                     MenuItem("Unconnect all").apply {
                         setOnAction {
-                            val iterator = Main.arrangementWindow.visualEditor.inputToOutputConnection.iterator()
-                            for(entry in iterator){
-                                if(entry.key == this@ComponentPin || entry.value == this@ComponentPin){
-                                    iterator.remove()
-                                }
-                            }
-                            Main.arrangementWindow.visualEditor.reconnectPins()
+                            component.disconnectPinRequest.onNext(this@ComponentPin)
                         }
                     }
             ).show(this, event.screenX, event.screenY)
@@ -108,12 +107,10 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
                     success = true
                     (Main.dragAndDropObject as? ComponentPin<*>)?.let { dragged ->
                         if(dragged.component.inputPins.contains(dragged)){
-                            Main.arrangementWindow.visualEditor.inputToOutputConnection[dragged] = this@ComponentPin
+                            dragged.connection = this@ComponentPin
                         }else{
-                            Main.arrangementWindow.visualEditor.inputToOutputConnection[this@ComponentPin] = dragged
+                            this@ComponentPin.connection = dragged
                         }
-
-                        Main.arrangementWindow.visualEditor.reconnectPins()
                     }
                 }
                 event.isDropCompleted = success
@@ -131,7 +128,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
     }
 
     fun receiveValue(): T? {
-        val valueFromConnection = Main.arrangementWindow.visualEditor.inputToOutputConnection[this]?.getValue?.invoke() as? T
+        val valueFromConnection = connection?.getValue?.invoke() as? T
         return if(valueFromConnection == null && type == Double::class.java && valueControl != null){
             valueControl.value as? T
         }else{

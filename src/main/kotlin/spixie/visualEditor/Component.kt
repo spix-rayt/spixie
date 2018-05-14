@@ -1,14 +1,16 @@
 package spixie.visualEditor
 
+import io.reactivex.subjects.PublishSubject
 import javafx.geometry.Point2D
 import javafx.scene.Group
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.Region
-import spixie.Main
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
-import kotlin.math.*
+import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 open class Component:Region(), Externalizable {
     val inputPins = arrayListOf<ComponentPin<*>>()
@@ -16,6 +18,11 @@ open class Component:Region(), Externalizable {
     val content = Group()
 
     private var dragDelta = Point2D(0.0, 0.0)
+
+
+    val conneectionsChanged = PublishSubject.create<Unit>()
+    val relocations = PublishSubject.create<Unit>()
+    val disconnectPinRequest = PublishSubject.create<ComponentPin<*>>()
 
     init {
         style = "-fx-border-color: #9A12B3FF; -fx-border-width: 1; -fx-background-color: #FFFFFFFF;"
@@ -44,7 +51,7 @@ open class Component:Region(), Externalizable {
         val newY = floor(y / 32.0) * 32.0
         if(layoutX != newX || layoutY != newY){
             relocate(newX, newY)
-            Main.arrangementWindow.visualEditor.reconnectPins()
+            relocations.onNext(Unit)
         }
     }
 

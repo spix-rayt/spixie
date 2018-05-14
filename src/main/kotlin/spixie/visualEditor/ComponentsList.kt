@@ -3,23 +3,32 @@ package spixie.visualEditor
 
 import javafx.collections.ObservableList
 import javafx.scene.Node
-import javafx.scene.control.*
+import javafx.scene.control.ScrollPane
+import javafx.scene.control.TextField
+import javafx.scene.control.TreeItem
+import javafx.scene.control.TreeView
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
+import spixie.Main
 import spixie.visualEditor.components.Color
 import spixie.visualEditor.components.Graph
-import spixie.visualEditor.components.Test
+import spixie.visualEditor.components.ModuleComponent
+import spixie.visualEditor.components.ParticlesProduct
 
-class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, private val result: (component: Component) -> Unit): BorderPane() {
+class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, forMain: Boolean, private val result: (component: Component) -> Unit): BorderPane() {
     private val treeView = TreeView<Any>(TreeItem("Components"))
     private val scrollPane = ScrollPane(treeView)
     private val textField = TextField()
 
     init {
         treeView.apply {
-            root.children.add(TreeItem(ComponentListItem(Test::class.java)))
-            root.children.add(TreeItem(ComponentListItem(Color::class.java)))
-            root.children.add(TreeItem(ComponentListItem(Graph::class.java)))
+            val basicItems = TreeItem<Any>("Basic")
+            val moduleItems = TreeItem<Any>("Module")
+            root.children.addAll(basicItems, moduleItems)
+            basicItems.children.add(TreeItem(ComponentListItem(ParticlesProduct::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(Color::class.java)))
+            if(forMain) basicItems.children.add(TreeItem(ComponentListItem(Graph::class.java)))
+            moduleItems.children.setAll(Main.arrangementWindow.visualEditor.modules.filter { !it.isMain }.map { TreeItem<Any>(it) })
             expandChildItems(root)
 
             focusedProperty().addListener { _, _, newValue ->
@@ -71,6 +80,10 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         val value = treeView.selectionModel.selectedItem?.value
         if (value is ComponentListItem) {
             result(value.clazz.newInstance() as @kotlin.ParameterName(name = "component") Component)
+            containerChildrens.remove(this@ComponentsList)
+        }
+        if(value is Module){
+            result(ModuleComponent().apply { module = value })
             containerChildrens.remove(this@ComponentsList)
         }
     }
