@@ -6,6 +6,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import spixie.static.linearInterpolate
+import spixie.static.rand
 import spixie.visualEditor.GraphData
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
@@ -36,6 +37,20 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
 
     private fun randomMode() {
         children.clear()
+        val intervalValue = ValueControl(1.0, 1.0, "Interval").limitMin(1.0)
+        val seedValue = ValueControl(1.0, 1.0, "Seed").limitMin(0.0)
+
+        mode(start, end, listOf(intervalValue, seedValue)){
+            val seed = seedValue.value.toLong() + 1L
+            val interval = intervalValue.value.toInt()
+            for(i in start..end){
+                val n = i-start
+                val d = n%interval
+                val v1 = n-d
+                val t = d/interval.toDouble()
+                graph.data.points[i] = linearInterpolate(rand(0, 0, 0, 0, seed, (v1+start).toLong()).toDouble(), rand(0, 0, 0, 0, seed, (v1+start+interval).toLong()).toDouble(), t).toFloat()
+            }
+        }
     }
 
     private fun sineMode() {

@@ -21,11 +21,9 @@ class ModuleComponent: Component(), Externalizable {
             }
 
             val result = module.findResultComponent().getParticles()
-            if(result != null){
-                result.saveInCache()
-                cache[cacheKey] = result.hash
-                return@ComponentPin result
-            }
+            result.saveInCache()
+            cache[cacheKey] = result.hash
+            return@ComponentPin result
         }
         return@ComponentPin ParticleArray(arrayListOf())
     }, "Particles", ParticleArray::class.java, null)

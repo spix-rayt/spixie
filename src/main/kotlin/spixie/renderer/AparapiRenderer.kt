@@ -20,7 +20,7 @@ class AparapiRenderer: Renderer {
 
         val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(256)
         if(particlesCount == 0){
-            return bufferedImage
+            return bufferedImage.getSubimage(0, 0, realWidth, realHeight)
         }
 
         val clParticles = particlesArray.array()

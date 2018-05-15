@@ -279,6 +279,9 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                 if(event.code == KeyCode.Q){
                     selectionBlock.buildGraph()
                 }
+                if(event.code == KeyCode.E){
+                    selectionBlock.editGraph()
+                }
                 if(event.code == KeyCode.DELETE){
                     selectionBlock.del()
                 }

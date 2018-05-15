@@ -72,6 +72,19 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         Main.arrangementWindow.graphBuilderGroup.children.addAll(graphBuilder)
     }
 
+    fun editGraph(){
+        val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
+        val start = timeStart.multiply(100).toInt()
+        val end = timeEnd.multiply(100).toInt()
+        val graphEditor = GraphEditor(start, if(end>start) end else start+1, graph)
+        val subscribe = zoom.subscribe {
+            graphEditor.layoutX = layoutX
+            graphEditor.layoutY = layoutY + height + 10.0
+        }
+        graphEditor.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
+        Main.arrangementWindow.graphBuilderGroup.children.addAll(graphEditor)
+    }
+
     private var copyData = floatArrayOf() to mapOf<Int, Pair<Float, Float>>()
     private var copyLength = 0
 

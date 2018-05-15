@@ -106,7 +106,7 @@ class RenderManager {
     private fun render(particleArray: ParticleArray):BufferedImage {
         val renderBufferBuilder = RenderBufferBuilder(particleArray.array.size)
         particleArray.array.forEach { particle ->
-            if(particle.matrix.m32()>=-999){
+            if(particle.matrix.m32()>=-960){
                 renderBufferBuilder.addParticle(particle.matrix.m30()/((particle.matrix.m32()+1000)/1000), particle.matrix.m31()/((particle.matrix.m32()+1000)/1000), particle.size/((particle.matrix.m32()+1000)/1000), particle.red, particle.green, particle.blue, particle.alpha)
             }
         }
@@ -144,10 +144,31 @@ class RenderManager {
                 if(!process.isAlive){
                     break
                 }
+                val (w, h) = renderer.getSize()
+                val resultArray = DoubleArray(w * h * 4)
+                val doubleArray = DoubleArray(w * h * 4)
+                val iterations = 3
 
-                val bufferedImage = render(Main.arrangementWindow.visualEditor.render(frameToTime(frame, bpm.value)))
+                for(k in 0 until iterations){
+                    val renderedImage = render(Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k+1)/iterations.toDouble())))
+                    renderedImage.raster.getPixels(0,0, renderedImage.width, renderedImage.height, doubleArray)
+
+                    for(x in 0 until w){
+                        for (y in 0 until h){
+                            val offset = y*w*4+x*4
+                            val srcA = doubleArray[offset+3]/iterations/255.0
+                            resultArray[offset] = srcA*doubleArray[offset] + resultArray[offset]
+                            resultArray[offset+1] = srcA*doubleArray[offset+1] + resultArray[offset+1]
+                            resultArray[offset+2] = srcA*doubleArray[offset+2] + resultArray[offset+2]
+                            resultArray[offset+3] = 255.0
+                        }
+                    }
+                }
+                val bufferedImage = BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR)
+                bufferedImage.raster.setPixels(0, 0, w, h, resultArray)
                 val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
                 bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
+
                 ImageIO.write(bufferedImage1, "png", outputStream)
 
                 inputStream.printAvailable()

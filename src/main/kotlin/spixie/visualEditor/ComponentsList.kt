@@ -10,10 +10,7 @@ import javafx.scene.control.TreeView
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import spixie.Main
-import spixie.visualEditor.components.Color
-import spixie.visualEditor.components.Graph
-import spixie.visualEditor.components.ModuleComponent
-import spixie.visualEditor.components.ParticlesProduct
+import spixie.visualEditor.components.*
 
 class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, forMain: Boolean, private val result: (component: Component) -> Unit): BorderPane() {
     private val treeView = TreeView<Any>(TreeItem("Components"))
@@ -26,7 +23,9 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             val moduleItems = TreeItem<Any>("Module")
             root.children.addAll(basicItems, moduleItems)
             basicItems.children.add(TreeItem(ComponentListItem(ParticlesProduct::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(MoveRotate::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(Color::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(Slice::class.java)))
             if(forMain) basicItems.children.add(TreeItem(ComponentListItem(Graph::class.java)))
             moduleItems.children.setAll(Main.arrangementWindow.visualEditor.modules.filter { !it.isMain }.map { TreeItem<Any>(it) })
             expandChildItems(root)

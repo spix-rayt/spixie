@@ -69,19 +69,27 @@ class GraphData {
         data.first.forEachIndexed { index, f ->
             when (index) {
                 0 -> {
-                    setJumpPoint(from, getLeftValue(from) to data.first[0])
+                    val v = data.first[0]
+                    if(v == JUMP_POINT){
+                        setJumpPoint(from, getLeftValue(from) to data.second[0]!!.second)
+                    }else{
+                        setJumpPoint(from, getLeftValue(from) to v)
+                    }
                 }
                 data.first.lastIndex -> {
-                    setJumpPoint(index+from, data.first[index] to getRightValue(index+from))
+                    val v = data.first[index]
+                    if(v == JUMP_POINT){
+                        setJumpPoint(index+from, data.second[index]!!.first to getRightValue(index+from))
+                    }else{
+                        setJumpPoint(index+from, v to getRightValue(index+from))
+                    }
                 }
                 else -> {
                     this.points[index+from] = f
+                    if(f == JUMP_POINT){
+                        setJumpPoint(index+from, data.second[index]!!)
+                    }
                 }
-            }
-        }
-        data.second.forEach { i, jump ->
-            if(i != 0 && i != data.first.lastIndex){
-                setJumpPoint(i+from, jump)
             }
         }
     }
