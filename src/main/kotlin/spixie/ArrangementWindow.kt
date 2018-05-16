@@ -359,6 +359,10 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
         }
     }
 
+    fun getSelectedFrames(): Pair<Int, Int>{
+        return (selectionBlock.timeStart.toDouble()*3600/Main.renderManager.bpm.value).toInt() to (selectionBlock.timeEnd.toDouble()*3600/Main.renderManager.bpm.value).toInt()
+    }
+
     private fun updateCursor(event:MouseEvent){
         val sceneToLocal = content.sceneToLocal(event.sceneX, event.sceneY)
         val x = Math.round(sceneToLocal.x/6.25)*6.25 + 0.5

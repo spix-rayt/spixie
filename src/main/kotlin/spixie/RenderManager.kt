@@ -113,24 +113,29 @@ class RenderManager {
         return renderer.render(renderBufferBuilder.complete())
     }
 
-    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit) {
+    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean) {
         renderingToFile = true
         Thread(Runnable {
-            renderer.setSize(1920, 1080)
-            val countFrames = time.frame + 1
+            val w = 1920
+            val h = 1080
+            val fps = 60
+            renderer.setSize(w, h)
+            val countFrames = endFrame-startFrame+1
             val processBuilder = ProcessBuilder(
-                    listOf(
+                    listOfNotNull(
                             Settings.ffmpeg,
                             "-y",
                             "-f", "image2pipe",
-                            "-framerate", "60",
+                            "-framerate", "$fps",
                             "-i", "-",
-                            "-i","test.aiff",
+                            if(audio) "-i" else null, if(audio) "test.aiff" else null,
+                            "-vf", "scale=$w:$h",
+                            "-ss", "${startFrame/fps.toDouble()}",
                             "-c:v", "libx264",
                             "-preset", "slow",
                             "-crf", "17",
                             "-pix_fmt", "yuv420p",
-                            "-c:a","aac",
+                            if(audio) "-c:a" else null, if(audio) "aac" else null,
                             "-shortest",
                             "out.mp4"
                     )
@@ -140,47 +145,61 @@ class RenderManager {
             val inputStream = process.inputStream
             val errorStream = process.errorStream
 
-            for (frame in 0 until countFrames) {
-                if(!process.isAlive){
-                    break
-                }
-                val (w, h) = renderer.getSize()
-                val resultArray = DoubleArray(w * h * 4)
-                val doubleArray = DoubleArray(w * h * 4)
-                val iterations = 3
-
-                for(k in 0 until iterations){
-                    val renderedImage = render(Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k+1)/iterations.toDouble())))
-                    renderedImage.raster.getPixels(0,0, renderedImage.width, renderedImage.height, doubleArray)
-
-                    for(x in 0 until w){
-                        for (y in 0 until h){
-                            val offset = y*w*4+x*4
-                            val srcA = doubleArray[offset+3]/iterations/255.0
-                            resultArray[offset] = srcA*doubleArray[offset] + resultArray[offset]
-                            resultArray[offset+1] = srcA*doubleArray[offset+1] + resultArray[offset+1]
-                            resultArray[offset+2] = srcA*doubleArray[offset+2] + resultArray[offset+2]
-                            resultArray[offset+3] = 255.0
-                        }
+            try{
+                kotlin.run {
+                    val bufferedImage1 = BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR)
+                    for(frame in 0 until startFrame){
+                        ImageIO.write(bufferedImage1, "png", outputStream)
                     }
                 }
-                val bufferedImage = BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR)
-                bufferedImage.raster.setPixels(0, 0, w, h, resultArray)
-                val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
-                bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
 
-                ImageIO.write(bufferedImage1, "png", outputStream)
+                for (frame in startFrame..endFrame) {
+                    if(!process.isAlive){
+                        break
+                    }
+                    val resultArray = DoubleArray(w * h * 4)
+                    val doubleArray = DoubleArray(w * h * 4)
 
+                    for(k in 0 until motionBlurIterations){
+                        val renderedImage = render(Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k+1)/motionBlurIterations.toDouble())))
+                        renderedImage.raster.getPixels(0,0, renderedImage.width, renderedImage.height, doubleArray)
+
+                        for(x in 0 until w){
+                            for (y in 0 until h){
+                                val offset = y*w*4+x*4
+                                val srcA = doubleArray[offset+3]/motionBlurIterations/255.0
+                                resultArray[offset] = srcA*doubleArray[offset] + resultArray[offset]
+                                resultArray[offset+1] = srcA*doubleArray[offset+1] + resultArray[offset+1]
+                                resultArray[offset+2] = srcA*doubleArray[offset+2] + resultArray[offset+2]
+                                resultArray[offset+3] = 255.0
+                            }
+                        }
+                    }
+                    val bufferedImage = BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR)
+                    bufferedImage.raster.setPixels(0, 0, w, h, resultArray)
+                    val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
+                    bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
+
+                    ImageIO.write(bufferedImage1, "png", outputStream)
+
+                    inputStream.printAvailable()
+                    errorStream.printAvailable()
+
+                    Platform.runLater { frameRenderedToFileEventHandler(frame-startFrame+1, countFrames) }
+                }
+            }catch (e: Exception){
+                e.printStackTrace()
+            }
+            try{
                 inputStream.printAvailable()
                 errorStream.printAvailable()
-
-                Platform.runLater { frameRenderedToFileEventHandler(frame + 1, countFrames) }
+                outputStream.close()
+                process.waitFor()
+                println("Process finished with exit code ${process.exitValue()}")
+            }catch (e:Exception){
+                e.printStackTrace()
             }
-            outputStream.close()
-            process.waitFor()
-            inputStream.printAvailable()
-            errorStream.printAvailable()
-            println("Process finished with exit code ${process.exitValue()}")
+
             renderingToFile = false
             Platform.runLater { renderToFileCompleted() }
         }).start()

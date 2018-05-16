@@ -1,13 +1,11 @@
 package spixie
 
-import javafx.event.EventHandler
 import javafx.scene.Node
 import javafx.scene.control.Button
 import javafx.scene.control.Slider
 import javafx.scene.control.ToolBar
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
-import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import java.util.*
 
@@ -15,15 +13,7 @@ class WorkingWindow : BorderPane() {
     init {
         val menuBar = ToolBar()
         val renderButton = Button("Render")
-        renderButton.onMouseClicked = EventHandler<MouseEvent> {
-            this@WorkingWindow.isDisable = true
-            Main.renderManager.renderToFile({ currentFrame, framesCount ->
-                renderButton.text = currentFrame.toString() + " / " + framesCount
-            }, {
-                renderButton.text = "Render"
-                this@WorkingWindow.isDisable = false
-            })
-        }
+        renderButton.setOnAction { RenderDialog(this.scene.window) }
         renderButton.isFocusTraversable = false
         val slider = Slider(1.0,6.0,2.0).apply {
             isShowTickMarks = true
