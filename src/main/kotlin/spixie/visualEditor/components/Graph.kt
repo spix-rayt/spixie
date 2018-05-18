@@ -1,42 +1,46 @@
 package spixie.visualEditor.components
 
-import javafx.scene.layout.VBox
+import javafx.scene.control.Label
+import spixie.ArrangementGraphsContainer
 import spixie.Main
-import spixie.ValueControl
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
 
-class Graph: Component(), Externalizable {
-    private val valueControl = ValueControl(0.0, 1.0, "Graph ID").limitMin(0.0)
-    private val rangeFromControl = ValueControl(0.0, 0.1, "From")
-    private val rangeToControl = ValueControl(0.0, 0.1, "To")
+class Graph(): Component(), Externalizable {
+    private lateinit var graph: ArrangementGraphsContainer
+
+    constructor(graph: ArrangementGraphsContainer): this(){
+        this.graph = graph
+        label.text = graph.name.value
+        graph.name.changes.subscribe { newName->
+            label.text = newName
+        }
+    }
+
+    private val label = Label("")
+
     init {
         outputPins.add(ComponentPin(this, {
-            (Main.arrangementWindow.graphs[valueControl.value.toInt()]?.data?.getValue(Main.arrangementWindow.visualEditor.time)
-                    ?: 0.0) * (rangeToControl.value - rangeFromControl.value) + rangeFromControl.value
-        }, "Graph", Double::class.java, null))
+            graph.getValue(Main.arrangementWindow.visualEditor.time)
+        }, "Value", Double::class.java, null))
         updateVisual()
-        content.children.addAll(VBox(valueControl, rangeFromControl, rangeToControl))
-
-        valueControl.changes.subscribe {
-            Main.renderManager.requestRender()
-        }
+        content.children.addAll(label)
     }
 
     override fun writeExternal(o: ObjectOutput) {
         super.writeExternal(o)
-        o.writeDouble(valueControl.value)
-        o.writeDouble(rangeFromControl.value)
-        o.writeDouble(rangeToControl.value)
+        o.writeObject(graph)
     }
 
     override fun readExternal(o: ObjectInput) {
         super.readExternal(o)
-        valueControl.value = o.readDouble()
-        rangeFromControl.value = o.readDouble()
-        rangeToControl.value = o.readDouble()
+        graph = o.readObject() as ArrangementGraphsContainer
+        label.text = graph.name.value
+        graph.name.changes.subscribe { newName->
+            label.text = newName
+        }
     }
 }

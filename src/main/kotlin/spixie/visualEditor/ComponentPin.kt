@@ -15,8 +15,8 @@ import spixie.ValueControl
 import spixie.static.DragAndDropType
 
 class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: String, private val type: Class<T>, val valueControl: ValueControl?): HBox() {
-    private val backgroundCircle = Circle(16.0, 16.0, 5.0, Color.BLACK)
-    private val selectionCircle = Circle(16.0, 16.0, 4.0, Color.WHITE)
+    private val backgroundCircle = Circle(16.0, 16.0, 3.0, Color.BLACK)
+    private val selectionCircle = Circle(16.0, 16.0, 2.0, Color.WHITE)
     val circle = StackPane(backgroundCircle, selectionCircle).apply {
         minWidth = 32.0
         maxWidth = 32.0

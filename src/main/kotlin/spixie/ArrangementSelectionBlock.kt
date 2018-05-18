@@ -39,6 +39,8 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
             Main.arrangementWindow.graphBuilderGroup.children.clear()
         }
 
+    var graph: ArrangementGraph? = null
+
     init {
         zoom.subscribe {
             updateLayout()
@@ -51,78 +53,75 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         layoutX = Fraction(100, 64).multiply(timeStart).multiply(zoom.value!!).toDouble()
     }
 
-    private fun newGraph(): ArrangementGraph {
-        val newGraph = ArrangementGraph()
-        Main.arrangementWindow.graphCanvases.children.addAll(newGraph.canvas)
-        newGraph.canvas.width = Main.arrangementWindow.width + 200.0
-        newGraph.canvas.layoutY = line*100.0
-        return newGraph
-    }
-
     fun buildGraph(){
-        val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
-        val start = timeStart.multiply(100).toInt()
-        val end = timeEnd.multiply(100).toInt()
-        val graphBuilder = GraphBuilder(start, if(end>start) end else start+1, graph)
-        val subscribe = zoom.subscribe {
-            graphBuilder.layoutX = layoutX
-            graphBuilder.layoutY = layoutY + height + 10.0
+        graph?.let { graph->
+            val start = timeStart.multiply(100).toInt()
+            val end = timeEnd.multiply(100).toInt()
+            val graphBuilder = GraphBuilder(start, if(end>start) end else start+1, graph)
+            val subscribe = zoom.subscribe {
+                graphBuilder.layoutX = layoutX
+                graphBuilder.layoutY = layoutY + height + 10.0
+            }
+            graphBuilder.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
+            Main.arrangementWindow.graphBuilderGroup.children.setAll(graphBuilder)
         }
-        graphBuilder.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
-        Main.arrangementWindow.graphBuilderGroup.children.addAll(graphBuilder)
     }
 
     fun editGraph(){
-        val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
-        val start = timeStart.multiply(100).toInt()
-        val end = timeEnd.multiply(100).toInt()
-        val graphEditor = GraphEditor(start, if(end>start) end else start+1, graph)
-        val subscribe = zoom.subscribe {
-            graphEditor.layoutX = layoutX
-            graphEditor.layoutY = layoutY + height + 10.0
+        graph?.let { graph->
+            val start = timeStart.multiply(100).toInt()
+            val end = timeEnd.multiply(100).toInt()
+            val graphEditor = GraphEditor(start, if(end>start) end else start+1, graph)
+            val subscribe = zoom.subscribe {
+                graphEditor.layoutX = layoutX
+                graphEditor.layoutY = layoutY + height + 10.0
+            }
+            graphEditor.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
+            Main.arrangementWindow.graphBuilderGroup.children.setAll(graphEditor)
         }
-        graphEditor.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
-        Main.arrangementWindow.graphBuilderGroup.children.addAll(graphEditor)
     }
 
     private var copyData = floatArrayOf() to mapOf<Int, Pair<Float, Float>>()
     private var copyLength = 0
 
     fun copy(){
-        Main.arrangementWindow.graphs[line]?.let { graph ->
+        graph?.let { graph ->
             copyData = graph.data.copy(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
             copyLength = timeEnd.multiply(100).toInt() - timeStart.multiply(100).toInt()
         }
     }
 
     fun paste(){
-        val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
-        graph.data.del(timeStart.multiply(100).toInt(), timeStart.multiply(100).toInt() + copyLength)
-        graph.data.paste(timeStart.multiply(100).toInt(), copyData)
-        Main.arrangementWindow.needUpdateAllGraphs = true
+        graph?.let { graph->
+            graph.data.del(timeStart.multiply(100).toInt(), timeStart.multiply(100).toInt() + copyLength)
+            graph.data.paste(timeStart.multiply(100).toInt(), copyData)
+            Main.arrangementWindow.needRedrawAllGraphs = true
+        }
     }
 
     fun del() {
-        Main.arrangementWindow.graphs[line]?.let { graph ->
+        graph?.let { graph ->
             graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
-            Main.arrangementWindow.needUpdateAllGraphs = true
+            Main.arrangementWindow.needRedrawAllGraphs = true
         }
     }
 
     fun duplicate(){
-        val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
-        val p = graph.data.copy(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
-        val l = timeEnd.subtract(timeStart)
-        timeEnd = timeEnd.add(l)
-        timeStart = timeStart.add(l)
-        graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
-        graph.data.paste(timeStart.multiply(100).toInt(), p)
-        Main.arrangementWindow.needUpdateAllGraphs = true
+        graph?.let { graph->
+            val p = graph.data.copy(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+            val l = timeEnd.subtract(timeStart)
+            timeEnd = timeEnd.add(l)
+            timeStart = timeStart.add(l)
+            graph.data.del(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+            graph.data.paste(timeStart.multiply(100).toInt(), p)
+            Main.arrangementWindow.needRedrawAllGraphs = true
+        }
     }
 
     fun reverse(){
-        val graph = Main.arrangementWindow.graphs.getOrPut(line) { newGraph() }
-        graph.data.reverse(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
-        Main.arrangementWindow.needUpdateAllGraphs = true
+        graph?.let { graph->
+            graph.data.reverse(timeStart.multiply(100).toInt(), timeEnd.multiply(100).toInt())
+            Main.arrangementWindow.needRedrawAllGraphs = true
+        }
     }
 }

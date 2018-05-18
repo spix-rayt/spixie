@@ -75,6 +75,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
                     mouseEvent.consume()
                     children.remove(labelValue)
                     children.addAll(textFieldValue)
+                    textFieldValue.text = value.toString()
                     textFieldValue.requestFocus()
                     textFieldValue.selectAll()
                 }

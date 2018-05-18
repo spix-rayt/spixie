@@ -60,7 +60,7 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
             graph.data.resizeIfNeed(end+1)
             graph.data.paste(start, changeData(copy.first.clone() to copy.second.toList().toMap().toMutableMap()))
-            Main.arrangementWindow.updateGraph(graph)
+            Main.arrangementWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })
     }

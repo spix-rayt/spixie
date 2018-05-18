@@ -9,6 +9,7 @@ target
 *.bak
 /settings.json
 *.spixie
+cache
 
 # Intellij project files
 .idea/

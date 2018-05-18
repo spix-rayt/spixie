@@ -1,6 +1,9 @@
 ValueControl .label-value{
     -fx-cursor: v-resize;
 }
+ValueTextControl .label-value{
+    -fx-cursor: hand;
+}
 ValueControl{
     -fx-alignment: center-left;
     -fx-pref-height: 26px;

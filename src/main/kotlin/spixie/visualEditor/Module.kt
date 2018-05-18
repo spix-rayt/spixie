@@ -5,6 +5,7 @@ import javafx.scene.input.MouseButton
 import javafx.scene.layout.Pane
 import javafx.scene.paint.Color
 import javafx.scene.shape.CubicCurve
+import javafx.scene.shape.StrokeLineCap
 import spixie.Main
 import spixie.static.MAGIC
 import spixie.static.initCustomPanning
@@ -70,6 +71,10 @@ class Module(var name: String) {
             }
         }
         components.children.add(component)
+    }
+
+    fun removeComponent(component: Component){
+        components.children.remove(component)
     }
 
     fun findResultComponent(): Result {
@@ -143,6 +148,7 @@ class Module(var name: String) {
         connects.children.add(cubicCurve)
 
         cubicCurve.isMouseTransparent = true
+        cubicCurve.strokeLineCap = StrokeLineCap.ROUND
     }
 
     fun toSerializable(): Triple<String, List<Component>, List<Pair<Pair<Int, Int>, Pair<Int, Int>>>> {

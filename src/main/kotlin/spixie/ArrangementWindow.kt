@@ -2,12 +2,20 @@ package spixie
 
 import io.reactivex.subjects.BehaviorSubject
 import javafx.embed.swing.SwingFXUtils
+import javafx.geometry.Insets
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
+import javafx.scene.control.ContextMenu
+import javafx.scene.control.MenuItem
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
+import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Pane
+import javafx.scene.layout.VBox
+import javafx.scene.paint.CycleMethod
+import javafx.scene.paint.LinearGradient
+import javafx.scene.paint.Stop
 import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
@@ -24,7 +32,8 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import kotlin.math.roundToInt
 
-class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
+class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
+    private val contentPane = Pane()
     private val content = Group()
     val graphBuilderGroup = Group()
     private val grid = Group()
@@ -33,7 +42,25 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     private val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
     private val zoom = BehaviorSubject.createDefault(Fraction(64))
     private val selectionBlock = ArrangementSelectionBlock(zoom)
-    private val timePointer = Line(-0.5, 0.0, -0.5, 10000.0)
+    private val timePointer = Line(-0.5, 0.0, -0.5, 10000.0).apply {
+        strokeWidth = 32.0
+        startXProperty().addListener { _, _, newValue ->
+            stroke = LinearGradient(
+                    newValue.toDouble()-16.0,
+                    0.0,
+                    newValue.toDouble()+16.0,
+                    0.0,
+                    false,
+                    CycleMethod.NO_CYCLE,
+                    Stop(0.0, javafx.scene.paint.Color(1.0, 0.0, 0.0, 0.0)),
+                    Stop(0.47, javafx.scene.paint.Color(1.0, 0.0, 0.0, 0.3)),
+                    Stop(0.50, javafx.scene.paint.Color(0.0, 0.0, 0.0, 1.0)),
+                    Stop(0.53, javafx.scene.paint.Color(1.0, 0.0, 0.0, 0.3)),
+                    Stop(1.0, javafx.scene.paint.Color(1.0, 0.0, 0.0, 0.0))
+            )
+        }
+
+    }
     var timePointerCentering = false
         set(value) {
             field = value
@@ -42,7 +69,8 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             }
         }
     private val waveform = Canvas(1.0, 300.0)
-    val graphs = HashMap<Int, ArrangementGraph>()
+    private val graphsTree = Pane()
+    val graphs = arrayListOf<ArrangementGraphsContainer>()
 
     private fun redrawWaveform() {
         val newWaveformLayoutX = -content.layoutX - 100
@@ -84,17 +112,17 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
     }
 
     private fun updateGrid(){
-        style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
+        contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
     }
 
-    var needUpdateAllGraphs = false
+    var needRedrawAllGraphs = false
     private var needUpdateGrid = false
     var needRedrawWaveform = false
 
     fun perFrame(){
-        if(needUpdateAllGraphs){
-            updateGraph(null)
-            needUpdateAllGraphs = false
+        if(needRedrawAllGraphs){
+            redrawGraph(null)
+            needRedrawAllGraphs = false
         }
         if(needUpdateGrid){
             updateGrid()
@@ -106,12 +134,13 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
         }
     }
 
-    fun updateGraph(only: ArrangementGraph?){
+    fun redrawGraph(only: ArrangementGraph?){
         val newGraphsLayoutX = -content.layoutX - 100
         val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble()
         val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble()
         val redraw = { graph: ArrangementGraph ->
             val canvas = graph.canvas
+            canvas.width = width + 200.0
             canvas.layoutX = newGraphsLayoutX
             val g = canvas.graphicsContext2D
             g.clearRect(0.0, 0.0, canvas.width, canvas.height)
@@ -133,26 +162,98 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             }
         } else {
             runInUIAndWait {
-                for (graph in graphs) {
-                    redraw(graph.value)
+                graphs.forEach {
+                    if(it.expanded){
+                        it.list.forEach {
+                            redraw(it)
+                        }
+                    }
                 }
             }
         }
     }
 
+    fun updateGraphTree(){
+        graphCanvases.children.clear()
+        val graphsTreeContent = graphsTree.children[0] as Pane
+        graphsTreeContent.children.clear()
+        layout()
+        var i = 3
+        graphs.forEach { graphContainter->
+            graphsTreeContent.children.add(Pane().apply {
+                style="-fx-background-color: #FFFFFFDD;";
+                setMinSize(graphsTree.width, 100.0)
+                layoutY = i*100.0
+                children.add(graphContainter.name)
+                setOnMouseClicked { event->
+                    if(event.button == MouseButton.PRIMARY){
+                        graphContainter.expanded = !graphContainter.expanded
+                        updateGraphTree()
+                    }
+                }
+                setOnContextMenuRequested { event->
+                    ContextMenu(
+                            MenuItem("New subgraph").apply {
+                                setOnAction {
+                                    graphContainter.list.add(ArrangementGraph())
+                                    graphContainter.expanded=true
+                                    updateGraphTree()
+                                }
+                            },
+                            MenuItem("Delete graph").apply {
+                                setOnAction {
+                                    graphs.remove(graphContainter)
+                                    graphContainter.name.value="DELETED"
+                                    updateGraphTree()
+                                }
+                            }
+                    ).show(this, event.screenX, event.screenY)
+                    event.consume()
+                }
+            })
+            i++
+
+            if(graphContainter.expanded){
+                graphContainter.list.forEach { graph->
+                    graphsTreeContent.children.add(Pane().apply {
+                        style="-fx-background-color: #FFFFFFCC;";
+                        setMinSize(graphsTree.width, 100.0)
+                        layoutY = i*100.0
+                        children.add(
+                                VBox(
+                                        graph.rangeFromControl,graph.rangeToControl
+                                )
+                        )
+                        setOnContextMenuRequested { event->
+                            ContextMenu(
+                                    MenuItem("Delete subgraph").apply {
+                                        setOnAction {
+                                            graphContainter.list.remove(graph)
+                                            updateGraphTree()
+                                        }
+                                    }
+                            ).show(this, event.screenX, event.screenY)
+                            event.consume()
+                        }
+                    })
+                    graphCanvases.children.add(graph.canvas)
+                    graph.canvas.layoutY = i*100.0
+                    i++
+                }
+            }
+        }
+        needRedrawAllGraphs = true
+    }
+
     init {
         widthProperty().addListener { _, _, newValue ->
             waveform.width = newValue.toDouble() + 200.0
-            for (graph in graphs) {
-                graph.value.canvas.width = newValue.toDouble() + 200.0
-            }
             needRedrawWaveform = true
-            needUpdateAllGraphs = true
+            needRedrawAllGraphs = true
         }
 
-        initCustomPanning(content, false)
+        contentPane.initCustomPanning(content, false)
 
-        timePointer.strokeWidth = 4.0
         Main.renderManager.time.timeChanges.subscribe {
             updateTimePointer()
         }
@@ -161,7 +262,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             updateCursor(event)
         }
 
-        addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
+        contentPane.addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
             updateCursor(event)
             if(event.isControlDown){
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
@@ -171,7 +272,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
 
         var mousePressedCursorX:Double? = null
         var mousePressedLine:Int? = null
-        addEventHandler(MouseEvent.MOUSE_PRESSED, { event ->
+        contentPane.addEventHandler(MouseEvent.MOUSE_PRESSED, { event ->
             if(event.isConsumed) return@addEventHandler
             if(event.button == MouseButton.PRIMARY){
                 mousePressedCursorX = cursor.startX
@@ -180,7 +281,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
             requestFocus()
         })
 
-        addEventHandler(MouseEvent.MOUSE_RELEASED, { event ->
+        contentPane.addEventHandler(MouseEvent.MOUSE_RELEASED, { event ->
             if(event.button == MouseButton.PRIMARY){
                 mousePressedCursorX?.let { pressedCursorX ->
                     mousePressedLine?.let { pressedLine ->
@@ -205,6 +306,9 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                         }
 
                         selectionBlock.line = pressedLine
+                        selectionBlock.graph = graphs.mapNotNull {
+                            it.list.find { it.canvas.layoutY==selectionBlock.layoutY }
+                        }.firstOrNull()
                         mousePressedCursorX = null
                         mousePressedLine = null
                     }
@@ -228,7 +332,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                     cursor.endX = cursorNewX
 
                     needRedrawWaveform = true
-                    needUpdateAllGraphs = true
+                    needRedrawAllGraphs = true
                     updateTimePointer()
 
                 }
@@ -247,7 +351,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                     cursor.endX = cursorNewX
 
                     needRedrawWaveform = true
-                    needUpdateAllGraphs = true
+                    needRedrawAllGraphs = true
                     updateTimePointer()
                 }
             }
@@ -297,19 +401,43 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
         needUpdateGrid = true
 
         content.children.addAll(waveform, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
-        children.addAll(content)
+        center = contentPane.apply { children.add(content) }
 
-        clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
+        left = graphsTree.apply {
+            minWidth = 100.0
+            maxWidth = 100.0
+            children.addAll(Pane())
+
+            setOnContextMenuRequested { event->
+                ContextMenu(
+                        MenuItem("New Graph").apply {
+                            setOnAction {
+                                graphs.add(ArrangementGraphsContainer().apply { name.value="Graph ${graphs.size+1}" })
+                                updateGraphTree()
+                            }
+                        }
+                ).show(graphsTree, event.screenX, event.screenY)
+            }
+        }
+
+        //BorderPane.setMargin(left, Insets(.0))
+        BorderPane.setMargin(center, Insets(0.0))
+
+        updateGraphTree()
+
+        contentPane.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
+        graphsTree.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
             needRedrawWaveform = true
             needUpdateGrid = true
-            needUpdateAllGraphs = true
+            needRedrawAllGraphs = true
         }
         content.layoutYProperty().addListener { _, _, y ->
             waveform.layoutY = -y.toDouble()
+            graphsTree.children[0].layoutY = y.toDouble()
             needUpdateGrid = true
-            needUpdateAllGraphs = true
+            needRedrawAllGraphs = true
         }
     }
 
@@ -320,7 +448,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
         val modules = visualEditor.modules.map { it.toSerializable() }
         objectOutputStream.writeObject(modules)
 
-        objectOutputStream.writeObject(graphs.map { it.key to (it.value.data.points to it.value.data.jumpPoints) }.toMap())
+        objectOutputStream.writeObject(graphs)
 
         objectOutputStream.close()
         return byteArrayOutputStream.toByteArray()
@@ -343,16 +471,10 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
                 visualEditor.loadModule(it)
             }
 
-            val graphPoints = objectInputStream.readObject() as Map<Int, Pair<FloatArray, Map<Int, Pair<Float, Float>>>>
-            graphPoints.forEach {
-                val arrangementGraph = ArrangementGraph()
-                arrangementGraph.data.points = it.value.first
-                arrangementGraph.data.jumpPoints.putAll(it.value.second)
-                graphs[it.key] = arrangementGraph
-                arrangementGraph.canvas.layoutY = 100.0*it.key
-                graphCanvases.children.addAll(arrangementGraph.canvas)
-            }
-            needUpdateAllGraphs = true
+            graphs.clear()
+            graphs.addAll(objectInputStream.readObject() as ArrayList<ArrangementGraphsContainer>)
+            updateGraphTree()
+            needRedrawAllGraphs = true
             Main.renderManager.clearCache()
         }catch (e:Exception){
             e.printStackTrace()
@@ -375,7 +497,7 @@ class ArrangementWindow: Pane(), WorkingWindowOpenableContent {
         timePointer.startX = x
         timePointer.endX = x
         if(timePointerCentering){
-            content.layoutX = -(timePointer.startX - width/5)
+            content.layoutX = (-(timePointer.startX - width/5)).coerceAtMost(0.0)
         }
     }
 }

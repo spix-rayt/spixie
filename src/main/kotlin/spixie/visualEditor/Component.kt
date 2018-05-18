@@ -3,8 +3,11 @@ package spixie.visualEditor
 import io.reactivex.subjects.PublishSubject
 import javafx.geometry.Point2D
 import javafx.scene.Group
+import javafx.scene.control.ContextMenu
+import javafx.scene.control.MenuItem
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.Region
+import spixie.Main
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
@@ -25,7 +28,7 @@ open class Component:Region(), Externalizable {
     val disconnectPinRequest = PublishSubject.create<ComponentPin<*>>()
 
     init {
-        style = "-fx-border-color: #9A12B3FF; -fx-border-width: 1; -fx-background-color: #FFFFFFFF;"
+        style = "-fx-border-color: #000000FF; -fx-border-width: 1; -fx-background-color: #FFFFFFFF;"
 
         setOnMouseClicked { event ->
             event.consume()
@@ -41,6 +44,21 @@ open class Component:Region(), Externalizable {
             if(event.button == MouseButton.PRIMARY){
                 magneticRelocate(event.sceneX + dragDelta.x, event.sceneY + dragDelta.y)
             }
+        }
+
+        setOnContextMenuRequested { event->
+            ContextMenu(
+                    MenuItem("Delete").apply {
+                        setOnAction {
+                            Main.arrangementWindow.visualEditor.modules.forEach {
+                                it.removeComponent(this@Component)
+                            }
+                            this@Component.inputPins.forEach { disconnectPinRequest.onNext(it) }
+                            this@Component.outputPins.forEach { disconnectPinRequest.onNext(it) }
+                        }
+                    }
+            ).show(this, event.screenX, event.screenY)
+            event.consume()
         }
 
         children.addAll(content)

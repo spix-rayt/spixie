@@ -106,7 +106,7 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
             graph.data.points[start] = GraphData.JUMP_POINT
             graph.data.setJumpPoint(end, graph.data.points[end] to endRightValue.toFloat())
             graph.data.points[end] = GraphData.JUMP_POINT
-            Main.arrangementWindow.updateGraph(graph)
+            Main.arrangementWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })
     }

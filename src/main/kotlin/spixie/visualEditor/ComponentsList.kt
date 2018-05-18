@@ -21,13 +21,22 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         treeView.apply {
             val basicItems = TreeItem<Any>("Basic")
             val moduleItems = TreeItem<Any>("Module")
+            val graphItems = TreeItem<Any>("Graphs")
             root.children.addAll(basicItems, moduleItems)
             basicItems.children.add(TreeItem(ComponentListItem(ParticlesProduct::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(MoveRotate::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(Color::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(Slice::class.java)))
-            if(forMain) basicItems.children.add(TreeItem(ComponentListItem(Graph::class.java)))
+
             moduleItems.children.setAll(Main.arrangementWindow.visualEditor.modules.filter { !it.isMain }.map { TreeItem<Any>(it) })
+
+            if(forMain) {
+                Main.arrangementWindow.graphs.forEach { graph->
+                    graphItems.children.add(TreeItem(ComponentListGraphItem(graph)))
+                }
+                root.children.addAll(graphItems)
+            }
+
             expandChildItems(root)
 
             focusedProperty().addListener { _, _, newValue ->
@@ -83,6 +92,10 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         }
         if(value is Module){
             result(ModuleComponent().apply { module = value })
+            containerChildrens.remove(this@ComponentsList)
+        }
+        if(value is ComponentListGraphItem){
+            result(Graph(value.graph))
             containerChildrens.remove(this@ComponentsList)
         }
     }
