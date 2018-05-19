@@ -3,6 +3,7 @@ package spixie
 import io.reactivex.BackpressureStrategy
 import io.reactivex.Completable
 import io.reactivex.Observable
+import io.reactivex.functions.BiFunction
 import io.reactivex.functions.Function3
 import io.reactivex.rxjavafx.observables.JavaFxObservable
 import io.reactivex.schedulers.Schedulers
@@ -24,8 +25,13 @@ import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
 class RenderManager {
-    val time = TimeProperty(160.0)
     val bpm = ValueControl(160.0, 1.0, "BPM")
+    val time = TimeProperty(bpm)
+    val offset = ValueControl(0.0, 0.01, "Offset").apply {
+        changes.subscribe {
+            Main.arrangementWindow.needRedrawWaveform = true
+        }
+    }
     @Volatile private var renderingToFile = false
     private val renderer: Renderer = AparapiRenderer()
     private val cache = ReferenceMap<Long, ByteArray>()
@@ -38,6 +44,22 @@ class RenderManager {
             field = value
             requestRender()
         }
+
+
+    init {
+        bpm.apply {
+            limitMin(60.0)
+            limitMax(999.0)
+            changes.subscribe { newBPM->
+                Main.arrangementWindow.needRedrawWaveform = true
+            }
+
+            Observable.zip(changes, changes.skip(1), BiFunction { previous: Double, current: Double -> previous to current }).subscribe { pair ->
+                val t = time.time - offset.value
+                offset.value -= t*(pair.second/pair.first)-t
+            }
+        }
+    }
 
     private fun resizeIfNotCorrect(width: Int, height: Int) {
         val (currentWidth, currentHeight) = renderer.getSize()
@@ -56,7 +78,7 @@ class RenderManager {
         perFrame = {
             if(Main.audio.isPlaying()){
                 val seconds = Main.audio.getTime()
-                time.time = frameToTime((seconds*60).roundToInt(), Main.renderManager.bpm.value)
+                time.time = (frameToTime((seconds*60).roundToInt(), Main.renderManager.bpm.value) + offset.value).coerceAtLeast(0.0)
                 frameCache[time.time]?.let {
                     val byteArrayInputStream = ByteArrayInputStream(it)
                     imageView.image = Image(byteArrayInputStream)
@@ -113,7 +135,7 @@ class RenderManager {
         return renderer.render(renderBufferBuilder.complete())
     }
 
-    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean) {
+    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean, offsetAudio: Double) {
         renderingToFile = true
         Thread(Runnable {
             val w = 1920
@@ -121,6 +143,7 @@ class RenderManager {
             val fps = 60
             renderer.setSize(w, h)
             val countFrames = endFrame-startFrame+1
+            val ifAudio = { v: String-> if(audio) v else null }
             val processBuilder = ProcessBuilder(
                     listOfNotNull(
                             Settings.ffmpeg,
@@ -128,14 +151,15 @@ class RenderManager {
                             "-f", "image2pipe",
                             "-framerate", "$fps",
                             "-i", "-",
-                            if(audio) "-i" else null, if(audio) "test.aiff" else null,
+                            ifAudio("-itsoffset"), ifAudio(offsetAudio.toString()),
+                            ifAudio("-i"), ifAudio("audio.aiff"),
                             "-vf", "scale=$w:$h",
                             "-ss", "${startFrame/fps.toDouble()}",
                             "-c:v", "libx264",
                             "-preset", "slow",
                             "-crf", "17",
                             "-pix_fmt", "yuv420p",
-                            if(audio) "-c:a" else null, if(audio) "aac" else null,
+                            ifAudio("-c:a"), ifAudio("aac"),
                             "-shortest",
                             "out.mp4"
                     )

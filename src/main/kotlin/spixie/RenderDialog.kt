@@ -55,7 +55,8 @@ class RenderDialog(owner: Window): Stage() {
                         motionBlurSlider.value.toInt(),
                         selectedFrames.first,
                         selectedFrames.second,
-                        checkBoxAudio.isSelected
+                        checkBoxAudio.isSelected,
+                        Main.renderManager.offset.value/Main.renderManager.bpm.value*60.0
                 )
             }
             setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE)

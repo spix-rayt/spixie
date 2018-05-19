@@ -2,7 +2,6 @@ package spixie
 
 import io.reactivex.subjects.BehaviorSubject
 import javafx.embed.swing.SwingFXUtils
-import javafx.geometry.Insets
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.ContextMenu
@@ -19,7 +18,7 @@ import javafx.scene.paint.Stop
 import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
-import org.apache.commons.math3.fraction.Fraction
+import org.apache.commons.lang3.math.Fraction
 import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
 import spixie.visualEditor.Component
@@ -40,7 +39,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
     val graphCanvases = Group()
     val visualEditor = VisualEditor()
     private val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
-    private val zoom = BehaviorSubject.createDefault(Fraction(64))
+    private val zoom = BehaviorSubject.createDefault(Fraction.getFraction(64.0))
     private val selectionBlock = ArrangementSelectionBlock(zoom)
     private val timePointer = Line(-0.5, 0.0, -0.5, 10000.0).apply {
         strokeWidth = 32.0
@@ -74,8 +73,8 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
 
     private fun redrawWaveform() {
         val newWaveformLayoutX = -content.layoutX - 100
-        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble()
-        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble()
+        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble() - Main.renderManager.offset.value
+        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble() - Main.renderManager.offset.value
 
         val startSecond = startTime*3600/Main.renderManager.bpm.value/60
         val endSecond = endTime*3600/Main.renderManager.bpm.value/60
@@ -292,17 +291,17 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                             }
                             Main.renderManager.time.time = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
                             if(restartAudio){
-                                Main.audio.play(Duration.seconds(Main.renderManager.time.frame/60.0))
+                                Main.audio.play(Duration.seconds(Math.round((Main.renderManager.time.time-Main.renderManager.offset.value)*3600/Main.renderManager.bpm.value)/60.0))
                             }
                         }
                         val time1 = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
                         val time2 = (pressedCursorX-0.5)*64/100.0/zoom.value!!.toDouble()
                         if(time1 < time2){
-                            selectionBlock.timeStart = Fraction(time1)
-                            selectionBlock.timeEnd = Fraction(time2)
+                            selectionBlock.timeStart = Fraction.getFraction(time1)
+                            selectionBlock.timeEnd = Fraction.getFraction(time2)
                         }else{
-                            selectionBlock.timeStart = Fraction(time2)
-                            selectionBlock.timeEnd = Fraction(time1)
+                            selectionBlock.timeStart = Fraction.getFraction(time2)
+                            selectionBlock.timeEnd = Fraction.getFraction(time1)
                         }
 
                         selectionBlock.line = pressedLine
@@ -321,7 +320,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             if(event.deltaY<0){
                 if(zoom.value!!.compareTo(Fraction.ONE) != 0){
                     val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
-                    zoom.onNext(zoom.value!!.divide(2))
+                    zoom.onNext(zoom.value!!.divideBy(Fraction.getFraction(2.0)))
                     var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
                     content.layoutX += (cursor.startX - cursorNewX).roundToInt()
                     if(content.layoutX > 0) {
@@ -338,9 +337,9 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                 }
             }
             if(event.deltaY>0){
-                if(zoom.value!!.compareTo(Fraction(4096)) != 0){
+                if(zoom.value!!.compareTo(Fraction.getFraction(4096.0)) != 0){
                     val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
-                    zoom.onNext(zoom.value!!.multiply(2))
+                    zoom.onNext(zoom.value!!.multiplyBy(Fraction.getFraction(2.0)))
                     var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
                     content.layoutX += (cursor.startX - cursorNewX).roundToInt()
                     if(content.layoutX > 0) {
@@ -420,9 +419,6 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             }
         }
 
-        //BorderPane.setMargin(left, Insets(.0))
-        BorderPane.setMargin(center, Insets(0.0))
-
         updateGraphTree()
 
         contentPane.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
@@ -445,6 +441,9 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         val byteArrayOutputStream = ByteArrayOutputStream()
         val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
 
+        objectOutputStream.writeDouble(Main.renderManager.bpm.value)
+        objectOutputStream.writeDouble(Main.renderManager.offset.value)
+
         val modules = visualEditor.modules.map { it.toSerializable() }
         objectOutputStream.writeObject(modules)
 
@@ -456,6 +455,8 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
 
     fun load(objectInputStream: ObjectInputStream){
         try{
+            Main.renderManager.bpm.value = objectInputStream.readDouble()
+            Main.renderManager.offset.value = objectInputStream.readDouble()
             visualEditor.modules.clear()
             val modules = objectInputStream.readObject() as List<Triple<String, List<Component>, List<Pair<Pair<Int, Int>, Pair<Int, Int>>>>>
             modules.forEach {

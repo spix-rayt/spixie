@@ -118,7 +118,7 @@ class Main : Application() {
                         Platform.runLater { renderManager.time.time = playStartTime }
                     }else{
                         playStartTime = renderManager.time.time
-                        audio.play(Duration.seconds(renderManager.time.frame/60.0))
+                        audio.play(Duration.seconds(Math.round((playStartTime-Main.renderManager.offset.value)*3600/Main.renderManager.bpm.value)/60.0))
                     }
                 }
             }
@@ -154,10 +154,6 @@ class Main : Application() {
                 }
             }
         }.start()
-
-
-        //Test audio
-        audio.load(File("test.aiff"))
     }
 
     companion object {

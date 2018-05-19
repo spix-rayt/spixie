@@ -6,6 +6,7 @@ import javafx.scene.input.DataFormat
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Pane
+import org.apache.commons.lang3.math.Fraction
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -138,6 +139,8 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
         }
     })
 }
+
+val F_100 = Fraction.getFraction(100.0)
 
 object DragAndDropType {
     val PIN = DataFormat("PIN")

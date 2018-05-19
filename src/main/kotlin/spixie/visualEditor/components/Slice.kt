@@ -1,7 +1,8 @@
 package spixie.visualEditor.components
 
-import org.apache.commons.math3.fraction.Fraction
+import org.apache.commons.lang3.math.Fraction
 import spixie.ValueControl
+import spixie.static.F_100
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
 import spixie.visualEditor.Particle
@@ -14,11 +15,11 @@ class Slice: Component() {
 
     private val outParticles = ComponentPin(this, {
         val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
-        val start = Fraction(inStart.receiveValue() ?: 0.0).divide(100)
-        val end = Fraction(inEnd.receiveValue() ?: 0.0).divide(100)
+        val start = Fraction.getFraction(inStart.receiveValue() ?: 0.0).divideBy(F_100)
+        val end = Fraction.getFraction(inEnd.receiveValue() ?: 0.0).divideBy(F_100)
 
-        val from = Fraction(particles.array.size).multiply(start).toInt()
-        val to = Fraction(particles.array.size).multiply(end).toInt()
+        val from = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(start).toInt()
+        val to = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(end).toInt()
 
         ParticleArray(particles.array.slice(from until to).map {
             it.copy()

@@ -9,10 +9,10 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
-import org.apache.commons.math3.fraction.Fraction
+import org.apache.commons.lang3.math.Fraction
 
 class ValueControl(initial: Double, mul: Double, private val name: String) : HBox() {
-    private var startDragValue = Fraction(0)
+    private var startDragValue = Fraction.ZERO
     private var mul = 1.0
     private val labelName = Label()
     private val labelValue = Label()
@@ -56,7 +56,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         labelValue.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                startDragValue = Fraction(value).add(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt()))
+                startDragValue = Fraction.getFraction(value).add(Fraction.getFraction(this@ValueControl.mul).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble())))
                 dragged = false
             }
         }
@@ -64,7 +64,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         labelValue.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                value = startDragValue.subtract(Fraction(this@ValueControl.mul).multiply(mouseEvent.y.toInt())).toDouble()
+                value = startDragValue.subtract(Fraction.getFraction(this@ValueControl.mul).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble()))).toDouble()
                 dragged = true
             }
         }
