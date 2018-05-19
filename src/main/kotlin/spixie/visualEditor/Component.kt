@@ -2,8 +2,10 @@ package spixie.visualEditor
 
 import io.reactivex.subjects.PublishSubject
 import javafx.geometry.Point2D
+import javafx.geometry.Pos
 import javafx.scene.Group
 import javafx.scene.control.ContextMenu
+import javafx.scene.control.Label
 import javafx.scene.control.MenuItem
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.Region
@@ -75,25 +77,33 @@ open class Component:Region(), Externalizable {
 
     fun updateVisual(){
         content.children.clear()
+        content.children.addAll(
+                Label(javaClass.simpleName.replace(Regex("[A-Z]"), { matchResult -> " ${matchResult.value}" })).apply {
+                    style="-fx-font-weight: bold; -fx-font-style: italic;"
+                    alignment = Pos.CENTER
+                    prefWidth = 256.0 + 96.0 + 1.0
+                    prefHeight = 32.0
+                }
+        )
         content.children.addAll(inputPins)
         content.children.addAll(outputPins)
         inputPins.forEachIndexed { index, pin ->
             pin.layoutX = 0.0
-            pin.layoutY = index*32.0
+            pin.layoutY = index*32.0+32.0
             pin.updateUI()
         }
 
         outputPins.forEachIndexed { index, pin ->
             pin.layoutX = 256.0 + 96.0 - 128.0
-            pin.layoutY = index*32.0
+            pin.layoutY = index*32.0+32.0
             pin.updateUI()
         }
 
 
         prefWidth = 256.0 + 96.0 + 1.0
-        prefHeight = max(inputPins.size, outputPins.size)*32.0 + 1.0
+        prefHeight = max(inputPins.size, outputPins.size)*32.0 + 1.0 + 32.0
         width = 256.0 + 96.0 + 1.0
-        height = max(inputPins.size, outputPins.size)*32.0 + 1.0
+        height = max(inputPins.size, outputPins.size)*32.0 + 1.0 + 32.0
     }
 
     var serializationIndex = -1

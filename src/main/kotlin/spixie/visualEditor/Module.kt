@@ -63,12 +63,16 @@ class Module(var name: String) {
             components.children.forEach { component ->
                 if(component is Component){
                     component.inputPins.forEach { pin ->
-                        if(pin.connection == pinForDisconnect || pin == pinForDisconnect){
-                            pin.connection = null
+                        if(pin == pinForDisconnect){
+                            pin.connections.clear()
+                        }
+                        if(pin.connections.contains(pinForDisconnect)){
+                            pin.connections.remove(pinForDisconnect)
                         }
                     }
                 }
             }
+            reconnectPins()
         }
         components.children.add(component)
     }
@@ -99,10 +103,12 @@ class Module(var name: String) {
             discovered.add(first)
             result = result mix first.hashCode().toLong()
             first.inputPins.forEach {
-                val connection = it.connection
-                if(connection != null){
-                    if(!discovered.contains(connection.component)){
-                        componentsList.add(connection.component)
+                val connections = it.connections
+                if(connections.isEmpty()){
+                    connections.forEach {
+                        if(!discovered.contains(it.component)){
+                            componentsList.add(it.component)
+                        }
                     }
                 }else{
                     it.valueControl?.let { valueControl ->
@@ -120,7 +126,7 @@ class Module(var name: String) {
         components.children.forEach { component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
-                    pin1.connection?.let { pin2->
+                    pin1.connections.forEach { pin2->
                         connectPins(pin2, pin1)
                     }
                 }
@@ -151,48 +157,46 @@ class Module(var name: String) {
         cubicCurve.strokeLineCap = StrokeLineCap.ROUND
     }
 
-    fun toSerializable(): Triple<String, List<Component>, List<Pair<Pair<Int, Int>, Pair<Int, Int>>>> {
+    fun toSerializable(): Triple<String, List<Component>, List<Pair<Pair<Int, String>, Pair<Int, String>>>> {
         val components = components.children.filter { it is Component }.map { it as Component }
         components.forEachIndexed { index, component -> component.serializationIndex = index }
-        val inputToOutputConnection = hashMapOf<ComponentPin<*>, ComponentPin<*>>()
+        val inputToOutputConnection = arrayListOf<Pair<ComponentPin<*>, ComponentPin<*>>>()
         this.components.children.forEach { component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
-                    pin1.connection?.let { pin2->
-                        inputToOutputConnection[pin1] = pin2
+                    pin1.connections.forEach { pin2->
+                        inputToOutputConnection.add(pin1 to pin2)
                     }
                 }
             }
         }
         val connections = inputToOutputConnection.map { entry ->
-            val v1 = entry.key.component.serializationIndex to entry.key.component.inputPins.indexOf(entry.key)
-            val v2 = entry.value.component.serializationIndex to entry.value.component.outputPins.indexOf(entry.value)
+            val v1 = entry.first.component.serializationIndex to entry.first.name
+            val v2 = entry.second.component.serializationIndex to entry.second.name
             v1 to v2
         }
         return Triple(name, components, connections)
     }
 
-    fun fromSerializable(data: Triple<String, List<Component>, List<Pair<Pair<Int, Int>, Pair<Int, Int>>>>) {
+    fun fromSerializable(data: Triple<String, List<Component>, List<Pair<Pair<Int, String>, Pair<Int, String>>>>) {
         val (moduleName, moduleComponents, moduleConnections) = data
         clearComponents()
         moduleComponents.forEach { addComponent(it) }
         val idToComponent = moduleComponents.map { it.serializationIndex to it }.toMap()
-
-        val inputToOutputConnection = hashMapOf<ComponentPin<*>, ComponentPin<*>>()
-        moduleConnections.forEach {
-            val (a,b) = it
-            val (componentInputIndex, inputIndex) = a
-            val (componentOutputIndex, outputIndex) = b
-            idToComponent[componentInputIndex]?.inputPins?.get(inputIndex)?.let { inputPin ->
-                idToComponent[componentOutputIndex]?.outputPins?.get(outputIndex)?.let { outputPin ->
-                    inputToOutputConnection[inputPin] = outputPin
-                }
-            }
-        }
         components.children.forEach { component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
-                    pin1.connection = inputToOutputConnection[pin1]
+                    pin1.connections.addAll(
+                            moduleConnections.mapNotNull {
+                                if(pin1.component.serializationIndex == it.first.first && pin1.name == it.first.second){
+                                    it.second
+                                }else{
+                                    null
+                                }
+                            }.mapNotNull { pin2Serialized->
+                                idToComponent[pin2Serialized.first]?.outputPins?.find { it.name == pin2Serialized.second }
+                            }
+                    )
                 }
             }
         }

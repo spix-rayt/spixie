@@ -14,7 +14,7 @@ import spixie.Main
 import spixie.ValueControl
 import spixie.static.DragAndDropType
 
-class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: String, private val type: Class<T>, val valueControl: ValueControl?): HBox() {
+class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, val name: String, private val type: Class<T>, val valueControl: ValueControl?): HBox() {
     private val backgroundCircle = Circle(16.0, 16.0, 3.0, Color.BLACK)
     private val selectionCircle = Circle(16.0, 16.0, 2.0, Color.WHITE)
     val circle = StackPane(backgroundCircle, selectionCircle).apply {
@@ -24,11 +24,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
         minHeight = 32.0
         maxHeight = 32.0
     }
-    var connection: ComponentPin<*>? = null
-        set(value) {
-            field = value
-            component.conneectionsChanged.onNext(Unit)
-        }
+    val connections = mutableListOf<ComponentPin<*>>()
 
     private val label = Label(name)
 
@@ -51,6 +47,7 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
                         }
                     }
             ).show(this, event.screenX, event.screenY)
+            event.consume()
         }
 
         circle.apply {
@@ -107,15 +104,22 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
                     success = true
                     (Main.dragAndDropObject as? ComponentPin<*>)?.let { dragged ->
                         if(dragged.component.inputPins.contains(dragged)){
-                            dragged.connection = this@ComponentPin
+                            dragged.connectWith(this@ComponentPin)
                         }else{
-                            this@ComponentPin.connection = dragged
+                            this@ComponentPin.connectWith(dragged)
                         }
                     }
                 }
                 event.isDropCompleted = success
                 event.consume()
             }
+        }
+    }
+
+    fun connectWith(connection: ComponentPin<*>){
+        if(type == connection.type){
+            connections.add(connection)
+            component.conneectionsChanged.onNext(Unit)
         }
     }
 
@@ -128,11 +132,24 @@ class ComponentPin<T>(val component: Component, val getValue: (() -> T)?, name: 
     }
 
     fun receiveValue(): T? {
-        val valueFromConnection = connection?.getValue?.invoke() as? T
-        return if(valueFromConnection == null && type == Double::class.java && valueControl != null){
-            valueControl.value as? T
-        }else{
-            valueFromConnection
+        return when(type){
+            Double::class.java -> {
+                val values = connections
+                        .sortedBy { it.component.layoutY }
+                        .mapNotNull { it.getValue?.invoke() as? Double }
+                if(values.isEmpty() && valueControl != null)
+                    valueControl.value as? T
+                else
+                    values.sum() as T
+            }
+            ParticleArray::class.java -> {
+                val newArray = connections
+                        .sortedBy { it.component.layoutY }
+                        .mapNotNull { (it.getValue?.invoke() as? ParticleArray)?.array }
+                        .flatten()
+                ParticleArray(newArray) as T
+            }
+            else -> null
         }
     }
 

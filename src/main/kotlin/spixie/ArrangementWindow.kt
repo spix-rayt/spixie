@@ -458,7 +458,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             Main.renderManager.bpm.value = objectInputStream.readDouble()
             Main.renderManager.offset.value = objectInputStream.readDouble()
             visualEditor.modules.clear()
-            val modules = objectInputStream.readObject() as List<Triple<String, List<Component>, List<Pair<Pair<Int, Int>, Pair<Int, Int>>>>>
+            val modules = objectInputStream.readObject() as List<Triple<String, List<Component>, List<Pair<Pair<Int, String>, Pair<Int, String>>>>>
             modules.forEach {
                 val module = Module(it.first).apply {
                     fromSerializable(it)
