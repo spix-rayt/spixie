@@ -5,6 +5,7 @@ import javafx.scene.input.MouseButton
 import javafx.scene.layout.Pane
 import javafx.scene.paint.Color
 import javafx.scene.shape.CubicCurve
+import javafx.scene.shape.Rectangle
 import javafx.scene.shape.StrokeLineCap
 import spixie.Main
 import spixie.static.MAGIC
@@ -39,6 +40,8 @@ class Module(var name: String) {
                 }
             }
         }
+
+        contentPane.clip = Rectangle(Double.MAX_VALUE, Double.MAX_VALUE)
 
         content.layoutXProperty().addListener { _, _, _ ->
             updateBackgroundGrid()

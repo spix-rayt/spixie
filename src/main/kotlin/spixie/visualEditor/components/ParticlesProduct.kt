@@ -17,7 +17,7 @@ class ParticlesProduct: Component() {
                 particlesB.array.flatMap { pb ->
                     particlesA.array.map { pa ->
                         Particle().apply {
-                            matrix.set(pb.matrix.mul(pa.matrix))
+                            pb.matrix.mul(pa.matrix, matrix)
                             this.size = pa.size*pb.size
                         }
                     }
