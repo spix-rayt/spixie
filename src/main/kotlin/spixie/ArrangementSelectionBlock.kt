@@ -4,6 +4,7 @@ import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.layout.Region
 import org.apache.commons.lang3.math.Fraction
 import spixie.static.F_100
+import spixie.visualEditor.GraphData
 
 class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Region() {
     private var strictWidth:Double
@@ -82,7 +83,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         }
     }
 
-    private var copyData = floatArrayOf() to mapOf<Int, Pair<Float, Float>>()
+    private var copyData = GraphData()
     private var copyLength = 0
 
     fun copy(){

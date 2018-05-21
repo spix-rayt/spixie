@@ -35,7 +35,6 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
         val endShiftValue = ValueControl(0.0, 0.01, "EndShift").limitMin(0.0).limitMax(1.0)
 
         mode(start, end, listOf(startHeightValue, startShiftValue, endHeightValue, endShiftValue)){ data ->
-            val (points, jumpPoints) = data
             val startHeight = startHeightValue.value
             val startShift = startShiftValue.value
             val endHeight = endHeightValue.value
@@ -44,22 +43,23 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
                 val t = i / (end-start).toDouble()
                 val height = linearInterpolate(startHeight, endHeight, t)
                 val shift = linearInterpolate(startShift, endShift, t)
-                if(points[i] == GraphData.JUMP_POINT){
-                    jumpPoints[i] = (jumpPoints[i]!!.first*height + (1.0 - height)*shift).toFloat() to (jumpPoints[i]!!.second*height + (1.0 - height)*shift).toFloat()
+                if(data.points[i] == GraphData.JUMP_POINT){
+                    data.jumpPoints[i] = (data.jumpPoints[i]!!.first*height + (1.0 - height)*shift).toFloat() to (data.jumpPoints[i]!!.second*height + (1.0 - height)*shift).toFloat()
                 }else{
-                    points[i] = (points[i]*height + (1.0 - height)*shift).toFloat()
+                    data.points[i] = (data.points[i]*height + (1.0 - height)*shift).toFloat()
                 }
             }
-            return@mode points to jumpPoints
         }
     }
 
-    private inline fun mode(start: Int, end: Int, valueControls: List<ValueControl>, crossinline changeData: (copy: Pair<FloatArray, MutableMap<Int, Pair<Float, Float>>>) -> Pair<FloatArray, Map<Int, Pair<Float, Float>>>){
+    private inline fun mode(start: Int, end: Int, valueControls: List<ValueControl>, crossinline processData: (copy: GraphData) -> Unit){
         children.clear()
         val copy = graph.data.copy(start, end)
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
             graph.data.resizeIfNeed(end+1)
-            graph.data.paste(start, changeData(copy.first.clone() to copy.second.toList().toMap().toMutableMap()))
+            val data = GraphData().apply { points = copy.points.clone(); jumpPoints.putAll(copy.jumpPoints) }
+            processData(data)
+            graph.data.paste(start,  data)
             Main.arrangementWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })

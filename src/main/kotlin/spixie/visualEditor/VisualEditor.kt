@@ -6,11 +6,14 @@ import javafx.scene.Group
 import javafx.scene.control.ListView
 import javafx.scene.effect.DropShadow
 import javafx.scene.input.KeyCode
+import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.scene.paint.Color
 import javafx.stage.Screen
 import spixie.Main
 import spixie.WorkingWindowOpenableContent
+import spixie.visualEditor.components.MoveRotate
+import spixie.visualEditor.components.Result
 
 class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
     var currentModule = Module("Main")
@@ -23,6 +26,13 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
         loadModule(currentModule)
 
         val shiftKeyReleaseEvents = PublishSubject.create<Unit>()
+
+        setOnMouseClicked { event ->
+            if(event.button == MouseButton.PRIMARY){
+                requestFocus()
+                event.consume()
+            }
+        }
 
         setOnKeyReleased { event ->
             if(event.code == KeyCode.HOME){
@@ -75,6 +85,17 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
                         }
                     }
                 }
+
+        currentModule.apply {
+            val resultComponent = Result()
+            addComponent(resultComponent)
+            resultComponent.magneticRelocate(384.0, 0.0)
+
+            val moveComponent = MoveRotate()
+            addComponent(moveComponent)
+            moveComponent.changeZ(1000.0)
+            resultComponent.inputPins[0].connectWith(moveComponent.outputPins[0])
+        }
     }
 
     fun loadModule(module: Module){

@@ -38,6 +38,10 @@ class MoveRotate: Component() {
         )
     }, "Particles", ParticleArray::class.java, null)
 
+    fun changeZ(value:Double){
+        inZ.valueControl?.value = value
+    }
+
     init {
         inputPins.add(inParticles)
         inputPins.add(inX)

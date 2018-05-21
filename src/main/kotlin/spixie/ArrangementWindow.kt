@@ -68,7 +68,9 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             }
         }
     private val waveform = Canvas(1.0, 300.0)
-    private val graphsTree = Pane()
+    private val graphsTree = Pane().apply {
+        style="-fx-background-color: #22313FFF"
+    }
     val graphs = arrayListOf<ArrangementGraphsContainer>()
 
     private fun redrawWaveform() {
@@ -180,8 +182,8 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         var i = 3
         graphs.forEach { graphContainter->
             graphsTreeContent.children.add(Pane().apply {
-                style="-fx-background-color: #FFFFFFDD;";
-                setMinSize(graphsTree.width, 100.0)
+                style="-fx-background-color: #FFFFFFFF;";
+                setMinSize(graphsTree.width-1, 100.0)
                 layoutY = i*100.0
                 children.add(graphContainter.name)
                 setOnMouseClicked { event->
@@ -215,8 +217,8 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             if(graphContainter.expanded){
                 graphContainter.list.forEach { graph->
                     graphsTreeContent.children.add(Pane().apply {
-                        style="-fx-background-color: #FFFFFFCC;";
-                        setMinSize(graphsTree.width, 100.0)
+                        style="-fx-background-color: #FFFFFFFF;";
+                        setMinSize(graphsTree.width-1, 100.0)
                         layoutY = i*100.0
                         children.add(
                                 VBox(

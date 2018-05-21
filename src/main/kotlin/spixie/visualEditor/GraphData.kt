@@ -58,28 +58,31 @@ class GraphData {
         points[x] = JUMP_POINT
     }
 
-    fun copy(from:Int, to:Int): Pair<FloatArray, Map<Int, Pair<Float, Float>>> {
+    fun copy(from:Int, to:Int): GraphData {
         val slicedPoints = points.sliceArray(from..to)
         val slicedJumps = jumpPoints.filterKeys { (from..to).contains(it) }.mapKeys { it.key - from }
-        return slicedPoints to slicedJumps
+        return GraphData().apply {
+            points = slicedPoints
+            jumpPoints.putAll(slicedJumps)
+        }
     }
 
-    fun paste(from:Int, data: Pair<FloatArray, Map<Int, Pair<Float, Float>>>){
-        resizeIfNeed(from+data.first.size)
-        data.first.forEachIndexed { index, f ->
+    fun paste(from:Int, data: GraphData){
+        resizeIfNeed(from+data.points.size)
+        data.points.forEachIndexed { index, f ->
             when (index) {
                 0 -> {
-                    val v = data.first[0]
+                    val v = data.points[0]
                     if(v == JUMP_POINT){
-                        setJumpPoint(from, getLeftValue(from) to data.second[0]!!.second)
+                        setJumpPoint(from, getLeftValue(from) to data.jumpPoints[0]!!.second)
                     }else{
                         setJumpPoint(from, getLeftValue(from) to v)
                     }
                 }
-                data.first.lastIndex -> {
-                    val v = data.first[index]
+                data.points.lastIndex -> {
+                    val v = data.points[index]
                     if(v == JUMP_POINT){
-                        setJumpPoint(index+from, data.second[index]!!.first to getRightValue(index+from))
+                        setJumpPoint(index+from, data.jumpPoints[index]!!.first to getRightValue(index+from))
                     }else{
                         setJumpPoint(index+from, v to getRightValue(index+from))
                     }
@@ -87,7 +90,7 @@ class GraphData {
                 else -> {
                     this.points[index+from] = f
                     if(f == JUMP_POINT){
-                        setJumpPoint(index+from, data.second[index]!!)
+                        setJumpPoint(index+from, data.jumpPoints[index]!!)
                     }
                 }
             }

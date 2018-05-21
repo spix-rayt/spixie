@@ -28,7 +28,6 @@ class Module(var name: String) {
     init {
         contentPane.initCustomPanning(content, true)
         content.children.addAll(components, connects)
-        addComponent(Result())
         contentPane.apply { children.addAll(content) }
 
         contentPane.setOnMouseClicked { event ->

@@ -19,6 +19,9 @@ import java.io.File
 import java.io.ObjectInputStream
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import java.text.SimpleDateFormat
+import java.util.*
 
 class Main : Application() {
     @Throws(Exception::class)
@@ -135,6 +138,7 @@ class Main : Application() {
 
         stage.onCloseRequest = EventHandler<WindowEvent> {
             val bytes = arrangementWindow.save()
+            Files.move(Paths.get("save.spixie"), Paths.get("save${SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
             Files.write(Paths.get("save.spixie"), bytes)
             Platform.exit()
         }

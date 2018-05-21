@@ -2,6 +2,7 @@ package spixie
 
 import io.reactivex.BackpressureStrategy
 import io.reactivex.Completable
+import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.functions.BiFunction
 import io.reactivex.functions.Function3
@@ -9,17 +10,19 @@ import io.reactivex.rxjavafx.observables.JavaFxObservable
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
 import javafx.application.Platform
+import javafx.embed.swing.SwingFXUtils
 import javafx.geometry.Bounds
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
-import spixie.renderer.AparapiRenderer
+import spixie.renderer.JOCLRenderer
 import spixie.renderer.RenderBufferBuilder
 import spixie.renderer.Renderer
 import spixie.static.*
 import spixie.visualEditor.ParticleArray
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
+import java.nio.FloatBuffer
 import java.util.*
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
@@ -33,7 +36,7 @@ class RenderManager {
         }
     }
     @Volatile private var renderingToFile = false
-    private val renderer: Renderer = AparapiRenderer()
+    private val renderer: Renderer = JOCLRenderer()
     private val cache = ReferenceMap<Long, ByteArray>()
     private val frameCache = ReferenceMap<Double, ByteArray>()
     private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
@@ -96,19 +99,27 @@ class RenderManager {
                             val particles = Main.arrangementWindow.visualEditor.render(t)
                             val imageCached = cache[particles.hash]
                             if(imageCached == null){
-                                val image = render(particles).toPNGByteArray()
-                                cache[particles.hash] = image
-                                frameCache[t] = image
+                                val image = renderBufferedImage(particles)
+                                runInUIAndWait {
+                                    imageView.image = SwingFXUtils.toFXImage(image, null)
+                                }
+                                Flowable.fromCallable { image.toPNGByteArray() }
+                                        .subscribeOn(Schedulers.computation())
+                                        .observeOn(renderThread)
+                                        .subscribe {
+                                            cache[particles.hash] = it
+                                            frameCache[t] = it
+                                        }
                             }else{
+                                val image = Image(ByteArrayInputStream(imageCached))
                                 frameCache[t] = imageCached
-                            }
-                            runInUIAndWait {
-                                frameCache[t]?.let {
-                                    imageView.image = Image(ByteArrayInputStream(it))
+                                runInUIAndWait {
+                                    imageView.image = image
                                 }
                             }
+
                             if(autoRenderNextFrame){
-                                runInUIAndWait {
+                                Platform.runLater {
                                     time.frame += 1
                                 }
                             }
@@ -125,14 +136,18 @@ class RenderManager {
         forceRender.onNext(Unit)
     }
 
-    private fun render(particleArray: ParticleArray):BufferedImage {
+    private fun prepareRenderBuffer(particleArray: ParticleArray): FloatBuffer {
         val renderBufferBuilder = RenderBufferBuilder(particleArray.array.size)
         particleArray.array.forEach { particle ->
-            if(particle.matrix.m32()>=-960){
-                renderBufferBuilder.addParticle(particle.matrix.m30()/((particle.matrix.m32()+1000)/1000), particle.matrix.m31()/((particle.matrix.m32()+1000)/1000), particle.size/((particle.matrix.m32()+1000)/1000), particle.red, particle.green, particle.blue, particle.alpha)
+            if(particle.matrix.m32()>=40){
+                renderBufferBuilder.addParticle(particle.matrix.m30()/(particle.matrix.m32()/1000), particle.matrix.m31()/(particle.matrix.m32()/1000), particle.size/(particle.matrix.m32()/1000), particle.red, particle.green, particle.blue, particle.alpha)
             }
         }
-        return renderer.render(renderBufferBuilder.complete())
+        return renderBufferBuilder.complete()
+    }
+
+    private fun renderBufferedImage(particleArray: ParticleArray):BufferedImage {
+        return renderer.renderBufferedImage(prepareRenderBuffer(particleArray))
     }
 
     fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean, offsetAudio: Double) {
@@ -181,31 +196,37 @@ class RenderManager {
                     if(!process.isAlive){
                         break
                     }
-                    val resultArray = DoubleArray(w * h * 4)
-                    val doubleArray = DoubleArray(w * h * 4)
-
-                    for(k in 0 until motionBlurIterations){
-                        val renderedImage = render(Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k+1)/motionBlurIterations.toDouble())))
-                        renderedImage.raster.getPixels(0,0, renderedImage.width, renderedImage.height, doubleArray)
-
-                        for(x in 0 until w){
-                            for (y in 0 until h){
-                                val offset = y*w*4+x*4
-                                val srcA = doubleArray[offset+3]/motionBlurIterations/255.0
-                                resultArray[offset] = srcA*doubleArray[offset] + resultArray[offset]
-                                resultArray[offset+1] = srcA*doubleArray[offset+1] + resultArray[offset+1]
-                                resultArray[offset+2] = srcA*doubleArray[offset+2] + resultArray[offset+2]
-                                resultArray[offset+3] = 255.0
+                    val resultArray = FloatArray(w * h * 4)
+                    Flowable.fromArray(*((0 until motionBlurIterations).toList().toTypedArray()))
+                            .subscribeOn(Schedulers.computation())
+                            .map { k->
+                                prepareRenderBuffer(Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k + 1) / motionBlurIterations.toDouble())))
                             }
-                        }
-                    }
+                            .observeOn(Schedulers.computation())
+                            .map { particles->
+                                renderer.render(particles)
+                            }
+                            .observeOn(Schedulers.computation())
+                            .map { floatArray->
+                                for (x in 0 until w) {
+                                    for (y in 0 until h) {
+                                        val offset = y * w * 4 + x * 4
+                                        val srcA = floatArray[offset + 3] / motionBlurIterations / 255.0f
+                                        resultArray[offset] = srcA * floatArray[offset] + resultArray[offset]
+                                        resultArray[offset + 1] = srcA * floatArray[offset + 1] + resultArray[offset + 1]
+                                        resultArray[offset + 2] = srcA * floatArray[offset + 2] + resultArray[offset + 2]
+                                        resultArray[offset + 3] = 255.0f
+                                    }
+                                }
+                            }
+                            .toList().blockingGet()
+
                     val bufferedImage = BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR)
                     bufferedImage.raster.setPixels(0, 0, w, h, resultArray)
                     val bufferedImage1 = BufferedImage(bufferedImage.width, bufferedImage.height, BufferedImage.TYPE_3BYTE_BGR)
                     bufferedImage1.graphics.drawImage(bufferedImage, 0, 0, null)
 
                     ImageIO.write(bufferedImage1, "png", outputStream)
-
                     inputStream.printAvailable()
                     errorStream.printAvailable()
 

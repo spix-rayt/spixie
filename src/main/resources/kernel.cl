@@ -1,4 +1,4 @@
-__kernel void renderParticles(__global float *particles, int width, int height, int realWidth, int particlesCount, __global int *outImage) {
+__kernel void renderParticles(__global float *particles, int width, int height, int realWidth, int particlesCount, __global float *outImage) {
     __local float p[256*7];
     __local float validp[256];
     int workGroup = get_group_id(0);
@@ -41,13 +41,14 @@ __kernel void renderParticles(__global float *particles, int width, int height, 
         alpha = 1.0f;
     }
 
-    __local int tile[256*4];
-    tile[localId*4] = clamp((int)round(red*255), 0, 255);
-    tile[localId*4 + 1] = clamp((int)round(green*255), 0, 255);
-    tile[localId*4 + 2] = clamp((int)round(blue*255), 0, 255);
-    tile[localId*4 + 3] = clamp((int)round(alpha*255), 0, 255);
+    __local float tile[256*4];
+    tile[localId*4] = clamp(round(red*255.0f), 0.0f, 255.0f);
+    tile[localId*4 + 1] = clamp(round(green*255.0f), 0.0f, 255.0f);
+    tile[localId*4 + 2] = clamp(round(blue*255.0f), 0.0f, 255.0f);
+    tile[localId*4 + 3] = clamp(round(alpha*255.0f), 0.0f, 255.0f);
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    int px = (imgy*width + groupX*256)*4;
-    async_work_group_copy(outImage+px, tile, 256*4, 0);
+    int groupX256 = groupX*256;
+    int px = (imgy*realWidth + groupX256)*4;
+    async_work_group_copy(outImage+px, tile, (clamp(groupX256+256, 0, realWidth)-groupX256)*4, 0);
 }

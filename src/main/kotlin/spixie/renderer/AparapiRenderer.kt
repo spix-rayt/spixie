@@ -14,24 +14,34 @@ class AparapiRenderer: Renderer {
     private var realHeight = 1
     private val device = (KernelManager.instance().bestDevice().apply { println(this) } as OpenCLDevice)
 
-    override fun render(particlesArray: FloatBuffer): BufferedImage {
-        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
-        val raster = bufferedImage.raster
+    private lateinit var kernel: AparapiKernelInterface
 
+    override fun render(particlesArray: FloatBuffer): FloatArray {
         val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(256)
         if(particlesCount == 0){
-            return bufferedImage.getSubimage(0, 0, realWidth, realHeight)
+            return FloatArray(realWidth*realHeight*4)
         }
-
+        val imageOut = FloatArray(realWidth*realHeight*4)
         val clParticles = particlesArray.array()
-        val imageOut = IntArray(width*height*4)
-        val kernel = device.bind(AparapiKernelInterface::class.java)
+
+        //app getting stuck with this code :( idk why
+        /*if(!::kernel.isInitialized){
+            kernel = device.bind(AparapiKernelInterface::class.java)
+        }
+        kernel.renderParticles(device.createRange(width*height, 256), clParticles, width, height, realWidth, particlesCount, imageOut)*/
+
+        kernel = device.bind(AparapiKernelInterface::class.java)
         kernel.renderParticles(device.createRange(width*height, 256), clParticles, width, height, realWidth, particlesCount, imageOut)
         kernel.dispose()
 
-        raster.setPixels(0, 0, width, height, imageOut)
-        bufferedImage.data = raster
-        return bufferedImage.getSubimage(0, 0, realWidth, realHeight)
+        return imageOut
+    }
+
+    override fun renderBufferedImage(particlesArray: FloatBuffer): BufferedImage {
+        val floatArray = render(particlesArray)
+        val bufferedImage = BufferedImage(realWidth, realHeight, BufferedImage.TYPE_4BYTE_ABGR)
+        bufferedImage.raster.setPixels(0, 0, realWidth, realHeight, floatArray)
+        return bufferedImage
     }
 
     override fun setSize(width: Int, height: Int) {

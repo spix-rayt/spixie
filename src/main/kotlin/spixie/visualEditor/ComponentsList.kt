@@ -40,14 +40,20 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
 
             expandChildItems(root)
 
-            focusedProperty().addListener { _, _, newValue ->
-                if (newValue) {
-                    textField.requestFocus()
-                }
-            }
-
             setOnMouseClicked {
                 createSelected()
+            }
+        }
+
+        textField.focusedProperty().addListener { _, _, newValue ->
+            if(!newValue){
+                scene?.let { scene ->
+                    if(scene.focusOwner == scrollPane || scene.focusOwner == treeView){
+                        textField.requestFocus()
+                    }else{
+                        containerChildrens.remove(this@ComponentsList)
+                    }
+                }
             }
         }
 
@@ -66,12 +72,6 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
                 if(event.code == KeyCode.ENTER){
                     createSelected()
                 }
-            }
-        }
-
-        scrollPane.focusedProperty().addListener { _, _, newValue ->
-            if(newValue){
-                textField.requestFocus()
             }
         }
 
