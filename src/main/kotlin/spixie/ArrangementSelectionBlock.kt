@@ -64,7 +64,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
                 graphBuilder.layoutX = layoutX
                 graphBuilder.layoutY = layoutY + height + 10.0
             }
-            graphBuilder.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
+            graphBuilder.parentProperty().addListener { _, _, newValue -> if(newValue == null) subscribe.dispose() }
             Main.arrangementWindow.graphBuilderGroup.children.setAll(graphBuilder)
         }
     }
@@ -78,7 +78,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
                 graphEditor.layoutX = layoutX
                 graphEditor.layoutY = layoutY + height + 10.0
             }
-            graphEditor.parentProperty().addListener { _, _, newValue -> if(newValue != null) subscribe.dispose() }
+            graphEditor.parentProperty().addListener { _, _, newValue -> if(newValue == null) subscribe.dispose() }
             Main.arrangementWindow.graphBuilderGroup.children.setAll(graphEditor)
         }
     }

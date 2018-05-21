@@ -47,8 +47,11 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
                 val n = i-start
                 val d = n%interval
                 val v1 = n-d
-                val t = d/interval.toDouble()
-                graph.data.points[i] = linearInterpolate(rand(0, 0, 0, 0, seed, (v1+start).toLong()).toDouble(), rand(0, 0, 0, 0, seed, (v1+start+interval).toLong()).toDouble(), t).toFloat()
+                if(d==0 && i != start && i != end){
+                    graph.data.setJumpPoint(i, rand(0, 0, 0, 0, seed, (v1+start-interval).toLong()) to rand(0, 0, 0, 0, seed, (v1+start).toLong()))
+                }else{
+                    graph.data.points[i] = rand(0, 0, 0, 0, seed, (v1+start).toLong())
+                }
             }
         }
     }
