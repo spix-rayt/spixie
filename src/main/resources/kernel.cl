@@ -1,4 +1,4 @@
-__kernel void renderParticles(__global float *particles, int width, int height, int realWidth, int particlesCount, __global float *outImage) {
+__kernel void renderParticles(__global float *particles, int width, int height, int realWidth, int particlesCount, int ssaa, int depthRender, __global float *outImage) {
     __local float p[256*7];
     __local float validp[256];
     int workGroup = get_group_id(0);
@@ -24,28 +24,59 @@ __kernel void renderParticles(__global float *particles, int width, int height, 
             j=0;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-        if(fabs(p[localId*7+1] - pixelPos.y) < p[localId*7+2]){
+        if(fabs(p[localId*7+1] - pixelPos.y) < p[localId*7+2]+1.0f){
             validp[atomic_inc(&j)] = localId;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
 
+        float power=1.0f/(ssaa*ssaa);
+
         for(int q=0;q<j;q++){
             int i = validp[q];
-            float d = fast_distance((float2)(p[i*7], p[i*7+1]), pixelPos)/p[i*7+2];
-            float srca=clamp(p[i*7+6]*(1.0f-d), 0.0f, 1.0f);
-            float rsrca = 1.0f-srca;
-            red = red*rsrca + p[i*7+3]*srca;
-            green = green*rsrca + p[i*7+4]*srca;
-            blue = blue*rsrca + p[i*7+5]*srca;
+            if(depthRender){
+                float d = fast_distance((float2)(p[i*7], p[i*7+1]), pixelPos)/(p[i*7+2]);
+                float k = (1.0f - smoothstep(0.98f, 0.98f, d));
+                red = red*(1.0f-k) + p[i*7+3]*k;
+                green = green*(1.0f-k) + p[i*7+4]*k;
+                blue = blue*(1.0f-k) + p[i*7+5]*k;
+                alpha = 1.0;
+            }else{
+                float sum = 0.0f;
+                for(int ssaaX=0; ssaaX<ssaa; ssaaX++){
+                    float offsetX = (((ssaaX+0.5f)/ssaa)/2.0f-0.5f);
+                    for(int ssaaY=0; ssaaY<ssaa; ssaaY++){
+                        float offsetY = (((ssaaY+0.5f)/ssaa)/2.0f-0.5f);
+                        float rotatedOffsetX = 0.898f * offsetX - 0.438f * offsetY;
+                        float rotatedOffsetY = 0.438f * offsetX + 0.898f * offsetY;
+                        float2 pixelPosWithOffset = (float2)( (((imgx + rotatedOffsetX)/(realWidth-1.0f))-0.5f)*1000.0f*realWidth/height , (((imgy + rotatedOffsetY)/(height-1.0f))-0.5f)*1000.0f );
+                        float d = fast_distance((float2)(p[i*7], p[i*7+1]), pixelPosWithOffset)/p[i*7+2];
+                        sum += (1.0f - smoothstep(0.0f, 1.0f, d)) * p[i*7+6] * power;
+                    }
+                }
+                red = red*(1.0f-sum) + p[i*7+3]*sum;
+                green = green*(1.0f-sum) + p[i*7+4]*sum;
+                blue = blue*(1.0f-sum) + p[i*7+5]*sum;
+                alpha = sum + alpha*(1.0f-sum);
+            }
         }
-        alpha = 1.0f;
     }
 
     __local float tile[256*4];
-    tile[localId*4] = clamp(round(red*255.0f), 0.0f, 255.0f);
-    tile[localId*4 + 1] = clamp(round(green*255.0f), 0.0f, 255.0f);
-    tile[localId*4 + 2] = clamp(round(blue*255.0f), 0.0f, 255.0f);
-    tile[localId*4 + 3] = clamp(round(alpha*255.0f), 0.0f, 255.0f);
+
+    alpha = clamp(alpha, 0.00001f, 1.0f);
+
+    if(depthRender){
+        tile[localId*4] = 1.0f - red;
+        tile[localId*4 + 1] = 1.0f - green;
+        tile[localId*4 + 2] = 1.0f - blue;
+        tile[localId*4 + 3] = 1;
+    }else{
+        tile[localId*4] = red/alpha;
+        tile[localId*4 + 1] = green/alpha;
+        tile[localId*4 + 2] = blue/alpha;
+        tile[localId*4 + 3] = alpha;
+    }
+
     barrier(CLK_LOCAL_MEM_FENCE);
 
     int groupX256 = groupX*256;

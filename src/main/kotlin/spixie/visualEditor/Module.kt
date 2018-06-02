@@ -1,5 +1,6 @@
 package spixie.visualEditor
 
+import javafx.geometry.Point2D
 import javafx.scene.Group
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.Pane
@@ -15,12 +16,20 @@ import spixie.static.raw
 import spixie.visualEditor.components.ModuleComponent
 import spixie.visualEditor.components.Result
 import kotlin.math.absoluteValue
+import kotlin.math.max
+import kotlin.math.min
 
 class Module(var name: String) {
     val contentPane = Pane()
     private val components = Group()
     val content = Group()
     private val connects = Group()
+    private var selectedComponents = arrayOf<Component>()
+        set(value) {
+            selectedComponents.forEach { it.selected = false }
+            field=value
+            selectedComponents.forEach { it.selected = true }
+        }
 
     val isMain
         get() = name == "Main"
@@ -29,6 +38,39 @@ class Module(var name: String) {
         contentPane.initCustomPanning(content, true)
         content.children.addAll(components, connects)
         contentPane.apply { children.addAll(content) }
+
+
+        var selectionRectangleStartPoint = Point2D(0.0, 0.0)
+        contentPane.setOnMousePressed { event ->
+            if(event.button == MouseButton.PRIMARY){
+                selectionRectangleStartPoint = components.screenToLocal(event.screenX, event.screenY)
+
+                val componentsUnderCursor = components.children
+                        .map { it as Component }
+                        .filter { it.boundsInParent.intersects(selectionRectangleStartPoint.x, selectionRectangleStartPoint.y, 0.0, 0.0) }.toTypedArray()
+
+                if(componentsUnderCursor.isEmpty() || !componentsUnderCursor.all { selectedComponents.contains(it) }){
+                    selectedComponents = componentsUnderCursor
+                }
+            }
+        }
+
+        contentPane.setOnMouseDragged { event ->
+            if(event.button == MouseButton.PRIMARY){
+                val selectionRectangleEndPoint = components.screenToLocal(event.screenX, event.screenY)
+                selectedComponents = components.children
+                        .map { it as Component }
+                        .filter {
+                            it.boundsInParent.intersects(
+                                    min(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x),
+                                    min(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y),
+                                    max(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x) - min(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x),
+                                    max(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y) - min(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y)
+                            )
+                        }
+                        .toTypedArray()
+            }
+        }
 
         contentPane.setOnMouseClicked { event ->
             if(event.button == MouseButton.SECONDARY){
@@ -50,7 +92,7 @@ class Module(var name: String) {
         }
     }
 
-    fun clearComponents(){
+    private fun clearComponents(){
         components.children.clear()
     }
 
@@ -75,6 +117,11 @@ class Module(var name: String) {
                 }
             }
             reconnectPins()
+        }
+        component.relocateSelectedRequests.subscribe { (x, y)->
+            selectedComponents.forEach {
+                it.relativelyMagneticRelocate(x, y)
+            }
         }
         components.children.add(component)
     }

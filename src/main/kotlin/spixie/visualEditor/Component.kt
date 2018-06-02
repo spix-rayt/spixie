@@ -8,7 +8,8 @@ import javafx.scene.control.ContextMenu
 import javafx.scene.control.Label
 import javafx.scene.control.MenuItem
 import javafx.scene.input.MouseButton
-import javafx.scene.layout.Region
+import javafx.scene.layout.*
+import javafx.scene.paint.Color
 import spixie.Main
 import java.io.Externalizable
 import java.io.ObjectInput
@@ -28,9 +29,20 @@ open class Component:Region(), Externalizable {
     val conneectionsChanged = PublishSubject.create<Unit>()
     val relocations = PublishSubject.create<Unit>()
     val disconnectPinRequest = PublishSubject.create<ComponentPin<*>>()
+    val relocateSelectedRequests = PublishSubject.create<Pair<Double, Double>>()
+    var selected = false
+        set(value) {
+            field=value
+            border = if(value){
+                Border(BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths(2.0)))
+            }else{
+                Border(BorderStroke(Color.GRAY, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths(1.0)))
+            }
+        }
 
     init {
-        style = "-fx-border-color: #000000FF; -fx-border-width: 1; -fx-background-color: #FFFFFFFF;"
+        selected = false
+        style = "-fx-background-color: #FFFFFFFF;"
 
         setOnMouseClicked { event ->
             event.consume()
@@ -44,7 +56,14 @@ open class Component:Region(), Externalizable {
 
         setOnMouseDragged { event ->
             if(event.button == MouseButton.PRIMARY){
-                magneticRelocate(event.sceneX + dragDelta.x, event.sceneY + dragDelta.y)
+                val newX = ((event.sceneX + dragDelta.x) / 32.0).roundToInt() * 32.0
+                val newY = floor((event.sceneY + dragDelta.y) / 32.0) * 32.0
+                if(layoutX != newX || layoutY != newY){
+                    val diffX = newX - layoutX
+                    val diffY = newY - layoutY
+                    relocateSelectedRequests.onNext(diffX to diffY)
+                }
+                event.consume()
             }
         }
 
@@ -73,6 +92,10 @@ open class Component:Region(), Externalizable {
             relocate(newX, newY)
             relocations.onNext(Unit)
         }
+    }
+
+    fun relativelyMagneticRelocate(x: Double, y:Double){
+        magneticRelocate(layoutX + x, layoutY + y)
     }
 
     fun updateVisual(){
@@ -124,5 +147,9 @@ open class Component:Region(), Externalizable {
             }
         }
         serializationIndex = o.readInt()
+    }
+
+    companion object {
+        const val serialVersionUID = 0L
     }
 }

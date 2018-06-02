@@ -2,7 +2,6 @@ package spixie.renderer
 
 import com.jogamp.opencl.*
 import spixie.static.roundUp
-import java.awt.image.BufferedImage
 import java.nio.FloatBuffer
 
 class JOCLRenderer: Renderer {
@@ -21,7 +20,7 @@ class JOCLRenderer: Renderer {
         clImageOut = context.createFloatBuffer(realWidth*realHeight*4, CLMemory.Mem.WRITE_ONLY)
     }
 
-    override fun render(particlesArray:FloatBuffer): FloatArray {
+    override fun render(particlesArray:FloatBuffer, depth: Boolean): FloatArray {
         val queue = device.createCommandQueue()
         val localWorkSize = 256
 
@@ -43,6 +42,8 @@ class JOCLRenderer: Renderer {
         kernel.putArg(height)
         kernel.putArg(realWidth)
         kernel.putArg(particlesCount)
+        kernel.putArg(if(depth) 1 else 6)
+        kernel.putArg(if(depth) 1 else 0)
         kernel.putArgs(clImageOut)
 
         queue.putWriteBuffer(clParticles, false)
@@ -54,13 +55,6 @@ class JOCLRenderer: Renderer {
         clImageOut.buffer.get(floatArray)
         clParticles.release()
         return floatArray
-    }
-
-    override fun renderBufferedImage(particlesArray: FloatBuffer): BufferedImage {
-        val floatArray = render(particlesArray)
-        val bufferedImage = BufferedImage(realWidth, realHeight, BufferedImage.TYPE_4BYTE_ABGR)
-        bufferedImage.raster.setPixels(0, 0, realWidth, realHeight, floatArray)
-        return bufferedImage
     }
 
     override fun setSize(width:Int, height:Int){

@@ -28,6 +28,10 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             basicItems.children.add(TreeItem(ComponentListItem(MoveRotate::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(Color::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(Slice::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(LineTest::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(Render::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(RenderDepth::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(FocusBlur::class.java)))
 
             moduleItems.children.setAll(Main.arrangementWindow.visualEditor.modules.filter { !it.isMain }.map { TreeItem<Any>(it) })
 

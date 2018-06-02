@@ -149,6 +149,12 @@ class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, 
                         .flatten()
                 ParticleArray(newArray) as T
             }
+            ImageFloatArray::class.java -> {
+                connections
+                        .sortedBy { it.component.layoutY }
+                        .mapNotNull { it.getValue?.invoke() as? ImageFloatArray }
+                        .lastOrNull() as? T
+            }
             else -> null
         }
     }

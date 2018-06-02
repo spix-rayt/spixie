@@ -1,0 +1,351 @@
+<html>
+<head>
+	<title>Color</title>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/1.3.7/chroma.min.js"></script>
+	<script type="text/javascript">
+		var rk = 0.299-0.15+0.05;
+		var gk = 0.587 - 0.05;
+		var bk = 0.114+0.15;
+
+		var canvas1Enabled = false;
+
+		function rgb2hsv(r, g, b){
+		    var max = Math.max(r,Math.max(g,b));
+		    var min = Math.min(r,Math.min(g,b));
+		    var h = max;
+		    var v = max;
+
+		    var d=max-min;
+		    var s = max==0.0 ? 0.0 : d/max;
+		    if(max==min){
+		        h=0.0;
+		    }else{
+		    	if(max == r){
+		    		h = (g-b)/d + (g<b ? 6.0 : 0.0);
+		    	}
+		    	if(max == g){
+		    		h = (b-r) / d + 2.0;
+		    	}
+		    	if(max == b){
+		    		h = (r-g) / d + 4.0
+		    	}
+		    }
+		    return [h,s,v];
+		}
+
+		function hsv2rgb(h, s, v) {
+		    var i = Math.trunc(h);
+		    var f = h - i;
+		    var p = v * (1.0 - s);
+		    var q = v * (1.0 - f * s);
+		    var t = v * (1.0 - (1.0 - f) * s);
+
+		    if(i%6==0) return [v,t,p];
+		    if(i%6==1) return [q,v,p];
+		    if(i%6==2) return [p,v,t];
+		    if(i%6==3) return [p,q,v];
+		    if(i%6==4) return [t,p,v];
+		    if(i%6==5) return [v,p,q];
+		}
+
+		function hue2rgb(p, q, t) {
+			if (t < 0) t += 1;
+			if (t > 1) t -= 1;
+			if (t < 1/6) return p + (q - p) * 6 * t;
+			if (t < 1/2) return q;
+			if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+			return p;
+	    }
+
+		function hsl2rgb(h, s, l, white) {
+			var r, g, b;
+			l = l*l;
+
+			var rangeA = 0.0;
+			var rangeM = 0;
+			var rangeB = 10.0;
+
+			for(var i=0;i<=20;i++){
+				rangeM = (rangeA+rangeB)/2.0;
+				if(white){
+					var q = rangeM<0.5 ? rangeM * (1 + s) : rangeM + s - rangeM * s;
+				}else{
+					var q = rangeM * (1 + s);
+				}
+				
+				
+				var p = 2 * rangeM - q;
+
+				r = hue2rgb(p, q, h + 1/3);
+				g = hue2rgb(p, q, h);
+				b = hue2rgb(p, q, h - 1/3);
+
+				if(li2squared(r,g,b)>l){
+					rangeB = rangeM;
+				}else{
+					rangeA = rangeM;
+				}
+			}
+			return [r, g, b];
+		}
+
+		function rgb2hs(r, g, b) {
+		  var max = Math.max(r, g, b), min = Math.min(r, g, b);
+		  var h, s = (max + min) / 2;
+		  var d = max - min;
+		    s = d / (max + min);
+
+		    switch (max) {
+		      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+		      case g: h = (b - r) / d + 2; break;
+		      case b: h = (r - g) / d + 4; break;
+		    }
+
+		    h /= 6;
+		  return [ h, s ];
+		}
+
+		function linear(y1, y2, t) {
+		    return (y1*(1.0-t)+y2*t);
+		}
+
+		function li(r,g,b){
+			return r*rk + g*gk + b*bk;
+		}
+
+		var Pr = 0.299-0.08;
+		var Pg = 0.587-0.04;
+		var Pb = 0.114+0.12;
+
+		function li2(r,g,b){
+			return Math.sqrt(r*r*Pr+g*g*Pg+b*b*Pb);
+		}
+
+		function li2squared(r,g,b){
+			return r*r*Pr+g*g*Pg+b*b*Pb;
+		}
+
+		$(function(){
+			if(canvas1Enabled)var ctx = $("#canvas")[0].getContext('2d');
+			var ctx2 = $("#canvas2")[0].getContext('2d');
+			$(window).resize(function(){
+				if(canvas1Enabled) ctx.canvas.width = $("body").height();
+				if(canvas1Enabled) ctx.canvas.height = $("body").height();
+				ctx2.canvas.width = $("body").height();
+				ctx2.canvas.height = $("body").height();
+				//redraw();
+			});
+
+			if(!canvas1Enabled) $("#canvas").hide();
+
+			
+			var stat = {};
+			function statadd(q){
+				if(stat[q] == undefined) stat[q] = 1;
+				else stat[q]++;
+			}
+
+			function redraw(){
+				//var luminance = parseInt($('#iy').val());
+				var c = parseInt($('#iy').val())/150.0*100.0;
+				var w = ctx2.canvas.width;
+				var h = ctx2.canvas.height;
+				if(canvas1Enabled) var imgdataid = ctx.createImageData(w, h);
+				if(canvas1Enabled) var img = imgdataid.data;
+
+				var imgdataid2 = ctx2.createImageData(w, h);
+				var img2 = imgdataid2.data;
+				stat={};
+				
+				for(var x=0; x<w; x++){
+					for(var y=0; y<h; y++){
+						var index = (x + y * w) * 4;
+						var luminance = Math.hypot(x-w/2, y-h/2)/h*2*150;
+						//var c = Math.hypot(x-w/2, y-h/2)/h*2*100;
+						var hue = (Math.atan2(y-h/2.0, x-w/2.0)/Math.PI*180.0+360.0)%360;
+						//if(canvas1Enabled) var rgb = chroma(hue, c, luminance, 'hcl').gl();
+						if(canvas1Enabled) var rgb = chroma(hue, c/100, luminance/150, 'hsl').gl();
+						
+						if(canvas1Enabled && luminance <= 75){
+							img[index + 0] = Math.pow(rgb[0], 1)*255;
+							img[index + 1] = Math.pow(rgb[1], 1)*255;
+							img[index + 2] = Math.pow(rgb[2], 1)*255;
+							img[index + 3] = 255;
+						}
+
+						
+						if(c<=100 && luminance <= 150){
+							var rgb2 = spixiehcl(hue, c/100.0, luminance/150);
+							img2[index + 0] = rgb2[0];
+							img2[index + 1] = rgb2[1];
+							img2[index + 2] = rgb2[2];
+							img2[index + 3] = 255;
+						}
+					}
+				}
+				if(canvas1Enabled)ctx.putImageData(imgdataid, 0, 0);
+				ctx2.putImageData(imgdataid2, 0, 0);
+			}
+
+			function spixiehcl(h, c, l){
+				//c = Math.pow(Math.trunc(c*7)/6.0, 1);
+				//h = Math.trunc(h/9)*9.0;
+
+				/*var gl = hsv2rgb(h/360.0*6, 1, 1);
+				var lum = li(gl[0], gl[1], gl[2]);
+				var gray = lum/(rk, gk, bk);
+				gl = [linear(gray, gl[0], c), linear(gray, gl[1], c), linear(gray, gl[2], c)];
+				lum = li(gl[0], gl[1], gl[2]);
+				gl = [gl[0] * l / lum, gl[1] * l / lum, gl[2] * l / lum];*/
+
+				//var gl = hsp2rgb(h/360.0,c,l);
+				//gl = [Math.pow(gl[0], 2), Math.pow(gl[1], 2), Math.pow(gl[2], 2)];
+
+				/*lum = li2(gl[0], gl[1], gl[2]);
+
+				var hsv = rgb2hsv(gl[0], gl[1], gl[2]);
+				if(hsv[2] > 1){
+					var ls = hsv2rgb(h/60.0, 1.0, 1.0);
+					ls = li2(ls[0], ls[1], ls[2]);
+					gl = hsv2rgb(h/60.0, coerce01(1.0 - (lum - ls) / (1.0 - ls)), 1.0);
+					console.log(li2(gl[0],gl[1],gl[2]), l);
+					//gl=[1.0, 1.0, 1.0];
+				}
+
+				return [gl[0]*255, gl[1]*255, gl[2]*255];*/
+
+				var result = hsl2rgb(h/360.0, c, l, false);
+				if(false){
+					if(result[0]>1.0 || result[1] > 1.0 || result[2] > 1.0) {
+						result = [1,1,1];
+					}
+				}else{
+					var hs = rgb2hs(result[0], result[1], result[2]);
+					var ql = li2(result[0], result[1], result[2]);
+					result = hsl2rgb(h/360.0, c, l, true);
+				}
+				
+
+				
+				return [result[0]*255, result[1]*255, result[2]*255];
+
+				//return [Math.pow(coerce01(gl[0]), 1/2)*255, Math.pow(coerce01(gl[1]), 1/2)*255, Math.pow(coerce01(gl[2]), 1/2)*255];
+			}
+
+			function coerce01(x){
+				if(x<0) return 0;
+				if(x>1) return 1;
+				return x;
+			}
+
+			function hsp2rgb(h, s, p){
+				var r,g,b;
+				var part = 1.0 - s;
+				var minOverMax = 1.0 - s;
+				if(minOverMax>0.0){
+					if(h<1.0/6.0){
+						h = 6.0*( h-0.0/6.0);
+						part = 1.0+h*(1.0/minOverMax-1.0);
+						b=p/Math.sqrt(Pr/minOverMax/minOverMax+Pg*part*part+Pb);
+						r=b/minOverMax;
+						g=b+h*(r-b);
+					}
+					else if(h<2.0/6.0){
+      					h=6.0*(-h+2.0/6.0);
+      					part = 1.0+h*(1.0/minOverMax-1.0);
+      					b=p/Math.sqrt(Pg/minOverMax/minOverMax+Pr*part*part+Pb);
+      					g=b/minOverMax;
+      					r=b+h*(g-b);
+					}
+					else if(h<3.0/6.0){
+      					h=6.0*(h-2.0/6.0);
+      					part = 1.0+h*(1.0/minOverMax-1.0);
+      					r=p/Math.sqrt(Pg/minOverMax/minOverMax+Pb*part*part+Pr);
+      					g=r/minOverMax;
+      					b=r+h*(g-r);
+					}
+					else if(h<4.0/6.0){
+						h=6.0*(-h+4.0/6.0);
+      					part = 1.0+h*(1.0/minOverMax-1.0);
+      					r=p/Math.sqrt(Pb/minOverMax/minOverMax+Pg*part*part+Pr);
+      					b=r/minOverMax;
+      					g=r+h*(b-r);
+					}
+					else if(h<5.0/6.0){
+						h=6.0*(h-4.0/6.0);
+      					part = 1.0+h*(1.0/minOverMax-1.0);
+      					g=p/Math.sqrt(Pb/minOverMax/minOverMax+Pr*part*part+Pg);
+      					b=g/minOverMax;
+      					r=g+h*(b-g);
+					}
+					else {
+						h=6.0*(-h+6.0/6.0);
+      					part = 1.0+h*(1.0/minOverMax-1.0);
+      					g=p/Math.sqrt(Pr/minOverMax/minOverMax+Pb*part*part+Pg);
+      					r=g/minOverMax;
+      					b=g+h*(r-g);
+					}
+				}else{
+					if(h<1.0/6.0){
+						h=6.0*(h-0.0/6.0);
+						r=Math.sqrt(p*p/(Pr+Pg*h*h));
+						g=r*h;
+						b=0.0;
+					}
+					else if(h<2.0/6.0){
+						h=6.0*(-h+2.0/6.0);
+						g=Math.sqrt(p*p/(Pg+Pr*h*h));
+						r=g*h;
+						b=0.0;
+					}
+					else if(h<3.0/6.0){
+						h=6.0*(h-2.0/6.0);
+						g=Math.sqrt(p*p/(Pg+Pb*h*h));
+						b=g*h;
+						r=0.0;
+					}
+					else if(h<4.0/6.0){
+						h=6.0*(-h+4.0/6.0);
+						b=Math.sqrt(p*p/(Pb+Pg*h*h));
+						g=b*h;
+						r=0.0;
+					}
+					else if(h<5.0/6.0){
+						h=6.0*(h-4.0/6.0);
+						b=Math.sqrt(p*p/(Pb+Pr*h*h));
+						r=b*h;
+						g=0.0;
+					}
+					else {
+						h=6.0*(-h+6.0/6.0);
+						r=Math.sqrt(p*p/(Pr+Pb*h*h));
+						b=r*h;
+						g=0.0;
+					}
+				}
+				return [r,g,b];
+			}
+
+			$(window).resize();
+
+			$("#iy").on('change', function(){
+				//redraw();
+			});
+
+			$("#redraw").click(function(){
+				redraw();
+			});
+			
+		});
+	</script>
+</head>
+<body style="position:absolute; top:0; bottom:0; right:0; left:0;">
+	<canvas id="canvas" width="1" height="1"></canvas>
+	<canvas id="canvas2" width="1" height="1"></canvas>
+	<span style="display: inline-block; height: 100%; vertical-align: top;">
+		<div><span style="display: inline-block; width: 120;">Chroma</span><input type="range" min="0" max="150" value="100" class="slider" id="iy" style="vertical-align: middle; width:400px;"></div>
+		<button id="redraw">redraw</button>
+	</span>
+</body>
+</html>

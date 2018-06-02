@@ -14,42 +14,36 @@ class GraphData {
 
     fun getValue(time: Double): Double {
         val x = time*100.0
+        val xi = x.toInt()
         return when{
-            x<0 -> 0.0
-            x>=points.size - 1 -> 0.0
+            x<0 -> getRightValue(0).toDouble()
+            x>=points.lastIndex -> getLeftValue(points.lastIndex).toDouble()
             else -> {
                 val t = (x%1)
-                val xx = x.toInt()
-                linearInterpolate(getRightValue(xx).toDouble(), getLeftValue(xx+1).toDouble(), t)
+                linearInterpolate(getRightValue(xi).toDouble(), getLeftValue(xi+1).toDouble(), t)
             }
         }
     }
 
     fun getLeftValue(index: Int): Float {
-        return if(index < points.size){
-            points[index].let {
-                if(it == JUMP_POINT){
-                    jumpPoints[index]!!.first
-                }else{
-                    it
-                }
+        val coercedIndex = index.coerceIn(0, points.lastIndex)
+        return points[coercedIndex].let {
+            if(it == JUMP_POINT){
+                jumpPoints[coercedIndex]!!.first
+            }else{
+                it
             }
-        }else{
-            0.0f
         }
     }
 
     fun getRightValue(index: Int): Float {
-        return if(index < points.size){
-            points[index].let {
-                if(it == JUMP_POINT){
-                    jumpPoints[index]!!.second
-                }else{
-                    it
-                }
+        val coercedIndex = index.coerceIn(0, points.lastIndex)
+        return points[coercedIndex].let {
+            if(it == JUMP_POINT){
+                jumpPoints[coercedIndex]!!.second
+            }else{
+                it
             }
-        }else{
-            0.0f
         }
     }
 

@@ -34,4 +34,8 @@ class ArrangementGraph: Externalizable {
         o.writeDouble(rangeFromControl.value)
         o.writeDouble(rangeToControl.value)
     }
+
+    companion object {
+        const val serialVersionUID = 0L
+    }
 }

@@ -112,18 +112,127 @@ fun linearInterpolate(y1: Double, y2:Double, t:Double): Double {
     return (y1*(1.0-t)+y2*t)
 }
 
+fun hue2rgb(p: Double,q: Double,t: Double): Double{
+    val tt = when{
+        t<0 -> t+1.0
+        t>1 -> t-1.0
+        else -> t
+    }
+    return when{
+        tt<1.0/6.0 -> p+(q-p)*6.0*tt
+        tt<1.0/2.0 -> q
+        tt<2.0/3.0 -> p+(q-p)*(2.0/3.0-tt)*6.0
+        else -> p
+    }
+}
+
+fun convertHueChromaLuminanceToRGB(h:Double, c:Double, l:Double, clampDesaturate: Boolean): Triple<Double, Double, Double> {
+    var rangeA = 0.0
+    var rangeB = 10.0
+    var r = 0.0
+    var g = 0.0
+    var b = 0.0
+    for(i in 0..20){
+        val m = (rangeA+rangeB)/2.0
+        val q = if(clampDesaturate){
+            if(m<0.5) m*(1+c) else m+c-m*c
+        }else{
+            m*(1+c)
+        }
+
+        val p = 2*m-q
+
+        r = hue2rgb(p,q,h+1.0/3.0)
+        g = hue2rgb(p,q,h)
+        b = hue2rgb(p,q,h-1.0/3.0)
+        if(calcLuminanceSquared(r,g,b)>l){
+            rangeB = m
+        }else{
+            rangeA = m
+        }
+    }
+    return Triple(r,g,b)
+}
+
+fun convertRGBToHueChromaLuminance(r:Double, g:Double, b:Double): Triple<Double, Double, Double> {
+    val max = maxOf(r,g,b)
+    val min = minOf(r,g,b)
+    var h=(max+min)/2.0
+    val d=  max-min
+    val s = d/(max+min)
+    when(max){
+        r-> h=(g-b)/d+(if(g<b) 6.0 else 0.0)
+        g-> h=(b-r)/d+2.0
+        b->h=(r-g)/d+4.0
+    }
+    return Triple(h/6, s, calcLuminance(r,g,b))
+}
+
+val Pr = 0.299-0.08;
+val Pg = 0.587-0.04;
+val Pb = 0.114+0.12;
+
+/*val Pr = 0.299;
+val Pg = 0.587;
+val Pb = 0.114;*/
+
+fun calcLuminance(r:Double, g:Double, b:Double): Double{
+    return Math.sqrt(calcLuminanceSquared(r,g,b))
+}
+
+fun calcLuminanceSquared(r:Double, g:Double, b:Double): Double{
+    return r*r*Pr+g*g*Pg+b*b*Pb
+}
+
+fun FloatArray.preparePixelsForSave(width: Int, height: Int): DoubleArray {
+    val resultArray = DoubleArray(width*height*3)
+    for (x in 0 until width) {
+        for (y in 0 until height) {
+            val offset = y * width * 4 + x * 4
+            val resultOffset = y * width * 3 + x * 3
+            val srcA = this[offset + 3].toDouble().coerceIn(0.0..1.0)
+
+            val r = Math.pow(this[offset].toDouble(), 1/2.2) * srcA
+            val g = Math.pow(this[offset+1].toDouble(), 1/2.2) * srcA
+            val b = Math.pow(this[offset+2].toDouble(), 1/2.2) * srcA
+
+            val (h, c, l) = convertRGBToHueChromaLuminance(r,g,b)
+            val (rr,gg,bb) = convertHueChromaLuminanceToRGB(h, c, l, true)
+            resultArray[resultOffset] = rr
+            resultArray[resultOffset+1] = gg
+            resultArray[resultOffset+2] = bb
+        }
+    }
+    return resultArray
+}
+
+fun DoubleArray.toBufferedImage(width: Int, height: Int): BufferedImage {
+    val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
+    for (x in 0 until width) {
+        for (y in 0 until height) {
+            val resultOffset = y * width * 3 + x * 3
+            this[resultOffset] = (this[resultOffset]*255).coerceIn(0.0..255.0)
+            this[resultOffset+1] = (this[resultOffset+1]*255).coerceIn(0.0..255.0)
+            this[resultOffset+2] = (this[resultOffset+2]*255).coerceIn(0.0..255.0)
+        }
+    }
+    bufferedImage.raster.setPixels(0, 0, width, height, this)
+    return bufferedImage
+}
+
 fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
     var mouseXOnStartDrag = 0.0
     var mouseYOnStartDrag = 0.0
     var layoutXOnStartDrag = 0.0
     var layoutYOnStartDrag = 0.0
 
-    setOnMousePressed { event ->
+    addEventHandler(MouseEvent.MOUSE_PRESSED){ event->
         if(event.button == MouseButton.MIDDLE){
             mouseXOnStartDrag = event.screenX
             mouseYOnStartDrag = event.screenY
             layoutXOnStartDrag = content.layoutX
             layoutYOnStartDrag = content.layoutY
+            event.consume()
         }
     }
 

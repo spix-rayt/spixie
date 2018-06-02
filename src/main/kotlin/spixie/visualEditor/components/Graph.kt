@@ -43,4 +43,8 @@ class Graph(): Component(), Externalizable {
             label.text = newName
         }
     }
+
+    companion object {
+        const val serialVersionUID = 0L
+    }
 }

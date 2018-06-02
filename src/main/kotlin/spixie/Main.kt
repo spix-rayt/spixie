@@ -111,7 +111,7 @@ class Main : Application() {
                 if(event.code == KeyCode.P){
                     if(renderManager.autoRenderNextFrame != true){
                         renderManager.autoRenderNextFrame = true
-                        renderManager.time.frame = renderManager.time.frame
+                        renderManager.time.frame = renderManager.time.frame/3*3
                         renderManager.requestRender()
                     }
                 }
@@ -138,12 +138,15 @@ class Main : Application() {
 
         stage.onCloseRequest = EventHandler<WindowEvent> {
             val bytes = arrangementWindow.save()
-            Files.move(Paths.get("save.spixie"), Paths.get("save${SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
-            Files.write(Paths.get("save.spixie"), bytes)
+            if(!File("save/").exists()) File("save/").mkdir()
+            if(File("save/save.spixie").exists()){
+                Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
+            }
+            Files.write(Paths.get("save/save.spixie"), bytes)
             Platform.exit()
         }
 
-        File("save.spixie").let {
+        File("save/save.spixie").let {
             if(it.exists()){
                 arrangementWindow.load(ObjectInputStream(it.inputStream()))
             }

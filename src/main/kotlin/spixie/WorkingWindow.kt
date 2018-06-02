@@ -34,13 +34,13 @@ class WorkingWindow : BorderPane() {
         val renderButton = Button("Render")
         renderButton.setOnAction { RenderDialog(this.scene.window) }
         renderButton.isFocusTraversable = false
-        val slider = Slider(1.0,6.0,2.0).apply {
+        val slider = Slider(0.0,3.0,1.0).apply {
             isShowTickMarks = true
             majorTickUnit = 1.0
             minorTickCount = 0
             isSnapToTicks = true
             valueProperty().addListener { _, _, newValue ->
-                Main.renderManager.scaleDown = newValue.toInt()
+                Main.renderManager.scaleDown = 1 shl newValue.toInt()
             }
             isFocusTraversable = false
         }

@@ -13,6 +13,7 @@ import javafx.stage.Screen
 import spixie.Main
 import spixie.WorkingWindowOpenableContent
 import spixie.visualEditor.components.MoveRotate
+import spixie.visualEditor.components.Render
 import spixie.visualEditor.components.Result
 
 class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
@@ -20,6 +21,8 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
         private set
     val modules = arrayListOf(currentModule)
     var time = 0.0
+    private set
+    var downscale = 1
     private set
 
     init {
@@ -89,12 +92,17 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
         currentModule.apply {
             val resultComponent = Result()
             addComponent(resultComponent)
-            resultComponent.magneticRelocate(384.0, 0.0)
+            resultComponent.magneticRelocate(768.0, 0.0)
+
+            val renderComponent = Render()
+            addComponent(renderComponent)
+            renderComponent.magneticRelocate(384.0, 0.0)
+            resultComponent.inputPins[0].connectWith(renderComponent.outputPins[0])
 
             val moveComponent = MoveRotate()
             addComponent(moveComponent)
             moveComponent.changeZ(1000.0)
-            resultComponent.inputPins[0].connectWith(moveComponent.outputPins[0])
+            renderComponent.inputPins[0].connectWith(moveComponent.outputPins[0])
         }
     }
 
@@ -104,9 +112,10 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
         homeLayout()
     }
 
-    fun render(time:Double): ParticleArray {
+    fun render(time:Double, downscale: Int): ImageFloatArray {
         this.time = time
-        return modules.find { it.isMain }?.findResultComponent()?.getParticles() ?: ParticleArray(arrayListOf())
+        this.downscale = downscale
+        return modules.find { it.isMain }?.findResultComponent()?.getImage() ?: ImageFloatArray(floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f), 1, 1)
     }
 
     private fun homeLayout(){

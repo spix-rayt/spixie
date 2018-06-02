@@ -53,4 +53,8 @@ class MoveRotate: Component() {
         outputPins.add(outParticles)
         updateVisual()
     }
+
+    companion object {
+        const val serialVersionUID = 0L
+    }
 }

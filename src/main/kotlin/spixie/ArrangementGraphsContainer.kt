@@ -25,4 +25,8 @@ class ArrangementGraphsContainer: Externalizable {
         o.writeUTF(name.value)
         o.writeObject(list)
     }
+
+    companion object {
+        const val serialVersionUID = 0L
+    }
 }
