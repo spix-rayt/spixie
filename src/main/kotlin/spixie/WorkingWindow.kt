@@ -1,12 +1,17 @@
 package spixie
 
+import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import javafx.scene.Node
 import javafx.scene.control.Button
+import javafx.scene.control.Label
 import javafx.scene.control.Slider
 import javafx.scene.control.ToolBar
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
+import javafx.scene.layout.HBox
+import javafx.scene.layout.Pane
+import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import java.util.*
 
@@ -49,7 +54,12 @@ class WorkingWindow : BorderPane() {
         Main.renderManager.time.timeChanges.subscribe { time ->
             timeLabel.value = Math.round(time*1000)/1000.0
         }
-        menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Main.renderManager.bpm, Main.renderManager.offset)
+
+        val particlesCountLabel = Label()
+        Main.renderManager.lastRenderedParticlesCount.observeOn(JavaFxScheduler.platform()).subscribe {
+            particlesCountLabel.text = "($it Particles)"
+        }
+        menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Main.renderManager.bpm, Main.renderManager.offset, Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) }, particlesCountLabel)
 
         menuBar.addEventHandler(KeyEvent.ANY){ event ->
             center.fireEvent(event.copyFor(center, center))

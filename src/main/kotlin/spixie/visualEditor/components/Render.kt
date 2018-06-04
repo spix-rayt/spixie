@@ -29,7 +29,7 @@ class Render: Component() {
         Main.renderManager.renderer.setSize(w, h)
         val image = Main.renderManager.renderer.render(renderBufferBuilder.complete(), false)
 
-        ImageFloatArray(image, w, h)
+        ImageFloatArray(image, w, h, particlesCount = particles.array.size)
     }, "Image", ImageFloatArray::class.java, null)
 
     init {

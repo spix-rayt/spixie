@@ -1,17 +1,19 @@
 package spixie
 
+import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
+import io.reactivex.subjects.PublishSubject
 import javafx.animation.AnimationTimer
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.event.EventHandler
 import javafx.scene.CacheHint
-import javafx.scene.Group
 import javafx.scene.Scene
+import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCombination
 import javafx.scene.input.KeyEvent
-import javafx.scene.layout.Pane
+import javafx.scene.layout.StackPane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import javafx.util.Duration
@@ -26,7 +28,7 @@ import java.util.*
 class Main : Application() {
     @Throws(Exception::class)
     override fun start(stage: Stage) {
-        val root = Group()
+        val root = StackPane()
         val imageView = ImageView().apply {
             style="-fx-background:transparent;"
             isSmooth = true
@@ -34,11 +36,19 @@ class Main : Application() {
             isCache = false
             cacheHint = CacheHint.SPEED
         }
-        val imagePane = Pane()
-
-        imagePane.children.addAll(imageView)
-        root.children.addAll(imagePane)
-        imagePane.style = "-fx-background-color: #000000;"
+        val images = PublishSubject.create<Image>().toSerialized()
+        images.observeOn(JavaFxScheduler.platform()).subscribe {
+            imageView.image = it
+            if(it.width*2 > root.width){
+                imageView.scaleX = 1.0
+                imageView.scaleY = 1.0
+            }else{
+                imageView.scaleX = 2.0
+                imageView.scaleY = 2.0
+            }
+        }
+        root.children.addAll(imageView)
+        root.style = "-fx-background-color: #000000;"
 
         val scene = Scene(root, 100.0, 100.0)
         scene.stylesheets.add("style.css")
@@ -47,8 +57,6 @@ class Main : Application() {
                 Main.workingWindow.center.requestFocus()
             }
         }
-        imageView.fitWidthProperty().bind(scene.widthProperty())
-        imageView.fitHeightProperty().bind(scene.heightProperty())
 
         stage.apply {
             title = "Render"
@@ -152,7 +160,7 @@ class Main : Application() {
             }
         }
 
-        renderManager.renderStart(imageView)
+        renderManager.renderStart(images)
         object : AnimationTimer() {
             override fun handle(now: Long) {
                 renderManager.perFrame()

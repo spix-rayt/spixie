@@ -37,7 +37,7 @@ class RenderDepth: Component() {
         Main.renderManager.renderer.setSize(w, h)
         val image = Main.renderManager.renderer.render(renderBufferBuilder.complete(), true)
 
-        ImageFloatArray(image, w, h)
+        ImageFloatArray(image, w, h, particlesCount = particles.array.size)
     }, "Image", ImageFloatArray::class.java, null)
 
     init {

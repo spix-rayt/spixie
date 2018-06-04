@@ -3,7 +3,7 @@ package spixie.visualEditor
 import spixie.static.linearInterpolate
 
 class GraphData {
-    var points = floatArrayOf()
+    var points = floatArrayOf(0.0f)
     val jumpPoints = hashMapOf<Int, Pair<Float, Float>>()
 
     fun resizeIfNeed(newSize: Int){

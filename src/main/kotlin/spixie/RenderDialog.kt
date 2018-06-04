@@ -7,6 +7,12 @@ import javafx.scene.layout.GridPane
 import javafx.stage.Modality
 import javafx.stage.Stage
 import javafx.stage.Window
+import org.apache.commons.lang3.time.StopWatch
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 class RenderDialog(owner: Window): Stage() {
     init {
@@ -19,6 +25,7 @@ class RenderDialog(owner: Window): Stage() {
         val progressBar = ProgressBar(0.0)
         val renderButton = Button("Render")
         val checkBoxAudio = CheckBox().apply { isSelected=true }
+        val remainingTimeLabel = Label("")
         val grid = GridPane()
 
         grid.add(
@@ -35,7 +42,8 @@ class RenderDialog(owner: Window): Stage() {
         grid.add(Label("Audio"), 0, 1)
         grid.add(checkBoxAudio, 1, 1)
         grid.add(progressBar,0, 2, 2, 1)
-        grid.add(renderButton, 0, 3, 2, 1)
+        grid.add(remainingTimeLabel, 0, 3)
+        grid.add(renderButton, 0, 4, 2, 1)
 
         grid.columnConstraints.addAll(ColumnConstraints(300.0), ColumnConstraints(500.0))
         grid.vgap = 8.0
@@ -45,9 +53,20 @@ class RenderDialog(owner: Window): Stage() {
                 progressBar.progress = 0.0
                 grid.isDisable = true
                 val selectedFrames = Main.arrangementWindow.getSelectedFrames()
+                val lastFramesRenderTime = mutableListOf<Double>()
+                val stopWatch = StopWatch.createStarted()
                 Main.renderManager.renderToFile(
                         { currentFrame, framesCount ->
                             progressBar.progress = currentFrame / framesCount.toDouble()
+                            val t = stopWatch.getTime(TimeUnit.MILLISECONDS)/1000.0
+                            stopWatch.reset()
+                            stopWatch.start()
+                            lastFramesRenderTime.add(t)
+                            if(lastFramesRenderTime.size>10) {
+                                lastFramesRenderTime.removeAt(0)
+                                val average = lastFramesRenderTime.average()
+                                remainingTimeLabel.text = "${SimpleDateFormat("mm:ss").format(Date(((framesCount-currentFrame)*average*1000.0).roundToLong()))} (${(average*1000.0).roundToInt()} ms / frame)"
+                            }
                         },
                         {
                             grid.isDisable = false

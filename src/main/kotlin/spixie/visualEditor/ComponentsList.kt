@@ -25,6 +25,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             root.children.addAll(basicItems, moduleItems)
             basicItems.children.add(TreeItem(ComponentListItem(SimpleParticlesGenerator::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(ParticlesProduct::class.java)))
+            basicItems.children.add(TreeItem(ComponentListItem(ParticlesPower::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(MoveRotate::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(Color::class.java)))
             basicItems.children.add(TreeItem(ComponentListItem(Slice::class.java)))

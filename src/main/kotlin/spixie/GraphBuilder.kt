@@ -70,15 +70,23 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
 
     private fun curveMode(){
         val startValue = ValueControl(graph.data.getRightValue(start).toDouble(), 0.001, "Start").limitMin(0.0).limitMax(1.0)
-        val curvatureValue = ValueControl(0.5, 0.001, "Curvature").limitMin(0.0).limitMax(1.0)
+        val curvatureValue = ValueControl(0.0, 0.01, "Curvature")
         val endValue = ValueControl(graph.data.getLeftValue(end).toDouble(), 0.001, "End").limitMin(0.0).limitMax(1.0)
         mode(start, end, listOf(startValue, curvatureValue, endValue)) {
             for(i in start..end){
-                val t = (i - start) / (end - start).toDouble()
-                val cy = startValue.value + (endValue.value - startValue.value)*curvatureValue.value
-                val y1 = linearInterpolate(startValue.value, cy, t)
-                val y2 = linearInterpolate(cy, endValue.value, t)
-                graph.data.points[i] = linearInterpolate(y1, y2, t).toFloat()
+                val curvature = if(startValue.value > endValue.value) -curvatureValue.value else curvatureValue.value
+                val t = if(curvature > 0){
+                    1.0-((i - start) / (end - start).toDouble())
+                }else {
+                    ((i - start) / (end - start).toDouble())
+                }
+                val curvaturePower = if(curvature>0) curvature+1.0 else - curvature+1.0
+
+                if(curvature <= 0){
+                    graph.data.points[i] = linearInterpolate(startValue.value, endValue.value, Math.pow(t, curvaturePower)).toFloat()
+                }else{
+                    graph.data.points[i] = linearInterpolate(endValue.value, startValue.value, Math.pow(t, curvaturePower)).toFloat()
+                }
             }
         }
     }

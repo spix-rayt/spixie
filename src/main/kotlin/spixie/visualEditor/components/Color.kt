@@ -11,7 +11,7 @@ class Color: Component() {
     private val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
     private val inHue = ComponentPin(this, null, "Hue", Double::class.java, ValueControl(2.0, 0.01, "").limitMin(0.0).limitMax(6.0))
     private val inChroma = ComponentPin(this, null, "Chroma", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
-    private val inLuminance = ComponentPin(this, null, "Luminance", Double::class.java, ValueControl(1.0, 0.01, ""))
+    private val inLuminance = ComponentPin(this, null, "Luminance", Double::class.java, ValueControl(1.0, 0.002, ""))
     private val inTransparency = ComponentPin(this, null, "Transparency", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
 
     private val outParticles = ComponentPin(this, {

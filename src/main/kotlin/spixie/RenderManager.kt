@@ -5,15 +5,12 @@ import io.reactivex.Completable
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.functions.BiFunction
-import io.reactivex.functions.Function3
-import io.reactivex.rxjavafx.observables.JavaFxObservable
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
+import io.reactivex.subjects.Subject
 import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
-import javafx.geometry.Bounds
 import javafx.scene.image.Image
-import javafx.scene.image.ImageView
 import org.apache.commons.collections4.map.ReferenceMap
 import spixie.renderer.JOCLRenderer
 import spixie.renderer.Renderer
@@ -32,11 +29,11 @@ class RenderManager {
             Main.arrangementWindow.needRedrawWaveform = true
         }
     }
-    @Volatile private var renderingToFile = false
     val renderer: Renderer = JOCLRenderer()
     private val frameCache = ReferenceMap<Double, ByteArray>()
     private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
     @Volatile var autoRenderNextFrame = false
+    val lastRenderedParticlesCount = BehaviorSubject.createDefault(0).toSerialized()
 
     var scaleDown:Int = 2
         set(value) {
@@ -49,7 +46,7 @@ class RenderManager {
         bpm.apply {
             limitMin(60.0)
             limitMax(999.0)
-            changes.subscribe { newBPM->
+            changes.subscribe { _->
                 Main.arrangementWindow.needRedrawWaveform = true
             }
 
@@ -64,29 +61,28 @@ class RenderManager {
 
     var perFrame = {  }
 
-    fun renderStart(imageView: ImageView) {
+    fun renderStart(images: Subject<Image>) {
         perFrame = {
             if(Main.audio.isPlaying()){
                 val seconds = Main.audio.getTime()
                 time.time = (frameToTime((seconds*60).roundToInt()/3*3, Main.renderManager.bpm.value) + offset.value).coerceAtLeast(0.0)
                 frameCache[time.time]?.let {
                     val byteArrayInputStream = ByteArrayInputStream(it)
-                    imageView.image = Image(byteArrayInputStream)
+                    images.onNext(Image(byteArrayInputStream))
                 }
             }
         }
 
-        Observable.combineLatest(time.timeChanges.distinctUntilChanged(), forceRender, JavaFxObservable.valuesOf(imageView.layoutBoundsProperty()), Function3 { t:Double, _:Unit, bounds:Bounds -> t to bounds })
+        Observable.combineLatest(time.timeChanges.distinctUntilChanged(), forceRender, BiFunction { t:Double, _:Unit -> t })
                 .toFlowable(BackpressureStrategy.LATEST)
                 .observeOn(renderThread, false, 1)
-                .subscribe { (t, bounds) ->
+                .subscribe { t ->
                     try {
-                        if (!renderingToFile && !Main.audio.isPlaying()) {
+                        if (!Main.audio.isPlaying()) {
                             val image = Main.arrangementWindow.visualEditor.render(t, scaleDown)
                             val bufferedImage = image.toBufferedImage()
-                            runInUIAndWait {
-                                imageView.image = SwingFXUtils.toFXImage(bufferedImage, null)
-                            }
+                            lastRenderedParticlesCount.onNext(image.particlesCount)
+                            images.onNext(SwingFXUtils.toFXImage(bufferedImage, null))
                             Flowable.fromCallable { bufferedImage.toPNGByteArray() }
                                     .subscribeOn(Schedulers.computation())
                                     .observeOn(renderThread)
@@ -113,7 +109,6 @@ class RenderManager {
     }
 
     fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean, offsetAudio: Double) {
-        renderingToFile = true
         Thread(Runnable {
             val w = 1920
             val h = 1080
@@ -213,7 +208,6 @@ class RenderManager {
                 e.printStackTrace()
             }
 
-            renderingToFile = false
             Platform.runLater { renderToFileCompleted() }
         }).start()
     }

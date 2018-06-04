@@ -18,8 +18,8 @@ class Slice: Component() {
         val start = Fraction.getFraction(inStart.receiveValue() ?: 0.0).divideBy(F_100)
         val end = Fraction.getFraction(inEnd.receiveValue() ?: 0.0).divideBy(F_100)
 
-        val from = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(start).toInt()
-        val to = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(end).toInt()
+        val from = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(start).toInt().coerceIn(0..100)
+        val to = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(end).toInt().coerceIn(0..100)
 
         ParticleArray(particles.array.slice(from until to).map {
             it.copy()

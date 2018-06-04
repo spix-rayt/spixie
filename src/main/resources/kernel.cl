@@ -63,7 +63,7 @@ __kernel void renderParticles(__global float *particles, int width, int height, 
 
     __local float tile[256*4];
 
-    alpha = clamp(alpha, 0.00001f, 1.0f);
+    alpha = clamp(alpha, 0.0f, 1.0f);
 
     if(depthRender){
         tile[localId*4] = 1.0f - red;
@@ -71,9 +71,9 @@ __kernel void renderParticles(__global float *particles, int width, int height, 
         tile[localId*4 + 2] = 1.0f - blue;
         tile[localId*4 + 3] = 1;
     }else{
-        tile[localId*4] = red/alpha;
-        tile[localId*4 + 1] = green/alpha;
-        tile[localId*4 + 2] = blue/alpha;
+        tile[localId*4] = clamp(red/alpha, 0.0f, 100000.0f);
+        tile[localId*4 + 1] = clamp(green/alpha, 0.0f, 100000.0f);
+        tile[localId*4 + 2] = clamp(blue/alpha, 0.0f, 100000.0f);
         tile[localId*4 + 3] = alpha;
     }
 
