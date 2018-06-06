@@ -7,21 +7,24 @@ import java.nio.ByteBuffer
 
 class ParticleArray {
     val array: List<Particle> by lazy { lazyArray() }
-    val hash: Long
+    val hash: Long by lazy { lazyHash() }
     private val lazyArray: () -> List<Particle>
+    private val lazyHash: () -> Long
 
     constructor(array: List<Particle>) {
         lazyArray = { array }
-        hash = array.fold(MAGIC.toLong()) { acc, particle ->
-            acc mix particle.spixieHash()
+        lazyHash = {
+            array.fold(MAGIC.toLong()) { acc, particle ->
+                acc mix particle.spixieHash()
+            }
         }
     }
 
     constructor(hash: Long){
-        this.hash = hash
         lazyArray = {
             loadFromCache()
         }
+        lazyHash = { hash }
     }
 
     fun saveInCache(){

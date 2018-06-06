@@ -35,7 +35,6 @@ class WorkingWindow : BorderPane() {
             isFocusTraversable = false
         }
 
-
         val renderButton = Button("Render")
         renderButton.setOnAction { RenderDialog(this.scene.window) }
         renderButton.isFocusTraversable = false

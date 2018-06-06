@@ -22,9 +22,9 @@ class JOCLRenderer: Renderer {
 
     override fun render(particlesArray:FloatBuffer, depth: Boolean): FloatArray {
         val queue = device.createCommandQueue()
-        val localWorkSize = 256
+        val localWorkSize = 64
 
-        val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(256)
+        val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(64)
         if(particlesCount == 0){
             return FloatArray(realWidth*realHeight*4)
         }
@@ -42,7 +42,6 @@ class JOCLRenderer: Renderer {
         kernel.putArg(height)
         kernel.putArg(realWidth)
         kernel.putArg(particlesCount)
-        kernel.putArg(if(depth) 1 else 6)
         kernel.putArg(if(depth) 1 else 0)
         kernel.putArgs(clImageOut)
 
@@ -58,7 +57,7 @@ class JOCLRenderer: Renderer {
     }
 
     override fun setSize(width:Int, height:Int){
-        this.width=width.roundUp(256)
+        this.width=width.roundUp(64)
         this.height=height
         this.realWidth = width
         this.realHeight = height

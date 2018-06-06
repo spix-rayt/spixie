@@ -3,7 +3,6 @@ package spixie.visualEditor.components
 import spixie.ValueControl
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
-import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
 
 class MoveRotate: Component() {
@@ -17,7 +16,7 @@ class MoveRotate: Component() {
 
 
     private val outParticles = ComponentPin(this, {
-        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
+        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf())
         val mx = inX.receiveValue() ?: 0.0
         val my = inY.receiveValue() ?: 0.0
         val mz = inZ.receiveValue() ?: 0.0
@@ -25,17 +24,16 @@ class MoveRotate: Component() {
         val ry = inRotateY.receiveValue() ?: 0.0
         val rz = inRotateZ.receiveValue() ?: 0.0
 
-        ParticleArray(
-                particles.array.map {
-                    it.copy().apply {
-                        matrix
-                                .rotateLocalX((rx * Math.PI*2).toFloat())
-                                .rotateLocalY((ry * Math.PI*2).toFloat())
-                                .rotateLocalZ((rz * Math.PI*2).toFloat())
-                                .translateLocal(mx.toFloat(), my.toFloat(), mz.toFloat())
-                    }
-                }
-        )
+        particles.array.forEach {
+            it.apply {
+                matrix
+                        .rotateLocalX((rx * Math.PI*2).toFloat())
+                        .rotateLocalY((ry * Math.PI*2).toFloat())
+                        .rotateLocalZ((rz * Math.PI*2).toFloat())
+                        .translateLocal(mx.toFloat(), my.toFloat(), mz.toFloat())
+            }
+        }
+        particles
     }, "Particles", ParticleArray::class.java, null)
 
     fun changeZ(value:Double){
