@@ -25,7 +25,7 @@ class ModuleComponent: Component(), Externalizable {
             cache[cacheKey] = result.hash
             return@ComponentPin result
         }*/
-        return@ComponentPin ParticleArray(arrayListOf())
+        return@ComponentPin ParticleArray(arrayListOf(), 0.0f)
     }, "Particles", ParticleArray::class.java, null)
 
     init {

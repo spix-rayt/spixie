@@ -14,11 +14,11 @@ class Color: Component() {
     private val inTransparency = ComponentPin(this, null, "Transparency", Double::class.java, ValueControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
 
     private val outParticles = ComponentPin(this, {
-        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf())
-        val hue = inHue.receiveValue()?.coerceIn(0.0..6.0) ?: 0.0
-        val chroma = inChroma.receiveValue()?.coerceIn(0.0..1.0) ?: 0.0
+        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
+        val hue = inHue.receiveValue() ?: 0.0
+        val chroma = inChroma.receiveValue() ?: 0.0
         val luminance = inLuminance.receiveValue() ?: 0.0
-        val transparency = inTransparency.receiveValue()?.coerceIn(0.0..1.0)?.toFloat() ?: 0.0f
+        val transparency = inTransparency.receiveValue()?.toFloat() ?: 0.0f
 
         val (r,g,b) = convertHueChromaLuminanceToRGB(hue/6.0, chroma, luminance, false)
         val red = Math.pow(r, 2.2).toFloat()

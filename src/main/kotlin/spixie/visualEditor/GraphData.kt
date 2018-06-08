@@ -16,8 +16,8 @@ class GraphData {
         val x = time*100.0
         val xi = x.toInt()
         return when{
-            x<0 -> getRightValue(0).toDouble()
-            x>=points.lastIndex -> getLeftValue(points.lastIndex).toDouble()
+            x<0 -> getLeftValue(0).toDouble()
+            x>=points.lastIndex -> getRightValue(points.lastIndex).toDouble()
             else -> {
                 val t = (x%1)
                 linearInterpolate(getRightValue(xi).toDouble(), getLeftValue(xi+1).toDouble(), t)

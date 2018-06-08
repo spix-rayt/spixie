@@ -2,13 +2,16 @@ package spixie.visualEditor.components
 
 import spixie.Main
 import spixie.renderer.RenderBufferBuilder
-import spixie.visualEditor.*
+import spixie.visualEditor.Component
+import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ImageFloatArray
+import spixie.visualEditor.ParticleArray
 
 class Render: Component() {
     private val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
 
     private val outImage = ComponentPin(this, {
-        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
+        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
 
         val renderBufferBuilder = RenderBufferBuilder(particles.array.size)
         particles.array.sortedBy { -it.matrix.m32() }.forEach { particle ->

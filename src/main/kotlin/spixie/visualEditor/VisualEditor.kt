@@ -2,12 +2,12 @@ package spixie.visualEditor
 
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import io.reactivex.subjects.PublishSubject
-import javafx.scene.Group
 import javafx.scene.control.ListView
 import javafx.scene.effect.DropShadow
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
+import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.stage.Screen
 import spixie.Main
@@ -58,9 +58,13 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
                 .filter { it.time()<300 }
                 .observeOn(JavaFxScheduler.platform())
                 .subscribe {
-                    val root = scene.root as Group
+                    val root = scene.root as StackPane
                     if(root.children.find { it is ListView<*> } == null){
-                        val listView = ListView<Any>().apply { Main.arrangementWindow.visualEditor.modules.forEach { this.items.add(it) } }
+                        val listView = ListView<Any>().apply {
+                            Main.arrangementWindow.visualEditor.modules.forEach { this.items.add(it) }
+                            maxWidth = 250.0
+                            maxHeight = 450.0
+                        }
                         root.children.addAll(listView)
                         listView.effect = DropShadow(20.0, 4.0, 4.0, Color.GRAY)
                         listView.layoutBoundsProperty().addListener { _, _, newValue ->

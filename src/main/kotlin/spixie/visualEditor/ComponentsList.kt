@@ -1,6 +1,7 @@
 package spixie.visualEditor
 
 
+import io.reactivex.rxjavafx.observables.JavaFxObservable
 import javafx.collections.ObservableList
 import javafx.scene.Node
 import javafx.scene.control.ScrollPane
@@ -16,34 +17,32 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
     private val treeView = TreeView<Any>(TreeItem("Components"))
     private val scrollPane = ScrollPane(treeView)
     private val textField = TextField()
+    private val basicItemsList = listOf(
+            ComponentListItem(SimpleParticlesGenerator::class.java),
+            ComponentListItem(ParticlesProduct::class.java),
+            ComponentListItem(ParticlesPower::class.java),
+            ComponentListItem(MoveRotate::class.java),
+            ComponentListItem(Color::class.java),
+            ComponentListItem(Slice::class.java),
+            ComponentListItem(LineTest::class.java),
+            ComponentListItem(SizeTransformer::class.java),
+            ComponentListItem(Render::class.java),
+            ComponentListItem(RenderDepth::class.java),
+            ComponentListItem(FocusBlur::class.java)
+    )
+
+    val basicItems = TreeItem<Any>("Basic").apply { isExpanded = true }
+    val moduleItems = TreeItem<Any>("Module").apply { isExpanded = true }
+    val graphItems = TreeItem<Any>("Graphs").apply { isExpanded = true }
 
     init {
         treeView.apply {
-            val basicItems = TreeItem<Any>("Basic")
-            val moduleItems = TreeItem<Any>("Module")
-            val graphItems = TreeItem<Any>("Graphs")
             root.children.addAll(basicItems, moduleItems)
-            basicItems.children.add(TreeItem(ComponentListItem(SimpleParticlesGenerator::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(ParticlesProduct::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(ParticlesPower::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(MoveRotate::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(Color::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(Slice::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(LineTest::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(Render::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(RenderDepth::class.java)))
-            basicItems.children.add(TreeItem(ComponentListItem(FocusBlur::class.java)))
-
-            moduleItems.children.setAll(Main.arrangementWindow.visualEditor.modules.filter { !it.isMain }.map { TreeItem<Any>(it) })
-
             if(forMain) {
-                Main.arrangementWindow.graphs.forEach { graph->
-                    graphItems.children.add(TreeItem(ComponentListGraphItem(graph)))
-                }
+
                 root.children.addAll(graphItems)
             }
-
-            expandChildItems(root)
+            root.isExpanded = true
 
             setOnMouseClicked {
                 createSelected()
@@ -62,6 +61,37 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             }
         }
 
+        JavaFxObservable.valuesOf(textField.textProperty()).startWith(textField.text).subscribe { filterText->
+            val filterRegex = Regex(filterText.toLowerCase().map { ".*$it" }.joinToString(separator = "") + ".*")
+            val selectedItem = treeView.selectionModel.selectedItem
+            basicItems.children.setAll(
+                    basicItemsList
+                            .filter { it.clazz.simpleName.toLowerCase().contains(filterRegex) }
+                            .map { TreeItem<Any>(it) }
+            )
+
+            moduleItems.children.setAll(
+                    Main.arrangementWindow.visualEditor.modules
+                            .filter { it.name.toLowerCase().contains(filterRegex) }
+                            .filter { !it.isMain }
+                            .map { TreeItem<Any>(it) }
+            )
+
+            graphItems.children.setAll(
+                    Main.arrangementWindow.graphs
+                            .filter { it.name.value.toLowerCase().contains(filterRegex) }
+                            .map { TreeItem<Any>(ComponentListGraphItem(it)) }
+            )
+
+            val allSelectableItems = (basicItems.children + moduleItems.children + graphItems.children)
+            val find = allSelectableItems.find { it.value == selectedItem?.value }
+            if(find != null){
+                treeView.selectionModel.select(find)
+            }else{
+                treeView.selectionModel.select(allSelectableItems.firstOrNull())
+            }
+        }
+
         textField.apply {
             setOnKeyPressed { event ->
                 if (event.code == KeyCode.ESCAPE) {
@@ -69,13 +99,16 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
                     event.consume()
                 }
                 if(event.code == KeyCode.DOWN){
-                    treeView.selectionModel.selectNext()
+                    treeView.selectionModel.select(treeView.selectionModel.selectedIndex+1)
+                    event.consume()
                 }
                 if(event.code == KeyCode.UP){
-                    treeView.selectionModel.selectPrevious()
+                    treeView.selectionModel.select((treeView.selectionModel.selectedIndex-1).coerceAtLeast(0))
+                    event.consume()
                 }
                 if(event.code == KeyCode.ENTER){
                     createSelected()
+                    event.consume()
                 }
             }
         }
@@ -103,15 +136,6 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         if(value is ComponentListGraphItem){
             result(Graph(value.graph))
             containerChildrens.remove(this@ComponentsList)
-        }
-    }
-
-    private fun expandChildItems(item: TreeItem<*>){
-        item.isExpanded = true
-        item.children.forEach {
-            if(!it.isLeaf){
-                expandChildItems(it)
-            }
         }
     }
 }

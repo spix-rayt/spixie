@@ -30,7 +30,7 @@ class RenderManager {
         }
     }
     val renderer: Renderer = JOCLRenderer()
-    private val frameCache = ReferenceMap<Double, ByteArray>()
+    private val frameCache = ReferenceMap<Int, ByteArray>()
     private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
     @Volatile var autoRenderNextFrame = false
     val lastRenderedParticlesCount = BehaviorSubject.createDefault(0).toSerialized()
@@ -65,8 +65,8 @@ class RenderManager {
         perFrame = {
             if(Main.audio.isPlaying()){
                 val seconds = Main.audio.getTime()
-                time.time = (frameToTime((seconds*60).roundToInt()/3*3, Main.renderManager.bpm.value) + offset.value).coerceAtLeast(0.0)
-                frameCache[time.time]?.let {
+                time.time = (frameToTime((seconds*60).roundToInt(), Main.renderManager.bpm.value) + offset.value).coerceAtLeast(0.0)
+                frameCache[time.frame/3*3]?.let {
                     val byteArrayInputStream = ByteArrayInputStream(it)
                     images.onNext(Image(byteArrayInputStream))
                 }
@@ -78,6 +78,7 @@ class RenderManager {
                 .observeOn(renderThread, false, 1)
                 .subscribe { t ->
                     try {
+                        val frame = Math.round(t*3600/bpm.value).toInt()
                         if (!Main.audio.isPlaying()) {
                             val image = Main.arrangementWindow.visualEditor.render(t, scaleDown)
                             val bufferedImage = image.toBufferedImage()
@@ -87,12 +88,12 @@ class RenderManager {
                                     .subscribeOn(Schedulers.computation())
                                     .observeOn(renderThread)
                                     .subscribe {
-                                        frameCache[t] = it
+                                        frameCache[frame] = it
                                     }
 
                             if(autoRenderNextFrame){
                                 Platform.runLater {
-                                    time.frame += 3
+                                    time.frame = time.frame/3*3+3
                                 }
                             }
                         }

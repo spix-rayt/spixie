@@ -3,7 +3,10 @@ package spixie.visualEditor.components
 import spixie.Main
 import spixie.ValueControl
 import spixie.renderer.RenderBufferBuilder
-import spixie.visualEditor.*
+import spixie.visualEditor.Component
+import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ImageFloatArray
+import spixie.visualEditor.ParticleArray
 import kotlin.math.abs
 
 class RenderDepth: Component() {
@@ -12,7 +15,7 @@ class RenderDepth: Component() {
     private val inWidth = ComponentPin(this, null, "Width", Double::class.java, ValueControl(0.0, 5.0, "").limitMin(0.0))
 
     private val outImage = ComponentPin(this, {
-        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
+        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
         val zeroRadius = inZeroRadius.receiveValue() ?: 0.0
         val width = inWidth.receiveValue() ?: 0.0
 

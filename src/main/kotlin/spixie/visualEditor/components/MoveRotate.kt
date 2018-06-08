@@ -16,7 +16,7 @@ class MoveRotate: Component() {
 
 
     private val outParticles = ComponentPin(this, {
-        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf())
+        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
         val mx = inX.receiveValue() ?: 0.0
         val my = inY.receiveValue() ?: 0.0
         val mz = inZ.receiveValue() ?: 0.0

@@ -140,14 +140,14 @@ class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, 
                 if(values.isEmpty() && valueControl != null)
                     valueControl.value as? T
                 else
-                    values.sum() as T
+                    values.sum().let { if(valueControl!=null) it.coerceIn(valueControl.min, valueControl.max) else it } as T
             }
             ParticleArray::class.java -> {
-                val newArray = connections
+                val particleArrays = connections
                         .sortedBy { it.component.layoutY }
-                        .mapNotNull { (it.getValue?.invoke() as? ParticleArray)?.array }
-                        .flatten()
-                ParticleArray(newArray) as T
+                        .mapNotNull { (it.getValue?.invoke() as? ParticleArray) }
+                val resultArray = particleArrays.flatMap { it.array }
+                ParticleArray(resultArray, resultArray.size.toFloat() + particleArrays.sumByDouble { it.decimalSize.toDouble() }.rem(1.0).toFloat()) as T
             }
             ImageFloatArray::class.java -> {
                 connections

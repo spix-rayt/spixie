@@ -10,19 +10,19 @@ class ParticlesProduct: Component() {
     private val inParticlesB = ComponentPin(this, null, "ParticlesB", ParticleArray::class.java, null)
 
     private val outParticles = ComponentPin(this, {
-        val particlesA = inParticlesA.receiveValue() ?: ParticleArray(arrayListOf())
-        val particlesB = inParticlesB.receiveValue() ?: ParticleArray(arrayListOf())
+        val particlesA = inParticlesA.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
+        val particlesB = inParticlesB.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
 
-        ParticleArray(
-                particlesB.array.flatMap { pb ->
-                    particlesA.array.map { pa ->
-                        Particle().apply {
-                            pb.matrix.mul(pa.matrix, matrix)
-                            this.size = pa.size*pb.size
-                        }
-                    }
+
+        val resultArray = particlesB.array.flatMap { pb ->
+            particlesA.array.map { pa ->
+                Particle().apply {
+                    pb.matrix.mul(pa.matrix, matrix)
+                    this.size = pa.size*pb.size
                 }
-        )
+            }
+        }
+        ParticleArray(resultArray, resultArray.size.toFloat())
     }, "Particles", ParticleArray::class.java, null)
 
     init {

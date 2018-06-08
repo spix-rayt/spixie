@@ -11,9 +11,8 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
 import org.apache.commons.lang3.math.Fraction
 
-class ValueControl(initial: Double, mul: Double, private val name: String) : HBox() {
+class ValueControl(initial: Double, private val dragDelta: Double, private val name: String) : HBox() {
     private var startDragValue = Fraction.ZERO
-    private var mul = 1.0
     private val labelName = Label()
     private val labelValue = Label()
     private val textFieldValue = TextField()
@@ -27,13 +26,15 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         }
     val changes = PublishSubject.create<Double>()
 
-    private var min = Double.NEGATIVE_INFINITY
+    var min = Double.NEGATIVE_INFINITY
+        private set
     fun limitMin(min: Double): ValueControl{
         this.min = min
         return this
     }
 
-    private var max = Double.POSITIVE_INFINITY
+    var max = Double.POSITIVE_INFINITY
+        private set
     fun limitMax(max:Double): ValueControl{
         this.max = max
         return this
@@ -44,7 +45,6 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
     }
 
     init {
-        this.mul = mul
         if(name.isNotEmpty()){
             labelName.text = "$name: "
         }else{
@@ -56,7 +56,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         labelValue.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                startDragValue = Fraction.getFraction(value).add(Fraction.getFraction(this@ValueControl.mul).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble())))
+                startDragValue = Fraction.getFraction(value).add(Fraction.getFraction(this@ValueControl.dragDelta).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble())))
                 dragged = false
             }
         }
@@ -64,7 +64,7 @@ class ValueControl(initial: Double, mul: Double, private val name: String) : HBo
         labelValue.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                value = startDragValue.subtract(Fraction.getFraction(this@ValueControl.mul).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble()))).toDouble()
+                value = startDragValue.subtract(Fraction.getFraction(this@ValueControl.dragDelta).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble()))).toDouble()
                 dragged = true
             }
         }

@@ -12,19 +12,18 @@ class LineTest: Component() {
 
 
     private val outParticles = ComponentPin(this, {
-        val particlesA = inParticlesA.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
-        val particlesB = inParticlesB.receiveValue() ?: ParticleArray(arrayListOf(Particle()))
+        val particlesA = inParticlesA.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
+        val particlesB = inParticlesB.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
 
-        ParticleArray(
-                particlesA.array.zip(particlesB.array).map { (p1,p2) ->
-                    val v = Vector3f(p2.matrix.m30() - p1.matrix.m30(), p2.matrix.m31() - p1.matrix.m31(), p2.matrix.m32() - p1.matrix.m32()).normalize()
-                    (0..(Vector3f(p2.matrix.m30(), p2.matrix.m31(), p2.matrix.m32()).distance(p1.matrix.m30(), p1.matrix.m31(), p1.matrix.m32()).toInt())).map {
-                        Particle().apply {
-                            matrix.translateLocal(p1.matrix.m30() + v.x*it, p1.matrix.m31() + v.y*it, p1.matrix.m32() + v.z*it)
-                        }
-                    }
-                }.flatten()
-        )
+        val resultArray = particlesA.array.zip(particlesB.array).map { (p1,p2) ->
+            val v = Vector3f(p2.matrix.m30() - p1.matrix.m30(), p2.matrix.m31() - p1.matrix.m31(), p2.matrix.m32() - p1.matrix.m32()).normalize()
+            (0..(Vector3f(p2.matrix.m30(), p2.matrix.m31(), p2.matrix.m32()).distance(p1.matrix.m30(), p1.matrix.m31(), p1.matrix.m32()).toInt())).map {
+                Particle().apply {
+                    matrix.translateLocal(p1.matrix.m30() + v.x*it, p1.matrix.m31() + v.y*it, p1.matrix.m32() + v.z*it)
+                }
+            }
+        }.flatten()
+        ParticleArray(resultArray, resultArray.size.toFloat())
     }, "Particles", ParticleArray::class.java, null)
 
     init {

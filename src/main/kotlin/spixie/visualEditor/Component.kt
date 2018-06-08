@@ -4,6 +4,7 @@ import io.reactivex.subjects.PublishSubject
 import javafx.geometry.Point2D
 import javafx.geometry.Pos
 import javafx.scene.Group
+import javafx.scene.Node
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.Label
 import javafx.scene.control.MenuItem
@@ -18,7 +19,8 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-open class Component:Region(), Externalizable {
+abstract class Component:Region(), Externalizable {
+    val parameters = arrayListOf<Node>()
     val inputPins = arrayListOf<ComponentPin<*>>()
     val outputPins = arrayListOf<ComponentPin<*>>()
     val content = Group()
@@ -108,11 +110,27 @@ open class Component:Region(), Externalizable {
                     prefHeight = 32.0
                 }
         )
+        content.children.addAll(parameters)
         content.children.addAll(inputPins)
         content.children.addAll(outputPins)
-        inputPins.forEachIndexed { index, pin ->
+
+        parameters.forEachIndexed { index, node ->
+            node.apply {
+                this.layoutX = 0.0
+                this.layoutY = index*32.0+32.0
+                this.minWidth(128.0 - 32.0)
+                this.maxWidth(128.0 - 32.0)
+
+                this.minHeight(32.0)
+                this.maxHeight(32.0)
+            }
+        }
+
+        val visibleInputPins = inputPins.filter { it.isVisible }
+
+        visibleInputPins.forEachIndexed { index, pin ->
             pin.layoutX = 0.0
-            pin.layoutY = index*32.0+32.0
+            pin.layoutY = index*32.0+32.0 + parameters.size*32.0
             pin.updateUI()
         }
 
@@ -124,9 +142,9 @@ open class Component:Region(), Externalizable {
 
 
         prefWidth = 256.0 + 96.0 + 1.0
-        prefHeight = max(inputPins.size, outputPins.size)*32.0 + 1.0 + 32.0
+        prefHeight = max(visibleInputPins.size + parameters.size, outputPins.size)*32.0 + 1.0 + 32.0
         width = 256.0 + 96.0 + 1.0
-        height = max(inputPins.size, outputPins.size)*32.0 + 1.0 + 32.0
+        height = max(visibleInputPins.size + parameters.size, outputPins.size)*32.0 + 1.0 + 32.0
     }
 
     var serializationIndex = -1
