@@ -1,7 +1,7 @@
 package spixie.visualEditor.components
 
 import spixie.Main
-import spixie.renderer.RenderBufferBuilder
+import spixie.opencl.RenderBufferBuilder
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
 import spixie.visualEditor.ImageFloatArray
@@ -31,8 +31,8 @@ class Render: Component() {
         }
         val w = 1920/Main.arrangementWindow.visualEditor.downscale
         val h = 1080/Main.arrangementWindow.visualEditor.downscale
-        Main.renderManager.renderer.setSize(w, h)
-        val image = Main.renderManager.renderer.render(renderBufferBuilder.complete(), false)
+        Main.opencl.setSize(w, h)
+        val image = Main.opencl.render(renderBufferBuilder.complete())
 
         ImageFloatArray(image, w, h, particlesCount = particles.array.size)
     }, "Image", ImageFloatArray::class.java, null)

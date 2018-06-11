@@ -1,11 +1,18 @@
-package spixie.renderer
+package spixie.opencl
 
 import com.jogamp.opencl.*
 import spixie.static.roundUp
 import java.nio.FloatBuffer
 
-class JOCLRenderer: Renderer {
-    private val context:CLContext = CLContext.create()
+class OpenCLApi {
+    private val context:CLContext = CLContext.create(
+            CLPlatform.listCLPlatforms().maxBy {
+                when{
+                    it.name.toLowerCase().contains("intel") -> 0
+                    else -> 42 // Prefer not intel GPU
+                }
+            }
+    )
     private val device:CLDevice
     private val program:CLProgram
     private var clImageOut:CLBuffer<FloatBuffer>
@@ -16,11 +23,12 @@ class JOCLRenderer: Renderer {
 
     init {
         device = context.maxFlopsDevice
+        println(device)
         program = context.createProgram(javaClass.getResourceAsStream("/kernel.cl")).build()
         clImageOut = context.createFloatBuffer(realWidth*realHeight*4, CLMemory.Mem.WRITE_ONLY)
     }
 
-    override fun render(particlesArray:FloatBuffer, depth: Boolean): FloatArray {
+    fun render(particlesArray:FloatBuffer): FloatArray {
         val queue = device.createCommandQueue()
         val localWorkSize = 64
 
@@ -55,7 +63,7 @@ class JOCLRenderer: Renderer {
         return floatArray
     }
 
-    override fun setSize(width:Int, height:Int){
+    fun setSize(width:Int, height:Int){
         this.width=width.roundUp(64)
         this.height=height
         this.realWidth = width
@@ -64,7 +72,7 @@ class JOCLRenderer: Renderer {
         clImageOut = context.createFloatBuffer(this.realWidth*this.realHeight*4, CLMemory.Mem.WRITE_ONLY)
     }
 
-    override fun getSize(): Pair<Int, Int> {
+    fun getSize(): Pair<Int, Int> {
         return realWidth to realHeight
     }
 }

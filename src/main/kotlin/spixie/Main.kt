@@ -17,6 +17,8 @@ import javafx.scene.layout.StackPane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import javafx.util.Duration
+import spixie.opencl.OpenCLApi
+import spixie.opencl.OpenCLInfoWindow
 import java.io.File
 import java.io.ObjectInputStream
 import java.nio.file.Files
@@ -132,6 +134,9 @@ class Main : Application() {
                         audio.play(Duration.seconds(Math.round((playStartTime-Main.renderManager.offset.value)*3600/Main.renderManager.bpm.value)/60.0))
                     }
                 }
+                if(event.code == KeyCode.F2){
+                    OpenCLInfoWindow(scene.window)
+                }
             }
         }
 
@@ -176,6 +181,7 @@ class Main : Application() {
         val workingWindow = WorkingWindow()
         val arrangementWindow = ArrangementWindow()
         val audio = Audio()
+        val opencl = OpenCLApi()
 
         var dragAndDropObject: Any = Any()
     }

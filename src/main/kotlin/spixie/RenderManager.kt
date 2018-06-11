@@ -12,8 +12,6 @@ import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.image.Image
 import org.apache.commons.collections4.map.ReferenceMap
-import spixie.renderer.JOCLRenderer
-import spixie.renderer.Renderer
 import spixie.static.*
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -29,7 +27,6 @@ class RenderManager {
             Main.arrangementWindow.needRedrawWaveform = true
         }
     }
-    val renderer: Renderer = JOCLRenderer()
     private val frameCache = ReferenceMap<Int, ByteArray>()
     private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
     @Volatile var autoRenderNextFrame = false
@@ -114,7 +111,7 @@ class RenderManager {
             val w = 1920
             val h = 1080
             val fps = 60
-            renderer.setSize(w, h)
+            Main.opencl.setSize(w, h)
             val countFrames = endFrame-startFrame+1
             val ifAudio = { v: String-> if(audio) v else null }
             val processBuilder = ProcessBuilder(
