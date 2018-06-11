@@ -5,19 +5,19 @@ import spixie.static.rand
 import spixie.visualEditor.ParticleArray
 import kotlin.math.roundToLong
 
-class SizeTransformer: ParticleArrayTransformer(10.0, 0.1, 0.0, Double.POSITIVE_INFINITY) {
+class GlowTransformer: ParticleArrayTransformer(1.0, 0.01, 0.0, 100.0) {
     override fun transform(particles: ParticleArray): ParticleArray {
         when(parameterMode.value){
             Mode.Simple -> {
                 val v = (inputSimpleValue.receiveValue() ?: 0.0).toFloat()
-                particles.array.forEach { it.size *= v }
+                particles.array.forEach { it.glow = v }
             }
             Mode.Linear -> {
                 val first = (inputLinearFirst.receiveValue() ?: 0.0)
                 val last = (inputLinearLast.receiveValue() ?: 0.0)
                 particles.array.forEachIndexed { index, particle ->
                     val t = if(particles.decimalSize>1) index.toDouble()/(particles.decimalSize-1.0) else 0.0
-                    particle.size*= linearInterpolate(first, last, t).toFloat()
+                    particle.glow = linearInterpolate(first, last, t).toFloat()
                 }
             }
             Mode.Random -> {
@@ -25,7 +25,7 @@ class SizeTransformer: ParticleArrayTransformer(10.0, 0.1, 0.0, Double.POSITIVE_
                 val max = (inputRandomMax.receiveValue() ?: 0.0).coerceAtLeast(min)
                 val seed = (inputRandomSeed.receiveValue() ?: 0.0).roundToLong()
                 particles.array.forEachIndexed { index, particle ->
-                    particle.size *= (rand(0, 0, 0, 0, seed, index.toLong())*(max - min)+min).toFloat()
+                    particle.glow = (rand(0, 0, 0, 0, seed, index.toLong())*(max - min)+min).toFloat()
                 }
             }
         }

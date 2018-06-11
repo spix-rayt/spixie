@@ -24,7 +24,7 @@ abstract class ParticleArrayTransformer(val default: Double, val dragDelta: Doub
 
     protected val inputRandomMin = ComponentPin(this, null, "Min", Double::class.java, ValueControl((0.0).coerceIn(min, max), dragDelta, "").limitMin(min).limitMax(max))
     protected val inputRandomMax = ComponentPin(this, null, "Max", Double::class.java, ValueControl(default, dragDelta, "").limitMin(min).limitMax(max))
-    protected val inputRandomSeed = ComponentPin(this, null, "Seed", Double::class.java, ValueControl(ThreadLocalRandom.current().nextInt(0, Int.MAX_VALUE).toDouble(), 1.0, "").limitMin(0.0))
+    protected val inputRandomSeed = ComponentPin(this, null, "Seed", Double::class.java, ValueControl(ThreadLocalRandom.current().nextInt(0, 10000).toDouble(), 1.0, "").limitMin(0.0))
 
     protected val parameterMode = ChoiceBox<Mode>(FXCollections.observableArrayList(Mode.values().toList())).apply {
         selectionModel.selectedItemProperty().addListener { _, _, newValue ->

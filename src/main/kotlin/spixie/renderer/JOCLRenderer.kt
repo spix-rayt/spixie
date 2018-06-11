@@ -42,7 +42,6 @@ class JOCLRenderer: Renderer {
         kernel.putArg(height)
         kernel.putArg(realWidth)
         kernel.putArg(particlesCount)
-        kernel.putArg(if(depth) 1 else 0)
         kernel.putArgs(clImageOut)
 
         queue.putWriteBuffer(clParticles, false)

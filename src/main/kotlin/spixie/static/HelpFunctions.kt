@@ -142,10 +142,10 @@ fun convertHueChromaLuminanceToRGB(h:Double, c:Double, l:Double, clampDesaturate
 
         val p = 2*m-q
 
-        r = hue2rgb(p,q,h+1.0/3.0)
-        g = hue2rgb(p,q,h)
-        b = hue2rgb(p,q,h-1.0/3.0)
-        if(calcLuminanceSquared(r,g,b)>l){
+        r = Math.pow(hue2rgb(p,q,h+1.0/3.0), 2.2)
+        g = Math.pow(hue2rgb(p,q,h), 2.2)
+        b = Math.pow(hue2rgb(p,q,h-1.0/3.0), 2.2)
+        if(calcLuminance(r,g,b)>l){
             rangeB = m
         }else{
             rangeA = m
@@ -154,7 +154,7 @@ fun convertHueChromaLuminanceToRGB(h:Double, c:Double, l:Double, clampDesaturate
     return Triple(r,g,b)
 }
 
-fun convertRGBToHueChromaLuminance(r:Double, g:Double, b:Double): Triple<Double, Double, Double> {
+fun convertRGBToHueChroma(r:Double, g:Double, b:Double): Pair<Double, Double> {
     val max = maxOf(r,g,b)
     val min = minOf(r,g,b)
     var h=(max+min)/2.0
@@ -165,23 +165,15 @@ fun convertRGBToHueChromaLuminance(r:Double, g:Double, b:Double): Triple<Double,
         g-> h=(b-r)/d+2.0
         b->h=(r-g)/d+4.0
     }
-    return Triple(h/6, s, calcLuminance(r,g,b))
+    return h/6 to s
 }
 
-val Pr = 0.299-0.08;
-val Pg = 0.587-0.04;
-val Pb = 0.114+0.12;
-
-/*val Pr = 0.299;
-val Pg = 0.587;
-val Pb = 0.114;*/
+val Pr = 0.2126;
+val Pg = 0.7152;
+val Pb = 0.0722;
 
 fun calcLuminance(r:Double, g:Double, b:Double): Double{
-    return Math.sqrt(calcLuminanceSquared(r,g,b))
-}
-
-fun calcLuminanceSquared(r:Double, g:Double, b:Double): Double{
-    return r*r*Pr+g*g*Pg+b*b*Pb
+    return r*Pr + g*Pg + b*Pb
 }
 
 fun FloatArray.preparePixelsForSave(width: Int, height: Int): DoubleArray {
@@ -192,17 +184,32 @@ fun FloatArray.preparePixelsForSave(width: Int, height: Int): DoubleArray {
             val resultOffset = y * width * 3 + x * 3
             val srcA = this[offset + 3].toDouble().coerceIn(0.0..1.0)
 
-            val r = Math.pow(this[offset].toDouble(), 1/2.2) * srcA
-            val g = Math.pow(this[offset+1].toDouble(), 1/2.2) * srcA
-            val b = Math.pow(this[offset+2].toDouble(), 1/2.2) * srcA
+            val r = Math.pow(this[offset].toDouble() * srcA, 1/2.2)
+            val g = Math.pow(this[offset+1].toDouble() * srcA, 1/2.2)
+            val b = Math.pow(this[offset+2].toDouble() * srcA, 1/2.2)
 
-            val (h, c, l) = convertRGBToHueChromaLuminance(r,g,b)
-            val (rr,gg,bb) = convertHueChromaLuminanceToRGB(h, c, l, true)
-            resultArray[resultOffset] = rr
-            resultArray[resultOffset+1] = gg
-            resultArray[resultOffset+2] = bb
+            val (h, c) = convertRGBToHueChroma(r,g,b)
+            val (rr,gg,bb) = convertHueChromaLuminanceToRGB(h, c, calcLuminance (this[offset].toDouble() * srcA, this[offset+1].toDouble() * srcA, this[offset+2].toDouble() * srcA), true)
+            resultArray[resultOffset] = Math.pow(rr, 1/2.2)
+            resultArray[resultOffset+1] = Math.pow(gg, 1/2.2)
+            resultArray[resultOffset+2] = Math.pow(bb, 1/2.2)
         }
     }
+    /*for (x in 0 until width) {
+        for (y in 0 until height) {
+            val offset = y * width * 4 + x * 4
+            val resultOffset = y * width * 3 + x * 3
+            val srcA = this[offset + 3].toDouble().coerceIn(0.0..1.0)
+
+            val r = Math.pow(this[offset].toDouble() * srcA, 1/2.2)
+            val g = Math.pow(this[offset+1].toDouble() * srcA, 1/2.2)
+            val b = Math.pow(this[offset+2].toDouble() * srcA, 1/2.2)
+
+            resultArray[resultOffset] = r
+            resultArray[resultOffset+1] = g
+            resultArray[resultOffset+2] = b
+        }
+    }*/
     return resultArray
 }
 

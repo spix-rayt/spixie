@@ -5,7 +5,7 @@ import java.nio.FloatBuffer
 class RenderBufferBuilder(particles:Int) {
     private val buffer = FloatBuffer.allocate(particles * PARTICLE_FLOAT_SIZE)
 
-    fun addParticle(x: Float, y: Float, size: Float, red:Float, green:Float, blue:Float, alpha:Float) {
+    fun addParticle(x: Float, y: Float, size: Float, red:Float, green:Float, blue:Float, alpha:Float, edge: Float, glow: Float) {
         buffer.put(x)
         buffer.put(y)
         buffer.put(size)
@@ -13,6 +13,8 @@ class RenderBufferBuilder(particles:Int) {
         buffer.put(green)
         buffer.put(blue)
         buffer.put(alpha)
+        buffer.put(edge)
+        buffer.put(glow)
     }
 
     fun complete(): FloatBuffer {
@@ -21,6 +23,6 @@ class RenderBufferBuilder(particles:Int) {
     }
 
     companion object {
-        const val PARTICLE_FLOAT_SIZE = 7
+        const val PARTICLE_FLOAT_SIZE = 9
     }
 }

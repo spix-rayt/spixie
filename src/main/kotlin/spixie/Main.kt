@@ -48,7 +48,7 @@ class Main : Application() {
             }
         }
         root.children.addAll(imageView)
-        root.style = "-fx-background-color: #000000;"
+        root.style = "-fx-background-color: #111111;"
 
         val scene = Scene(root, 100.0, 100.0)
         scene.stylesheets.add("style.css")

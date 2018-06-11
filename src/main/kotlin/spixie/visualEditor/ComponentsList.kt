@@ -26,9 +26,10 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             ComponentListItem(Slice::class.java),
             ComponentListItem(LineTest::class.java),
             ComponentListItem(SizeTransformer::class.java),
-            ComponentListItem(Render::class.java),
-            ComponentListItem(RenderDepth::class.java),
-            ComponentListItem(FocusBlur::class.java)
+            ComponentListItem(GlowTransformer::class.java),
+            ComponentListItem(EdgeTransformer::class.java),
+            ComponentListItem(ScaleTransformer::class.java),
+            ComponentListItem(Render::class.java)
     )
 
     val basicItems = TreeItem<Any>("Basic").apply { isExpanded = true }

@@ -23,7 +23,9 @@ class Render: Component() {
                         particle.red,
                         particle.green,
                         particle.blue,
-                        particle.alpha
+                        particle.alpha,
+                        particle.edge,
+                        particle.glow
                 )
             }
         }

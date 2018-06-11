@@ -16,8 +16,6 @@ class SimpleParticlesGenerator: Component() {
     private val inRotateYLast = ComponentPin(this, null, "RotateYLast", Double::class.java, ValueControl(0.0, 0.01, ""))
     private val inRotateZFirst = ComponentPin(this, null, "RotateZFirst", Double::class.java, ValueControl(0.0, 0.01, ""))
     private val inRotateZLast = ComponentPin(this, null, "RotateZLast", Double::class.java, ValueControl(0.0, 0.01, ""))
-    private val inScaleFirst = ComponentPin(this, null, "ScaleFirst", Double::class.java, ValueControl(1.0, 0.1, "").limitMin(0.0))
-    private val inScaleLast = ComponentPin(this, null, "ScaleLast", Double::class.java, ValueControl(1.0, 0.1, "").limitMin(0.0))
     private val inCount = ComponentPin(this, null, "Count", Double::class.java, ValueControl(1.0, 0.1, "").limitMin(0.0))
 
 
@@ -30,19 +28,15 @@ class SimpleParticlesGenerator: Component() {
         val ryl = inRotateYLast.receiveValue() ?: 0.0
         val rzf = inRotateZFirst.receiveValue() ?: 0.0
         val rzl = inRotateZLast.receiveValue() ?: 0.0
-        val scaleFirst = inScaleFirst.receiveValue() ?: 0.0
-        val scaleLast = inScaleLast.receiveValue() ?: 0.0
         val count = inCount.receiveValue() ?: 0.0
 
         val resultArray = (0 until count.toInt()).map { i ->
             Particle().apply {
                 val t = if(count>1) i.toDouble()/(count-1) else 0.0
-                val currentScale = linearInterpolate(scaleFirst, scaleLast, t).toFloat()
                 val currentRotateX = linearInterpolate(rxf, rxl, t).toFloat()
                 val currentRotateY = linearInterpolate(ryf, ryl, t).toFloat()
                 val currentRotateZ = linearInterpolate(rzf, rzl, t).toFloat()
                 matrix
-                        .scaleLocal(currentScale)
                         .rotateLocalX((currentRotateX * Math.PI*2).toFloat())
                         .rotateLocalY((currentRotateY * Math.PI*2).toFloat())
                         .rotateLocalZ((currentRotateZ * Math.PI*2).toFloat())
@@ -62,8 +56,6 @@ class SimpleParticlesGenerator: Component() {
         inputPins.add(inRotateYLast)
         inputPins.add(inRotateZFirst)
         inputPins.add(inRotateZLast)
-        inputPins.add(inScaleFirst)
-        inputPins.add(inScaleLast)
         inputPins.add(inCount)
         outputPins.add(outParticles)
         updateVisual()

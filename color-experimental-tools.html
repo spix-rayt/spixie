@@ -58,38 +58,6 @@
 			return p;
 	    }
 
-		function hsl2rgb(h, s, l, white) {
-			var r, g, b;
-			l = l*l;
-
-			var rangeA = 0.0;
-			var rangeM = 0;
-			var rangeB = 10.0;
-
-			for(var i=0;i<=20;i++){
-				rangeM = (rangeA+rangeB)/2.0;
-				if(white){
-					var q = rangeM<0.5 ? rangeM * (1 + s) : rangeM + s - rangeM * s;
-				}else{
-					var q = rangeM * (1 + s);
-				}
-				
-				
-				var p = 2 * rangeM - q;
-
-				r = hue2rgb(p, q, h + 1/3);
-				g = hue2rgb(p, q, h);
-				b = hue2rgb(p, q, h - 1/3);
-
-				if(li2squared(r,g,b)>l){
-					rangeB = rangeM;
-				}else{
-					rangeA = rangeM;
-				}
-			}
-			return [r, g, b];
-		}
-
 		function rgb2hs(r, g, b) {
 		  var max = Math.max(r, g, b), min = Math.min(r, g, b);
 		  var h, s = (max + min) / 2;
@@ -124,6 +92,43 @@
 
 		function li2squared(r,g,b){
 			return r*r*Pr+g*g*Pg+b*b*Pb;
+		}
+
+		function hsl2rgb(h, s, l, white) {
+			var r, g, b;
+
+			var rangeA = 0.0;
+			var rangeM = 0;
+			var rangeB = 10.0;
+
+			var gamma = 2.2;
+
+			for(var i=0;i<=20;i++){
+				rangeM = (rangeA+rangeB)/2.0;
+				if(white){
+					var q = rangeM<0.5 ? rangeM * (1 + s) : rangeM + s - rangeM * s;
+				}else{
+					var q = rangeM * (1 + s);
+				}
+				
+				
+				var p = 2 * rangeM - q;
+
+				r = hue2rgb(p, q, h + 1/3);
+				g = hue2rgb(p, q, h);
+				b = hue2rgb(p, q, h - 1/3);
+
+				
+
+				var qwe=0.2126*Math.pow(r, gamma)+0.7152*Math.pow(g, gamma)+0.0722*Math.pow(b, gamma);
+
+				if(qwe>l){
+					rangeB = rangeM;
+				}else{
+					rangeA = rangeM;
+				}
+			}
+			return [Math.pow(r, gamma), Math.pow(g, gamma), Math.pow(b, gamma)];
 		}
 
 		$(function(){
@@ -189,34 +194,12 @@
 			}
 
 			function spixiehcl(h, c, l){
-				//c = Math.pow(Math.trunc(c*7)/6.0, 1);
-				//h = Math.trunc(h/9)*9.0;
-
-				/*var gl = hsv2rgb(h/360.0*6, 1, 1);
-				var lum = li(gl[0], gl[1], gl[2]);
-				var gray = lum/(rk, gk, bk);
-				gl = [linear(gray, gl[0], c), linear(gray, gl[1], c), linear(gray, gl[2], c)];
-				lum = li(gl[0], gl[1], gl[2]);
-				gl = [gl[0] * l / lum, gl[1] * l / lum, gl[2] * l / lum];*/
-
-				//var gl = hsp2rgb(h/360.0,c,l);
-				//gl = [Math.pow(gl[0], 2), Math.pow(gl[1], 2), Math.pow(gl[2], 2)];
-
-				/*lum = li2(gl[0], gl[1], gl[2]);
-
-				var hsv = rgb2hsv(gl[0], gl[1], gl[2]);
-				if(hsv[2] > 1){
-					var ls = hsv2rgb(h/60.0, 1.0, 1.0);
-					ls = li2(ls[0], ls[1], ls[2]);
-					gl = hsv2rgb(h/60.0, coerce01(1.0 - (lum - ls) / (1.0 - ls)), 1.0);
-					console.log(li2(gl[0],gl[1],gl[2]), l);
-					//gl=[1.0, 1.0, 1.0];
+				var white = true;
+				var result = hsl2rgb(h/360.0, c, l, white);
+				if(!white && (result[0]>1.0 || result[1] > 1.0 || result[2] > 1.0)) {
+					result = [1,1,1];
 				}
-
-				return [gl[0]*255, gl[1]*255, gl[2]*255];*/
-
-				var result = hsl2rgb(h/360.0, c, l, false);
-				if(false){
+				/*if(false){
 					if(result[0]>1.0 || result[1] > 1.0 || result[2] > 1.0) {
 						result = [1,1,1];
 					}
@@ -224,11 +207,14 @@
 					var hs = rgb2hs(result[0], result[1], result[2]);
 					var ql = li2(result[0], result[1], result[2]);
 					result = hsl2rgb(h/360.0, c, l, true);
-				}
+				}*/
+
+
 				
 
 				
-				return [result[0]*255, result[1]*255, result[2]*255];
+				return [Math.pow(result[0], 1/2.2)*255, Math.pow(result[1], 1/2.2)*255, Math.pow(result[2], 1/2.2)*255];
+				//return [result[0]*255, result[1]*255, result[2]*255];
 
 				//return [Math.pow(coerce01(gl[0]), 1/2)*255, Math.pow(coerce01(gl[1]), 1/2)*255, Math.pow(coerce01(gl[2]), 1/2)*255];
 			}
