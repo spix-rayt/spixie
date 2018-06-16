@@ -116,10 +116,10 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
         homeLayout()
     }
 
-    fun render(time:Double, downscale: Int): ImageFloatArray {
+    fun render(time:Double, downscale: Int): ImageFloatBuffer {
         this.time = time
         this.downscale = downscale
-        return modules.find { it.isMain }?.findResultComponent()?.getImage() ?: ImageFloatArray(floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f), 1, 1)
+        return modules.find { it.isMain }?.findResultComponent()?.getImage() ?: ImageFloatBuffer(Main.opencl.createZeroBuffer(4), 1, 1)
     }
 
     private fun homeLayout(){

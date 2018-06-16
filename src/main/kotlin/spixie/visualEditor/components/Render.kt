@@ -4,7 +4,7 @@ import spixie.Main
 import spixie.opencl.RenderBufferBuilder
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
-import spixie.visualEditor.ImageFloatArray
+import spixie.visualEditor.ImageFloatBuffer
 import spixie.visualEditor.ParticleArray
 
 class Render: Component() {
@@ -31,11 +31,10 @@ class Render: Component() {
         }
         val w = 1920/Main.arrangementWindow.visualEditor.downscale
         val h = 1080/Main.arrangementWindow.visualEditor.downscale
-        Main.opencl.setSize(w, h)
-        val image = Main.opencl.render(renderBufferBuilder.complete())
+        val image = Main.opencl.render(renderBufferBuilder.complete(), w, h)
 
-        ImageFloatArray(image, w, h, particlesCount = particles.array.size)
-    }, "Image", ImageFloatArray::class.java, null)
+        ImageFloatBuffer(image, w, h, particlesCount = particles.array.size)
+    }, "Image", ImageFloatBuffer::class.java, null)
 
     init {
         inputPins.add(inParticles)

@@ -1,6 +1,7 @@
 package spixie.opencl
 
 import com.jogamp.opencl.*
+import spixie.Main
 import spixie.static.roundUp
 import java.nio.FloatBuffer
 
@@ -15,64 +16,96 @@ class OpenCLApi {
     )
     private val device:CLDevice
     private val program:CLProgram
-    private var clImageOut:CLBuffer<FloatBuffer>
-    private var width = 1
-    private var height = 1
-    private var realWidth = 1
-    private var realHeight = 1
+    private val queue: CLCommandQueue
 
     init {
         device = context.maxFlopsDevice
+        queue = device.createCommandQueue()
         println(device)
         program = context.createProgram(javaClass.getResourceAsStream("/kernel.cl")).build()
-        clImageOut = context.createFloatBuffer(realWidth*realHeight*4, CLMemory.Mem.WRITE_ONLY)
     }
 
-    fun render(particlesArray:FloatBuffer): FloatArray {
-        val queue = device.createCommandQueue()
-        val localWorkSize = 64
+    fun render(particlesArray:FloatBuffer, realWidth:Int, realHeight: Int): CLBuffer<FloatBuffer> {
+        val width=realWidth.roundUp(64)
+        val height=realHeight
+
+        val outputImage = context.createFloatBuffer(realWidth * realHeight * 4, CLMemory.Mem.READ_WRITE)
 
         val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(64)
         if(particlesCount == 0){
-            return FloatArray(realWidth*realHeight*4)
+            return createZeroBuffer(realWidth*realHeight*4)
         }
 
-        val clParticles = context.createFloatBuffer(particlesCount * RenderBufferBuilder.PARTICLE_FLOAT_SIZE, CLMemory.Mem.READ_ONLY)
+        val inputParticles = context.createFloatBuffer(particlesCount * RenderBufferBuilder.PARTICLE_FLOAT_SIZE, CLMemory.Mem.READ_ONLY)
 
 
-        clParticles.buffer.put(particlesArray)
-        clParticles.buffer.rewind()
-        clImageOut.buffer.rewind()
+        inputParticles.buffer.put(particlesArray)
+        inputParticles.buffer.rewind()
 
         val kernel = program.createCLKernel("renderParticles")
-        kernel.putArgs(clParticles)
+        kernel.putArgs(inputParticles)
         kernel.putArg(width)
         kernel.putArg(height)
         kernel.putArg(realWidth)
         kernel.putArg(particlesCount)
-        kernel.putArgs(clImageOut)
+        kernel.putArgs(outputImage)
 
-        queue.putWriteBuffer(clParticles, false)
-                .put1DRangeKernel(kernel, 0L, (width * height).toLong(), localWorkSize.toLong())
-                .putReadBuffer(clImageOut, true)
-
-
-        val floatArray = FloatArray(realWidth*realHeight*4)
-        clImageOut.buffer.get(floatArray)
-        clParticles.release()
-        return floatArray
+        queue.putWriteBuffer(inputParticles, false)
+                .put1DRangeKernel(kernel, 0L, (width * height).toLong(), 64L)
+        inputParticles.release()
+        return outputImage
     }
 
-    fun setSize(width:Int, height:Int){
-        this.width=width.roundUp(64)
-        this.height=height
-        this.realWidth = width
-        this.realHeight = height
-        clImageOut.release()
-        clImageOut = context.createFloatBuffer(this.realWidth*this.realHeight*4, CLMemory.Mem.WRITE_ONLY)
+    fun brightPixelsToWhite(inputImage: CLBuffer<FloatBuffer>, width:Int, height: Int): CLBuffer<FloatBuffer> {
+        val outputImage = context.createFloatBuffer(width * height * 3, CLMemory.Mem.READ_WRITE)
+
+        val kernel = program.createCLKernel("brightPixelsToWhite")
+        kernel.putArg(inputImage)
+        kernel.putArg(width*height)
+        kernel.putArg(outputImage)
+
+        queue.put1DRangeKernel(kernel, 0L, (width*height).roundUp(64).toLong(), 64L)
+
+        return outputImage
     }
 
-    fun getSize(): Pair<Int, Int> {
-        return realWidth to realHeight
+    fun forSave(inputImage: CLBuffer<FloatBuffer>, width:Int, height: Int): CLBuffer<FloatBuffer> {
+        val outputImage = context.createFloatBuffer(width * height * 3, CLMemory.Mem.READ_WRITE)
+
+        val kernel = program.createCLKernel("forSave")
+        kernel.putArg(inputImage)
+        kernel.putArg(width*height*3)
+        kernel.putArg(outputImage)
+
+        queue.put1DRangeKernel(kernel, 0L, (width*height*3).roundUp(64).toLong(), 64L)
+
+        return outputImage
+    }
+
+    fun createZeroBuffer(size:Int): CLBuffer<FloatBuffer> {
+        val buffer = context.createFloatBuffer(size, CLMemory.Mem.READ_WRITE)
+        val kernel = program.createCLKernel("zeroBuffer")
+        kernel.putArg(buffer)
+        kernel.putArg(size)
+        queue.put1DRangeKernel(kernel, 0L, size.roundUp(64).toLong(), 64L)
+        return buffer
+    }
+
+    fun pixelSum(accumImage: CLBuffer<FloatBuffer>, addImage: CLBuffer<FloatBuffer>, width:Int, height: Int, k: Float) {
+        val kernel = program.createCLKernel("pixelSum")
+        kernel.putArg(accumImage)
+        kernel.putArg(addImage)
+        kernel.putArg(k)
+        kernel.putArg(width*height*3)
+
+        queue.put1DRangeKernel(kernel, 0L, (width*height*3).roundUp(64).toLong(), 64L)
+    }
+
+    fun readAndRelease(buffer: CLBuffer<FloatBuffer>): FloatArray {
+        Main.opencl.queue.putReadBuffer(buffer, true)
+        val result = FloatArray(buffer.buffer.capacity())
+        buffer.buffer.get(result)
+        buffer.release()
+        return result
     }
 }

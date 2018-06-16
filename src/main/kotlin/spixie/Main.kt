@@ -153,7 +153,7 @@ class Main : Application() {
             val bytes = arrangementWindow.save()
             if(!File("save/").exists()) File("save/").mkdir()
             if(File("save/save.spixie").exists()){
-                Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
+                Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
             }
             Files.write(Paths.get("save/save.spixie"), bytes)
             Platform.exit()

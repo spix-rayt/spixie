@@ -149,10 +149,10 @@ class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, 
                 val resultArray = particleArrays.flatMap { it.array }
                 ParticleArray(resultArray, resultArray.size.toFloat() + particleArrays.sumByDouble { it.decimalSize.toDouble() }.rem(1.0).toFloat()) as T
             }
-            ImageFloatArray::class.java -> {
+            ImageFloatBuffer::class.java -> {
                 connections
                         .sortedBy { it.component.layoutY }
-                        .mapNotNull { it.getValue?.invoke() as? ImageFloatArray }
+                        .mapNotNull { it.getValue?.invoke() as? ImageFloatBuffer }
                         .lastOrNull() as? T
             }
             else -> null

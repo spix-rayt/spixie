@@ -1,5 +1,6 @@
 package spixie.static
 
+import com.jogamp.opencl.CLBuffer
 import javafx.application.Platform
 import javafx.scene.Group
 import javafx.scene.input.DataFormat
@@ -7,9 +8,11 @@ import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Pane
 import org.apache.commons.lang3.math.Fraction
+import spixie.Main
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.nio.FloatBuffer
 import java.util.concurrent.CountDownLatch
 import javax.imageio.ImageIO
 
@@ -176,54 +179,12 @@ fun calcLuminance(r:Double, g:Double, b:Double): Double{
     return r*Pr + g*Pg + b*Pb
 }
 
-fun FloatArray.preparePixelsForSave(width: Int, height: Int): DoubleArray {
-    val resultArray = DoubleArray(width*height*3)
-    for (x in 0 until width) {
-        for (y in 0 until height) {
-            val offset = y * width * 4 + x * 4
-            val resultOffset = y * width * 3 + x * 3
-            val srcA = this[offset + 3].toDouble().coerceIn(0.0..1.0)
-
-            val r = Math.pow(this[offset].toDouble() * srcA, 1/2.2)
-            val g = Math.pow(this[offset+1].toDouble() * srcA, 1/2.2)
-            val b = Math.pow(this[offset+2].toDouble() * srcA, 1/2.2)
-
-            val (h, c) = convertRGBToHueChroma(r,g,b)
-            val (rr,gg,bb) = convertHueChromaLuminanceToRGB(h, c, calcLuminance (this[offset].toDouble() * srcA, this[offset+1].toDouble() * srcA, this[offset+2].toDouble() * srcA), true)
-            resultArray[resultOffset] = Math.pow(rr, 1/2.2)
-            resultArray[resultOffset+1] = Math.pow(gg, 1/2.2)
-            resultArray[resultOffset+2] = Math.pow(bb, 1/2.2)
-        }
-    }
-    /*for (x in 0 until width) {
-        for (y in 0 until height) {
-            val offset = y * width * 4 + x * 4
-            val resultOffset = y * width * 3 + x * 3
-            val srcA = this[offset + 3].toDouble().coerceIn(0.0..1.0)
-
-            val r = Math.pow(this[offset].toDouble() * srcA, 1/2.2)
-            val g = Math.pow(this[offset+1].toDouble() * srcA, 1/2.2)
-            val b = Math.pow(this[offset+2].toDouble() * srcA, 1/2.2)
-
-            resultArray[resultOffset] = r
-            resultArray[resultOffset+1] = g
-            resultArray[resultOffset+2] = b
-        }
-    }*/
-    return resultArray
-}
-
-fun DoubleArray.toBufferedImage(width: Int, height: Int): BufferedImage {
+fun CLBuffer<FloatBuffer>.toBufferedImage(width: Int, height: Int): BufferedImage {
     val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
-    for (x in 0 until width) {
-        for (y in 0 until height) {
-            val resultOffset = y * width * 3 + x * 3
-            this[resultOffset] = (this[resultOffset]*255).coerceIn(0.0..255.0)
-            this[resultOffset+1] = (this[resultOffset+1]*255).coerceIn(0.0..255.0)
-            this[resultOffset+2] = (this[resultOffset+2]*255).coerceIn(0.0..255.0)
-        }
-    }
-    bufferedImage.raster.setPixels(0, 0, width, height, this)
+    val forSave = Main.opencl.forSave(this, width, height)
+    this.release()
+    val floatArray = Main.opencl.readAndRelease(forSave)
+    bufferedImage.raster.setPixels(0, 0, width, height, floatArray)
     return bufferedImage
 }
 

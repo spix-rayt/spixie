@@ -78,7 +78,7 @@ class RenderManager {
                         val frame = Math.round(t*3600/bpm.value).toInt()
                         if (!Main.audio.isPlaying()) {
                             val image = Main.arrangementWindow.visualEditor.render(t, scaleDown)
-                            val bufferedImage = image.toBufferedImage()
+                            val bufferedImage = image.toBufferedImageAndRelease()
                             lastRenderedParticlesCount.onNext(image.particlesCount)
                             images.onNext(SwingFXUtils.toFXImage(bufferedImage, null))
                             Flowable.fromCallable { bufferedImage.toPNGByteArray() }
@@ -96,6 +96,7 @@ class RenderManager {
                         }
                     } catch (e: ConcurrentModificationException) {
                         requestRender()
+                        println("ConcurrentModificationException")
                     } catch (e: StackOverflowError) {
                         println("Stack overflow")
                     }
@@ -111,7 +112,6 @@ class RenderManager {
             val w = 1920
             val h = 1080
             val fps = 60
-            Main.opencl.setSize(w, h)
             val countFrames = endFrame-startFrame+1
             val ifAudio = { v: String-> if(audio) v else null }
             val processBuilder = ProcessBuilder(
@@ -126,7 +126,8 @@ class RenderManager {
                             "-vf", "scale=$w:$h",
                             "-ss", "${startFrame/fps.toDouble()}",
                             "-c:v", "libx264",
-                            "-preset", "slow",
+                            "-tune", "animation",
+                            "-x264-params","keyint=10",
                             "-crf", "17",
                             "-pix_fmt", "yuv420p",
                             ifAudio("-c:a"), ifAudio("aac"),
@@ -154,37 +155,18 @@ class RenderManager {
                     val bufferedImage = Flowable.fromArray(*((0 until motionBlurIterations).toList().toTypedArray()))
                             .subscribeOn(renderThread)
                             .map { k->
-                                Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k + 1) / motionBlurIterations.toDouble()), 1).array
+                                Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k + 1) / motionBlurIterations.toDouble()), 1).buffer
                             }
-                            .observeOn(Schedulers.computation())
-                            .map {
-                                it.preparePixelsForSave(w, h)
+                            .map { buffer->
+                                Main.opencl.brightPixelsToWhite(buffer, w, h).also { buffer.release() }
                             }
-                            .observeOn(Schedulers.computation())
-                            .reduce(DoubleArray(w * h * 3)) { resultArray, pixelsArray->
-                                for (x in 0 until w) {
-                                    for (y in 0 until h) {
-                                        val offset = y * w * 3 + x * 3
-                                        resultArray[offset] = Math.pow(pixelsArray[offset], 2.2)/motionBlurIterations + resultArray[offset]
-                                        resultArray[offset + 1] = Math.pow(pixelsArray[offset + 1], 2.2)/motionBlurIterations + resultArray[offset + 1]
-                                        resultArray[offset + 2] = Math.pow(pixelsArray[offset + 2], 2.2)/motionBlurIterations + resultArray[offset + 2]
-                                    }
-                                }
-                                resultArray
+                            .reduce(Main.opencl.createZeroBuffer(w*h*3)) { accum, pixelsBuffer->
+                                Main.opencl.pixelSum(accum, pixelsBuffer, w, h, 1.0f/motionBlurIterations)
+                                pixelsBuffer.release()
+                                accum
                             }
-                            .observeOn(Schedulers.computation())
-                            .map { resultArray->
-                                for (x in 0 until w) {
-                                    for (y in 0 until h) {
-                                        val offset = y * w * 3 + x * 3
-                                        resultArray[offset] = (Math.pow(resultArray[offset], 1/2.2)*255).coerceIn(0.0..255.0)
-                                        resultArray[offset + 1] = (Math.pow(resultArray[offset + 1], 1/2.2)*255).coerceIn(0.0..255.0)
-                                        resultArray[offset + 2] = (Math.pow(resultArray[offset + 2], 1/2.2)*255).coerceIn(0.0..255.0)
-                                    }
-                                }
-                                BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR).apply {
-                                    raster.setPixels(0, 0, w, h, resultArray)
-                                }
+                            .map { result->
+                                result.toBufferedImage(w, h)
                             }.blockingGet()
 
                     ImageIO.write(bufferedImage, "png", outputStream)
