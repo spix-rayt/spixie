@@ -1,4 +1,4 @@
-package spixie.visualEditor.components
+package spixie.visualEditor.components.transformers
 
 import spixie.static.linearInterpolate
 import spixie.static.rand

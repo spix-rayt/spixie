@@ -12,6 +12,7 @@ import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import spixie.Main
 import spixie.visualEditor.components.*
+import spixie.visualEditor.components.transformers.*
 
 class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, forMain: Boolean, private val result: (component: Component) -> Unit): BorderPane() {
     private val treeView = TreeView<Any>(TreeItem("Components"))
@@ -29,6 +30,8 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             ComponentListItem(GlowTransformer::class.java),
             ComponentListItem(EdgeTransformer::class.java),
             ComponentListItem(ScaleTransformer::class.java),
+            ComponentListItem(RotateTransformer::class.java),
+            ComponentListItem(PositionTransformer::class.java),
             ComponentListItem(Render::class.java)
     )
 

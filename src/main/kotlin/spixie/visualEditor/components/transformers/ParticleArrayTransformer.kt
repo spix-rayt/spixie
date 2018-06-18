@@ -1,7 +1,8 @@
-package spixie.visualEditor.components
+package spixie.visualEditor.components.transformers
 
 import javafx.collections.FXCollections
 import javafx.scene.control.ChoiceBox
+import spixie.Main
 import spixie.ValueControl
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPin
@@ -11,7 +12,7 @@ import java.io.ObjectInput
 import java.io.ObjectOutput
 import java.util.concurrent.ThreadLocalRandom
 
-abstract class ParticleArrayTransformer(val default: Double, val dragDelta: Double, val min: Double, val max:Double): Component(), Externalizable {
+abstract class ParticleArrayTransformer(val default: Double, val dragDelta: Double, val min: Double, val max:Double, val additionalParameters: ArrayList<ChoiceBox<*>> = arrayListOf()): Component(), Externalizable {
     enum class Mode {
         Simple, Linear, Random
     }
@@ -55,11 +56,17 @@ abstract class ParticleArrayTransformer(val default: Double, val dragDelta: Doub
     }, "Particles", ParticleArray::class.java, null)
 
     init {
-        parameters.addAll(arrayListOf(parameterMode))
+        val addParameters = additionalParameters + arrayListOf(parameterMode)
+        parameters.addAll(addParameters)
         inputPins.addAll(arrayListOf(inputParticles, inputSimpleValue, inputLinearFirst, inputLinearLast, inputRandomMin, inputRandomMax, inputRandomSeed))
         outputPins.add(outputParticles)
         updateVisual()
-        parameterMode.selectionModel.select(0)
+        addParameters.forEach {
+            it.selectionModel.select(0)
+            it.selectionModel.selectedItemProperty().addListener { _, _, _ ->
+                Main.renderManager.requestRender()
+            }
+        }
     }
 
     abstract fun transform(particles: ParticleArray): ParticleArray

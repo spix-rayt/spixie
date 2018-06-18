@@ -11,7 +11,7 @@ class Particle {
     var blue:Float = 1.0f
     var alpha:Float = 1.0f
     var size:Float = 1.0f
-    var edge: Float = 1.0f
+    var edge: Float = 0.0f
     var glow: Float = 0.0f
     val matrix = Matrix4f()
 
