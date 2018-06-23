@@ -28,6 +28,7 @@ abstract class ParticleArrayTransformer(default: Double, dragDelta: Double, val 
 
     protected val inputRandomMin = ComponentPinNumber(this, null, "Min", NumberControl((0.0).coerceIn(min, max), dragDelta, "").limitMin(min).limitMax(max))
     protected val inputRandomMax = ComponentPinNumber(this, null, "Max", NumberControl(default, dragDelta, "").limitMin(min).limitMax(max))
+    protected val inputRandomStretch = ComponentPinNumber(this, null, "Stretch", NumberControl(1.0, 0.01, "").limitMin(0.01).limitMax(1000000.0))
     protected val inputRandomSeed = ComponentPinNumber(this, null, "Seed", NumberControl(ThreadLocalRandom.current().nextInt(0, 10000).toDouble(), 1.0, "").limitMin(0.0))
 
     protected val parameterMode = ChoiceBox<Mode>(FXCollections.observableArrayList(Mode.values().toList())).apply {
@@ -46,6 +47,7 @@ abstract class ParticleArrayTransformer(default: Double, dragDelta: Double, val 
                     inputRandomMin.isVisible = true
                     inputRandomMax.isVisible = true
                     inputRandomSeed.isVisible = true
+                    inputRandomStretch.isVisible = true
                 }
             }
             inputPins.filterNot { it.isVisible }.forEach { this@ParticleArrayTransformer.disconnectPinRequest.onNext(it) }
@@ -61,7 +63,7 @@ abstract class ParticleArrayTransformer(default: Double, dragDelta: Double, val 
     init {
         val addParameters = additionalParameters + arrayListOf(parameterMode)
         parameters.addAll(addParameters)
-        inputPins.addAll(arrayListOf(inputParticles, inputSimpleValue, inputLinearFirst, inputLinearLast, inputRandomMin, inputRandomMax, inputRandomSeed))
+        inputPins.addAll(arrayListOf(inputParticles, inputSimpleValue, inputLinearFirst, inputLinearLast, inputRandomMin, inputRandomMax, inputRandomStretch, inputRandomSeed))
         outputPins.add(outputParticles)
         updateVisual()
         addParameters.forEach {
@@ -73,7 +75,7 @@ abstract class ParticleArrayTransformer(default: Double, dragDelta: Double, val 
     }
 
     override fun getHeightInCells(): Int {
-        return 7
+        return 8
     }
 
     abstract fun transform(particles: ParticleArray): ParticleArray

@@ -3,6 +3,7 @@ package spixie.visualEditor.components.transformers
 import javafx.collections.FXCollections
 import javafx.scene.control.ChoiceBox
 import spixie.static.linearInterpolate
+import spixie.static.perlinInterpolate
 import spixie.static.rand
 import spixie.visualEditor.ParticleArray
 import java.io.Externalizable
@@ -50,9 +51,14 @@ class PositionTransformer: ParticleArrayTransformer(
             Mode.Random -> {
                 val min = inputRandomMin.receiveValue()
                 val max = inputRandomMax.receiveValue().coerceAtLeast(min)
+                val stretch = inputRandomStretch.receiveValue()
                 val seed = inputRandomSeed.receiveValue().roundToLong()
                 particles.array.forEachIndexed { index, particle ->
-                    val v = (rand(0, 0, 0, 0, seed, index.toLong()) *(max - min)+min).toFloat()
+                    val i = (index / stretch)
+                    val leftRandom  = rand(0, 0, 0, 0, seed, i.toLong()).toDouble()
+                    val rightRandom = rand(0, 0, 0, 0, seed, i.toLong()+1L).toDouble()
+                    val rand = perlinInterpolate(leftRandom, rightRandom, i%1)
+                    val v = (rand *(max - min)+min).toFloat()
                     when(axis){
                         Axis.X -> particle.matrix.translateLocal(v, 0.0f, 0.0f)
                         Axis.Y -> particle.matrix.translateLocal(0.0f, v, 0.0f)
@@ -65,7 +71,7 @@ class PositionTransformer: ParticleArrayTransformer(
     }
 
     override fun getHeightInCells(): Int {
-        return 8
+        return 9
     }
 
     override fun writeExternal(o: ObjectOutput) {

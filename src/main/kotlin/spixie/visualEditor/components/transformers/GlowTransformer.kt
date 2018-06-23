@@ -1,6 +1,7 @@
 package spixie.visualEditor.components.transformers
 
 import spixie.static.linearInterpolate
+import spixie.static.perlinInterpolate
 import spixie.static.rand
 import spixie.visualEditor.ParticleArray
 import kotlin.math.roundToLong
@@ -23,9 +24,14 @@ class GlowTransformer: ParticleArrayTransformer(1.0, 0.01, 1.0, 100.0) {
             Mode.Random -> {
                 val min = inputRandomMin.receiveValue()
                 val max = inputRandomMax.receiveValue().coerceAtLeast(min)
+                val stretch = inputRandomStretch.receiveValue()
                 val seed = inputRandomSeed.receiveValue().roundToLong()
                 particles.array.forEachIndexed { index, particle ->
-                    particle.glow = (rand(0, 0, 0, 0, seed, index.toLong())*(max - min)+min).toFloat()
+                    val i = (index / stretch)
+                    val leftRandom  = rand(0, 0, 0, 0, seed, i.toLong()).toDouble()
+                    val rightRandom = rand(0, 0, 0, 0, seed, i.toLong()+1L).toDouble()
+                    val rand = perlinInterpolate(leftRandom, rightRandom, i%1)
+                    particle.glow = (rand*(max - min)+min).toFloat()
                 }
             }
         }

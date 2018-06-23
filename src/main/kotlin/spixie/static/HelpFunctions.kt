@@ -115,6 +115,10 @@ fun linearInterpolate(y1: Double, y2:Double, t:Double): Double {
     return (y1*(1.0-t)+y2*t)
 }
 
+fun perlinInterpolate(y1: Double, y2: Double, t:Double):Double{
+    return linearInterpolate(y1, y2, t * t * t * (t * (t * 6 - 15) + 10))
+}
+
 fun hue2rgb(p: Double,q: Double,t: Double): Double{
     val tt = when{
         t<0 -> t+1.0
