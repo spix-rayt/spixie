@@ -14,6 +14,10 @@ typedef struct{
 #define SSAA 5
 #define SSAA_SQUARED SSAA * SSAA //assert(SSAA_SQUARED<LOCAL_WORK_SIZE)
 
+float linearstep(float edge0, float edge1, float x){
+    return clamp((x-edge0)/(edge1-edge0), 0.0f, 1.0f);
+}
+
 __kernel void renderParticles(__global float *particles, int width, int height, int realWidth, int particlesCount, __global float *outImage) {
     __local Particle p[LOCAL_WORK_SIZE];
     __local float validp[LOCAL_WORK_SIZE];
@@ -67,9 +71,9 @@ __kernel void renderParticles(__global float *particles, int width, int height, 
             for(int ssaaI=0;ssaaI<SSAA_SQUARED;ssaaI++){
                 float2 pixelPosWithOffset = (float2)( (((imgx + ssaaOffsets[ssaaI].x)/(realWidth-1.0f))-0.5f)*1000.0f*realWidth/height , (((imgy + ssaaOffsets[ssaaI].y)/(height-1.0f))-0.5f)*1000.0f );
                 float d = fast_distance((float2)(p[i].x, p[i].y), pixelPosWithOffset)/p[i].size;
-                sum += (1.0f - smoothstep(p[i].edge, 1.0f, d)) * p[i].a * ssaaPixelIntensity;
+                sum += (1.0f - linearstep(p[i].edge, 1.0f, d)) * p[i].a * ssaaPixelIntensity;
                 float d_glow = d/p[i].glow;
-                sum += (1.0f - smoothstep(0.0f, 1.0f, d_glow)) * (1.0f - smoothstep(0.0f, 1.0f, d_glow)) * p[i].a * ssaaPixelIntensity / p[i].glow * smoothstep(p[i].edge, 1.0f, d);
+                sum += (1.0f - linearstep(0.0f, 1.0f, d_glow)) * (1.0f - linearstep(0.0f, 1.0f, d_glow)) * p[i].a * ssaaPixelIntensity / p[i].glow * linearstep(p[i].edge, 1.0f, d);
             }
             sum = clamp(sum, 0.0f, 1.0f);
             red = red*(1.0f-sum) + p[i].r*sum;
