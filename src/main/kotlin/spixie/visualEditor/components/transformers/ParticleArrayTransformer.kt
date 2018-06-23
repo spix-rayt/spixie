@@ -3,35 +3,38 @@ package spixie.visualEditor.components.transformers
 import javafx.collections.FXCollections
 import javafx.scene.control.ChoiceBox
 import spixie.Main
-import spixie.ValueControl
+import spixie.NumberControl
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ComponentPinNumber
+import spixie.visualEditor.ComponentPinParticleArray
 import spixie.visualEditor.ParticleArray
+import spixie.visualEditor.components.WithParticlesArrayInput
+import spixie.visualEditor.components.WithParticlesArrayOutput
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
 import java.util.concurrent.ThreadLocalRandom
 
-abstract class ParticleArrayTransformer(val default: Double, val dragDelta: Double, val min: Double, val max:Double, val additionalParameters: ArrayList<ChoiceBox<*>> = arrayListOf()): Component(), Externalizable {
+abstract class ParticleArrayTransformer(default: Double, dragDelta: Double, val min: Double, val max:Double, val additionalParameters: ArrayList<ChoiceBox<*>> = arrayListOf()): Component(), WithParticlesArrayInput, WithParticlesArrayOutput, Externalizable {
     enum class Mode {
         Simple, Linear, Random
     }
-    protected val inputParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
+    protected val inputParticles = ComponentPinParticleArray(this, null, "Particles")
 
-    protected val inputSimpleValue = ComponentPin(this, null, "Value", Double::class.java, ValueControl(default, dragDelta, "").limitMin(min).limitMax(max))
+    protected val inputSimpleValue = ComponentPinNumber(this, null, "Value", NumberControl(default, dragDelta, "").limitMin(min).limitMax(max))
 
-    protected val inputLinearFirst = ComponentPin(this, null, "First", Double::class.java, ValueControl(default, dragDelta, "").limitMin(min).limitMax(max))
-    protected val inputLinearLast = ComponentPin(this, null, "Last", Double::class.java, ValueControl(default, dragDelta, "").limitMin(min).limitMax(max))
+    protected val inputLinearFirst = ComponentPinNumber(this, null, "First", NumberControl(default, dragDelta, "").limitMin(min).limitMax(max))
+    protected val inputLinearLast = ComponentPinNumber(this, null, "Last", NumberControl(default, dragDelta, "").limitMin(min).limitMax(max))
 
-    protected val inputRandomMin = ComponentPin(this, null, "Min", Double::class.java, ValueControl((0.0).coerceIn(min, max), dragDelta, "").limitMin(min).limitMax(max))
-    protected val inputRandomMax = ComponentPin(this, null, "Max", Double::class.java, ValueControl(default, dragDelta, "").limitMin(min).limitMax(max))
-    protected val inputRandomSeed = ComponentPin(this, null, "Seed", Double::class.java, ValueControl(ThreadLocalRandom.current().nextInt(0, 10000).toDouble(), 1.0, "").limitMin(0.0))
+    protected val inputRandomMin = ComponentPinNumber(this, null, "Min", NumberControl((0.0).coerceIn(min, max), dragDelta, "").limitMin(min).limitMax(max))
+    protected val inputRandomMax = ComponentPinNumber(this, null, "Max", NumberControl(default, dragDelta, "").limitMin(min).limitMax(max))
+    protected val inputRandomSeed = ComponentPinNumber(this, null, "Seed", NumberControl(ThreadLocalRandom.current().nextInt(0, 10000).toDouble(), 1.0, "").limitMin(0.0))
 
     protected val parameterMode = ChoiceBox<Mode>(FXCollections.observableArrayList(Mode.values().toList())).apply {
         selectionModel.selectedItemProperty().addListener { _, _, newValue ->
             inputPins.forEach { it.isVisible = false }
             inputParticles.isVisible = true
-            when(newValue){
+            when(newValue!!){
                 Mode.Simple -> {
                     inputSimpleValue.isVisible = true
                 }
@@ -50,10 +53,10 @@ abstract class ParticleArrayTransformer(val default: Double, val dragDelta: Doub
         }
     }
 
-    private val outputParticles = ComponentPin(this, {
-        val particles = inputParticles.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
+    private val outputParticles = ComponentPinParticleArray(this, {
+        val particles = inputParticles.receiveValue()
         transform(particles)
-    }, "Particles", ParticleArray::class.java, null)
+    }, "Particles")
 
     init {
         val addParameters = additionalParameters + arrayListOf(parameterMode)
@@ -69,7 +72,19 @@ abstract class ParticleArrayTransformer(val default: Double, val dragDelta: Doub
         }
     }
 
+    override fun getHeightInCells(): Int {
+        return 7
+    }
+
     abstract fun transform(particles: ParticleArray): ParticleArray
+
+    override fun getParticlesArrayInput(): ComponentPinParticleArray {
+        return inputParticles
+    }
+
+    override fun getParticlesArrayOutput(): ComponentPinParticleArray {
+        return outputParticles
+    }
 
     override fun writeExternal(o: ObjectOutput) {
         super.writeExternal(o)

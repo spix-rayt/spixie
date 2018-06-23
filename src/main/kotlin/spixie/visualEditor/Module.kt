@@ -1,5 +1,6 @@
 package spixie.visualEditor
 
+import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import javafx.geometry.Point2D
 import javafx.scene.Group
 import javafx.scene.input.MouseButton
@@ -15,9 +16,13 @@ import spixie.static.mix
 import spixie.static.raw
 import spixie.visualEditor.components.ModuleComponent
 import spixie.visualEditor.components.Result
+import spixie.visualEditor.components.WithParticlesArrayInput
+import spixie.visualEditor.components.WithParticlesArrayOutput
+import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 class Module(var name: String) {
     val contentPane = Pane()
@@ -97,12 +102,12 @@ class Module(var name: String) {
     }
 
     fun addComponent(component: Component){
-        component.relocations.subscribe {
-            reconnectPins()
-        }
-        component.conneectionsChanged.subscribe{
-            reconnectPins()
-        }
+        component.conneectionsChanged
+                .debounce(17L, TimeUnit.MILLISECONDS)
+                .observeOn(JavaFxScheduler.platform())
+                .subscribe{
+                    reconnectPins()
+                }
         component.disconnectPinRequest.subscribe { pinForDisconnect->
             components.children.forEach { component ->
                 if(component is Component){
@@ -116,7 +121,7 @@ class Module(var name: String) {
                     }
                 }
             }
-            reconnectPins()
+            component.conneectionsChanged.onNext(Unit)
         }
         component.relocateSelectedRequests.subscribe { (x, y)->
             selectedComponents.forEach {
@@ -160,8 +165,10 @@ class Module(var name: String) {
                         }
                     }
                 }else{
-                    it.valueControl?.let { valueControl ->
-                        result = result mix valueControl.value.raw()
+                    if(it is ComponentPinNumber){
+                        it.valueControl?.let { valueControl ->
+                            result = result mix valueControl.value.raw()
+                        }
                     }
                 }
             }
@@ -172,11 +179,30 @@ class Module(var name: String) {
     fun reconnectPins(){
         connects.children.clear()
         contentPane.layout()
+        components.children.forEach { component->
+            if(component is WithParticlesArrayInput){
+                component.getParticlesArrayInput().imaginaryConnections.clear()
+            }
+        }
         components.children.forEach { component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
                     pin1.connections.forEach { pin2->
-                        connectPins(pin2, pin1)
+                        connectPins(pin2, pin1, Color.DARKVIOLET)
+                    }
+                }
+                if(component is WithParticlesArrayOutput){
+                    components.children.forEach { component2 ->
+                        if(component2 is Component && component2 is WithParticlesArrayInput){
+                            if(component.layoutX.roundToInt() == component2.layoutX.roundToInt()){
+                                if((component.layoutY+component.height).roundToInt() == component2.layoutY.roundToInt()+1){
+                                    val outputPin = component.getParticlesArrayOutput()
+                                    val inputPin = component2.getParticlesArrayInput()
+                                    connectPins(outputPin, inputPin, Color.DARKVIOLET.deriveColor(0.0, 1.0, 1.0, 0.15))
+                                    inputPin.imaginaryConnections.add(outputPin)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -185,7 +211,7 @@ class Module(var name: String) {
     }
 
 
-    private fun connectPins(pin1: ComponentPin<*>, pin2: ComponentPin<*>){
+    private fun connectPins(pin1: ComponentPin, pin2: ComponentPin, color: Color){
         val cubicCurve = CubicCurve()
         val aBounds = pin1.component.localToParent(pin1.component.content.localToParent(pin1.localToParent(pin1.circle.boundsInParent)))
         val bBounds = pin2.component.localToParent(pin2.component.content.localToParent(pin2.localToParent(pin2.circle.boundsInParent)))
@@ -198,8 +224,8 @@ class Module(var name: String) {
         cubicCurve.controlX2 = cubicCurve.endX - (cubicCurve.endX - cubicCurve.startX).absoluteValue.coerceIn(64.0..800.0)/2
         cubicCurve.controlY2 = cubicCurve.endY
         cubicCurve.fill = Color.TRANSPARENT
-        cubicCurve.strokeWidth = 4.0
-        cubicCurve.stroke = Color.DARKVIOLET
+        cubicCurve.strokeWidth = 3.0
+        cubicCurve.stroke = color
         connects.children.add(cubicCurve)
 
         cubicCurve.isMouseTransparent = true
@@ -209,7 +235,7 @@ class Module(var name: String) {
     fun toSerializable(): Triple<String, List<Component>, List<Pair<Pair<Int, String>, Pair<Int, String>>>> {
         val components = components.children.filter { it is Component }.map { it as Component }
         components.forEachIndexed { index, component -> component.serializationIndex = index }
-        val inputToOutputConnection = arrayListOf<Pair<ComponentPin<*>, ComponentPin<*>>>()
+        val inputToOutputConnection = arrayListOf<Pair<ComponentPin, ComponentPin>>()
         this.components.children.forEach { component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
@@ -252,7 +278,7 @@ class Module(var name: String) {
     }
 
     private fun updateBackgroundGrid(){
-        contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+16.5}px 0px, repeat, #00000022 5%, transparent 5%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+16.5}px, repeat, #00000022 5%, transparent 5%);"
+        contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+(VE_GRID_CELL_SIZE/2.0+0.5)}px 0px, repeat, #00000022 5%, transparent 5%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+(VE_GRID_CELL_SIZE/2.0+0.5)}px, repeat, #00000022 5%, transparent 5%);"
     }
 
     override fun toString(): String {

@@ -11,7 +11,6 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
 
 class ValueTextControl(initial: String, private val name: String) : HBox() {
-    private var mul = 1.0
     private val labelName = Label()
     private val labelValue = Label()
     private val textFieldValue = TextField()
@@ -25,11 +24,10 @@ class ValueTextControl(initial: String, private val name: String) : HBox() {
     val changes = PublishSubject.create<String>()
 
     override fun toString(): String {
-        return "ValueControl($name $value)"
+        return "NumberControl($name $value)"
     }
 
     init {
-        this.mul = mul
         if(name.isNotEmpty()){
             labelName.text = "$name: "
         }else{

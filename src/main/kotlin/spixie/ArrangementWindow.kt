@@ -182,7 +182,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         var i = 3
         graphs.forEach { graphContainter->
             graphsTreeContent.children.add(Pane().apply {
-                style="-fx-background-color: #FFFFFFFF;";
+                style="-fx-background-color: #FFFFFFFF;"
                 setMinSize(graphsTree.width-1, 100.0)
                 layoutY = i*100.0
                 children.add(graphContainter.name)
@@ -217,12 +217,12 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             if(graphContainter.expanded){
                 graphContainter.list.forEach { graph->
                     graphsTreeContent.children.add(Pane().apply {
-                        style="-fx-background-color: #FFFFFFFF;";
+                        style="-fx-background-color: #FFFFFFFF;"
                         setMinSize(graphsTree.width-1, 100.0)
                         layoutY = i*100.0
                         children.add(
                                 VBox(
-                                        graph.rangeFromControl,graph.rangeToControl
+                                        graph.rangeMaxControl, graph.rangeMinControl
                                 )
                         )
                         setOnContextMenuRequested { event->
@@ -408,6 +408,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             minWidth = 100.0
             maxWidth = 100.0
             children.addAll(Pane())
+            clip = Rectangle(0.0, 0.0, minWidth - 1.0, Double.POSITIVE_INFINITY)
 
             setOnContextMenuRequested { event->
                 ContextMenu(
@@ -424,7 +425,6 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         updateGraphTree()
 
         contentPane.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
-        graphsTree.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
             needRedrawWaveform = true

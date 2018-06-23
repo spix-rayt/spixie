@@ -24,10 +24,10 @@ class RotateTransformer: ParticleArrayTransformer(
     protected val parameterAxis = additionalParameters[0] as ChoiceBox<Axis>
 
     override fun transform(particles: ParticleArray): ParticleArray {
-        val axis = parameterAxis.value
-        when(parameterMode.value){
+        val axis = parameterAxis.value!!
+        when(parameterMode.value!!){
             Mode.Simple -> {
-                val v = ((inputSimpleValue.receiveValue() ?: 0.0) * Math.PI * 2).toFloat()
+                val v = (inputSimpleValue.receiveValue() * Math.PI * 2).toFloat()
                 when(axis){
                     Axis.X -> particles.array.forEach { it.matrix.rotateLocalX(v) }
                     Axis.Y -> particles.array.forEach { it.matrix.rotateLocalY(v) }
@@ -35,8 +35,8 @@ class RotateTransformer: ParticleArrayTransformer(
                 }
             }
             Mode.Linear -> {
-                val first = (inputLinearFirst.receiveValue() ?: 0.0)
-                val last = (inputLinearLast.receiveValue() ?: 0.0)
+                val first = inputLinearFirst.receiveValue()
+                val last = inputLinearLast.receiveValue()
                 particles.array.forEachIndexed { index, particle ->
                     val t = if(particles.decimalSize>1) index.toDouble()/(particles.decimalSize-1.0) else 0.0
                     val v = (linearInterpolate(first, last, t) * Math.PI * 2).toFloat()
@@ -48,9 +48,9 @@ class RotateTransformer: ParticleArrayTransformer(
                 }
             }
             Mode.Random -> {
-                val min = (inputRandomMin.receiveValue() ?: 0.0)
-                val max = (inputRandomMax.receiveValue() ?: 0.0).coerceAtLeast(min)
-                val seed = (inputRandomSeed.receiveValue() ?: 0.0).roundToLong()
+                val min = inputRandomMin.receiveValue()
+                val max = inputRandomMax.receiveValue().coerceAtLeast(min)
+                val seed = inputRandomSeed.receiveValue().roundToLong()
                 particles.array.forEachIndexed { index, particle ->
                     val v = ((rand(0, 0, 0, 0, seed, index.toLong()) *(max - min)+min) * Math.PI * 2).toFloat()
                     when(axis){
@@ -62,6 +62,10 @@ class RotateTransformer: ParticleArrayTransformer(
             }
         }
         return particles
+    }
+
+    override fun getHeightInCells(): Int {
+        return 8
     }
 
     override fun writeExternal(o: ObjectOutput) {

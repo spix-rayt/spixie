@@ -9,14 +9,14 @@ import java.io.ObjectOutput
 class ArrangementGraph: Externalizable {
     val data = GraphData()
     val canvas = Canvas(1.0, 100.0)
-    val rangeFromControl = ValueControl(0.0, 0.1, "From")
-    val rangeToControl = ValueControl(1.0, 0.1, "To")
+    val rangeMinControl = NumberControl(0.0, 0.1, "Min")
+    val rangeMaxControl = NumberControl(1.0, 0.1, "Max")
 
     init {
-        rangeFromControl.changes.subscribe {
+        rangeMinControl.changes.subscribe {
             Main.renderManager.requestRender()
         }
-        rangeToControl.changes.subscribe {
+        rangeMaxControl.changes.subscribe {
             Main.renderManager.requestRender()
         }
     }
@@ -24,15 +24,15 @@ class ArrangementGraph: Externalizable {
     override fun readExternal(o: ObjectInput) {
         data.points = o.readObject() as FloatArray
         data.jumpPoints.putAll(o.readObject() as HashMap<Int, Pair<Float, Float>>)
-        rangeFromControl.value = o.readDouble()
-        rangeToControl.value = o.readDouble()
+        rangeMinControl.value = o.readDouble()
+        rangeMaxControl.value = o.readDouble()
     }
 
     override fun writeExternal(o: ObjectOutput) {
         o.writeObject(data.points)
         o.writeObject(data.jumpPoints)
-        o.writeDouble(rangeFromControl.value)
-        o.writeDouble(rangeToControl.value)
+        o.writeDouble(rangeMinControl.value)
+        o.writeDouble(rangeMaxControl.value)
     }
 
     companion object {

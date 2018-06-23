@@ -16,6 +16,10 @@ import spixie.visualEditor.components.MoveRotate
 import spixie.visualEditor.components.Render
 import spixie.visualEditor.components.Result
 
+const val VE_GRID_CELL_SIZE = 20.0
+const val VE_PIN_WIDTH = VE_GRID_CELL_SIZE * 5
+const val VE_KEK = VE_GRID_CELL_SIZE*4
+
 class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
     var currentModule = Module("Main")
         private set

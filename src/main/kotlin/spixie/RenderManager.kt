@@ -20,9 +20,9 @@ import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
 class RenderManager {
-    val bpm = ValueControl(160.0, 1.0, "BPM")
+    val bpm = NumberControl(160.0, 1.0, "BPM")
     val time = TimeProperty(bpm)
-    val offset = ValueControl(0.0, 0.01, "Offset").apply {
+    val offset = NumberControl(0.0, 0.01, "Offset").apply {
         changes.subscribe {
             Main.arrangementWindow.needRedrawWaveform = true
         }

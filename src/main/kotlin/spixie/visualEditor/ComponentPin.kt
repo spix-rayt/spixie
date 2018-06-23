@@ -11,33 +11,32 @@ import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.scene.shape.Circle
 import spixie.Main
-import spixie.ValueControl
 import spixie.static.DragAndDropType
 
-class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, val name: String, private val type: Class<T>, val valueControl: ValueControl?): HBox() {
-    private val backgroundCircle = Circle(16.0, 16.0, 3.0, Color.BLACK)
-    private val selectionCircle = Circle(16.0, 16.0, 2.0, Color.WHITE)
+abstract class ComponentPin(val component: Component, val getValue: (() -> Any)?, val name: String): HBox() {
+    private val backgroundCircle = Circle(VE_GRID_CELL_SIZE/2, VE_GRID_CELL_SIZE/2, 2.0, Color.BLACK)
+    private val selectionCircle = Circle(VE_GRID_CELL_SIZE/2, VE_GRID_CELL_SIZE/2, 1.0, Color.WHITE)
     val circle = StackPane(backgroundCircle, selectionCircle).apply {
-        minWidth = 32.0
-        maxWidth = 32.0
+        minWidth = VE_GRID_CELL_SIZE
+        maxWidth = VE_GRID_CELL_SIZE
 
-        minHeight = 32.0
-        maxHeight = 32.0
+        minHeight = VE_GRID_CELL_SIZE
+        maxHeight = VE_GRID_CELL_SIZE
     }
-    val connections = mutableListOf<ComponentPin<*>>()
+    open val connections = mutableListOf<ComponentPin>()
+    open val imaginaryConnections = mutableListOf<ComponentPin>()
 
-    private val label = Label(name)
+    protected val label = Label(name)
 
     init {
         label.apply {
-            minWidth = 128.0 - 32.0
-            maxWidth = 128.0 - 32.0
+            minWidth = VE_PIN_WIDTH - VE_GRID_CELL_SIZE
+            maxWidth = VE_PIN_WIDTH - VE_GRID_CELL_SIZE
 
-            minHeight = 32.0
-            maxHeight = 32.0
+            minHeight = VE_GRID_CELL_SIZE
+            maxHeight = VE_GRID_CELL_SIZE
+            style="-fx-font-size: 8pt;"
         }
-
-        valueControl?.changes?.subscribe { Main.renderManager.requestRender() }
 
         setOnContextMenuRequested { event->
             ContextMenu(
@@ -79,8 +78,8 @@ class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, 
 
             setOnDragOver { event ->
                 if(event.gestureSource != this && event.dragboard.hasContent(DragAndDropType.PIN)){
-                    (Main.dragAndDropObject as? ComponentPin<*>)?.let { dragged ->
-                        if(dragged.component != this@ComponentPin.component && dragged.type == this@ComponentPin.type){
+                    (Main.dragAndDropObject as? ComponentPin)?.let { dragged ->
+                        if(dragged.component != this@ComponentPin.component && dragged::class == this@ComponentPin::class){
                             if(dragged.isInputPin() && this@ComponentPin.isOutputPin() || dragged.isOutputPin() && this@ComponentPin.isInputPin()){
                                 event.acceptTransferModes(TransferMode.LINK)
                                 selectionCircle.fill = Color.DARKVIOLET
@@ -102,7 +101,7 @@ class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, 
 
                 if(dragboard.hasContent(DragAndDropType.PIN)){
                     success = true
-                    (Main.dragAndDropObject as? ComponentPin<*>)?.let { dragged ->
+                    (Main.dragAndDropObject as? ComponentPin)?.let { dragged ->
                         if(dragged.component.inputPins.contains(dragged)){
                             dragged.connectWith(this@ComponentPin)
                         }else{
@@ -116,57 +115,27 @@ class ComponentPin<T : Any>(val component: Component, val getValue: (() -> T)?, 
         }
     }
 
-    fun connectWith(connection: ComponentPin<*>){
-        if(type == connection.type){
+    fun connectWith(connection: ComponentPin){
+        if(this::class == connection::class){
             connections.add(connection)
             component.conneectionsChanged.onNext(Unit)
         }
     }
 
-    private fun isInputPin(): Boolean {
+    protected fun isInputPin(): Boolean {
         return component.inputPins.contains(this)
     }
 
-    private fun isOutputPin(): Boolean {
+    protected fun isOutputPin(): Boolean {
         return component.outputPins.contains(this)
     }
 
-    fun receiveValue(): T? {
-        return when(type){
-            Double::class.java -> {
-                val values = connections
-                        .sortedBy { it.component.layoutY }
-                        .mapNotNull { it.getValue?.invoke() as? Double }
-                if(values.isEmpty() && valueControl != null)
-                    valueControl.value as? T
-                else
-                    values.sum().let { if(valueControl!=null) it.coerceIn(valueControl.min, valueControl.max) else it } as T
-            }
-            ParticleArray::class.java -> {
-                val particleArrays = connections
-                        .sortedBy { it.component.layoutY }
-                        .mapNotNull { (it.getValue?.invoke() as? ParticleArray) }
-                val resultArray = particleArrays.flatMap { it.array }
-                ParticleArray(resultArray, resultArray.size.toFloat() + particleArrays.sumByDouble { it.decimalSize.toDouble() }.rem(1.0).toFloat()) as T
-            }
-            ImageFloatBuffer::class.java -> {
-                connections
-                        .sortedBy { it.component.layoutY }
-                        .mapNotNull { it.getValue?.invoke() as? ImageFloatBuffer }
-                        .lastOrNull() as? T
-            }
-            else -> null
-        }
-    }
+    abstract fun receiveValue(): Any
 
-    fun updateUI(){
+    open fun updateUI(){
         if(isInputPin()){
             label.alignment = Pos.CENTER_LEFT
-            if(valueControl == null){
-                children.setAll(circle, label)
-            }else{
-                children.setAll(circle, label, valueControl)
-            }
+            children.setAll(circle, label)
         }
 
         if(isOutputPin()){

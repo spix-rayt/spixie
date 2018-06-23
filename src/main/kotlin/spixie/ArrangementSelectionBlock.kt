@@ -21,13 +21,13 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
             maxHeight = value
         }
 
-    var timeStart = Fraction.ZERO
+    var timeStart: Fraction = Fraction.ZERO
         set(value) {
             field = value
             updateLayout()
             Main.arrangementWindow.graphBuilderGroup.children.clear()
         }
-    var timeEnd = Fraction.ZERO
+    var timeEnd: Fraction = Fraction.ZERO
         set(value) {
             field = value
             updateLayout()

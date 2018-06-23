@@ -29,15 +29,13 @@ class OpenCLApi {
         val width=realWidth.roundUp(64)
         val height=realHeight
 
-        val outputImage = context.createFloatBuffer(realWidth * realHeight * 4, CLMemory.Mem.READ_WRITE)
-
         val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(64)
         if(particlesCount == 0){
             return createZeroBuffer(realWidth*realHeight*4)
         }
 
+        val outputImage = context.createFloatBuffer(realWidth * realHeight * 4, CLMemory.Mem.READ_WRITE)
         val inputParticles = context.createFloatBuffer(particlesCount * RenderBufferBuilder.PARTICLE_FLOAT_SIZE, CLMemory.Mem.READ_ONLY)
-
 
         inputParticles.buffer.put(particlesArray)
         inputParticles.buffer.rewind()

@@ -4,7 +4,7 @@ import io.reactivex.subjects.BehaviorSubject
 import javafx.application.Platform
 import spixie.static.frameToTime
 
-class TimeProperty(private var bpm: ValueControl) {
+class TimeProperty(private var bpm: NumberControl) {
     private var _frame = 0
     private var _time = 0.0
 

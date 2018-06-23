@@ -1,28 +1,28 @@
 package spixie.visualEditor.components
 
-import spixie.ValueControl
+import spixie.NumberControl
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPin
-import spixie.visualEditor.ParticleArray
+import spixie.visualEditor.ComponentPinNumber
+import spixie.visualEditor.ComponentPinParticleArray
 
-class MoveRotate: Component() {
-    private val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
-    private val inX = ComponentPin(this, null, "X",Double::class.java, ValueControl(0.0, 5.00, ""))
-    private val inY = ComponentPin(this, null, "Y",Double::class.java, ValueControl(0.0, 5.00, ""))
-    private val inZ = ComponentPin(this, null, "Z",Double::class.java, ValueControl(0.0, 5.00, ""))
-    private val inRotateX = ComponentPin(this, null, "RotateX", Double::class.java, ValueControl(0.0, 0.01, ""))
-    private val inRotateY = ComponentPin(this, null, "RotateY", Double::class.java, ValueControl(0.0, 0.01, ""))
-    private val inRotateZ = ComponentPin(this, null, "RotateZ", Double::class.java, ValueControl(0.0, 0.01, ""))
+class MoveRotate: Component(), WithParticlesArrayInput, WithParticlesArrayOutput {
+    private val inParticles = ComponentPinParticleArray(this, null, "Particles")
+    private val inX = ComponentPinNumber(this, null, "X", NumberControl(0.0, 5.00, ""))
+    private val inY = ComponentPinNumber(this, null, "Y", NumberControl(0.0, 5.00, ""))
+    private val inZ = ComponentPinNumber(this, null, "Z", NumberControl(0.0, 5.00, ""))
+    private val inRotateX = ComponentPinNumber(this, null, "RotateX", NumberControl(0.0, 0.01, ""))
+    private val inRotateY = ComponentPinNumber(this, null, "RotateY", NumberControl(0.0, 0.01, ""))
+    private val inRotateZ = ComponentPinNumber(this, null, "RotateZ", NumberControl(0.0, 0.01, ""))
 
 
-    private val outParticles = ComponentPin(this, {
-        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
-        val mx = inX.receiveValue() ?: 0.0
-        val my = inY.receiveValue() ?: 0.0
-        val mz = inZ.receiveValue() ?: 0.0
-        val rx = inRotateX.receiveValue() ?: 0.0
-        val ry = inRotateY.receiveValue() ?: 0.0
-        val rz = inRotateZ.receiveValue() ?: 0.0
+    private val outParticles = ComponentPinParticleArray(this, {
+        val particles = inParticles.receiveValue()
+        val mx = inX.receiveValue()
+        val my = inY.receiveValue()
+        val mz = inZ.receiveValue()
+        val rx = inRotateX.receiveValue()
+        val ry = inRotateY.receiveValue()
+        val rz = inRotateZ.receiveValue()
 
         particles.array.forEach {
             it.apply {
@@ -34,7 +34,7 @@ class MoveRotate: Component() {
             }
         }
         particles
-    }, "Particles", ParticleArray::class.java, null)
+    }, "Particles")
 
     fun changeZ(value:Double){
         inZ.valueControl?.value = value
@@ -50,6 +50,14 @@ class MoveRotate: Component() {
         inputPins.add(inRotateZ)
         outputPins.add(outParticles)
         updateVisual()
+    }
+
+    override fun getParticlesArrayInput(): ComponentPinParticleArray {
+        return inParticles
+    }
+
+    override fun getParticlesArrayOutput(): ComponentPinParticleArray {
+        return outParticles
     }
 
     companion object {

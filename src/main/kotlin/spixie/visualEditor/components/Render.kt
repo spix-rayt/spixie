@@ -3,15 +3,15 @@ package spixie.visualEditor.components
 import spixie.Main
 import spixie.opencl.RenderBufferBuilder
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ComponentPinImageFloatBuffer
+import spixie.visualEditor.ComponentPinParticleArray
 import spixie.visualEditor.ImageFloatBuffer
-import spixie.visualEditor.ParticleArray
 
-class Render: Component() {
-    private val inParticles = ComponentPin(this, null, "Particles", ParticleArray::class.java, null)
+class Render: Component(), WithParticlesArrayInput {
+    private val inParticles = ComponentPinParticleArray(this, null, "Particles")
 
-    private val outImage = ComponentPin(this, {
-        val particles = inParticles.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
+    private val outImage = ComponentPinImageFloatBuffer(this, {
+        val particles = inParticles.receiveValue()
 
         val renderBufferBuilder = RenderBufferBuilder(particles.array.size)
         particles.array.sortedBy { -it.matrix.m32() }.forEach { particle ->
@@ -34,12 +34,16 @@ class Render: Component() {
         val image = Main.opencl.render(renderBufferBuilder.complete(), w, h)
 
         ImageFloatBuffer(image, w, h, particlesCount = particles.array.size)
-    }, "Image", ImageFloatBuffer::class.java, null)
+    }, "Image")
 
     init {
         inputPins.add(inParticles)
         outputPins.add(outImage)
         updateVisual()
+    }
+
+    override fun getParticlesArrayInput(): ComponentPinParticleArray {
+        return inParticles
     }
 
     companion object {

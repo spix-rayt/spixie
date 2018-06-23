@@ -16,21 +16,19 @@ import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
 import kotlin.math.floor
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 abstract class Component:Region(), Externalizable {
     val parameters = arrayListOf<Node>()
-    val inputPins = arrayListOf<ComponentPin<*>>()
-    val outputPins = arrayListOf<ComponentPin<*>>()
+    val inputPins = arrayListOf<ComponentPin>()
+    val outputPins = arrayListOf<ComponentPin>()
     val content = Group()
 
     private var dragDelta = Point2D(0.0, 0.0)
 
 
     val conneectionsChanged = PublishSubject.create<Unit>()
-    val relocations = PublishSubject.create<Unit>()
-    val disconnectPinRequest = PublishSubject.create<ComponentPin<*>>()
+    val disconnectPinRequest = PublishSubject.create<ComponentPin>()
     val relocateSelectedRequests = PublishSubject.create<Pair<Double, Double>>()
     var selected = false
         set(value) {
@@ -58,8 +56,8 @@ abstract class Component:Region(), Externalizable {
 
         setOnMouseDragged { event ->
             if(event.button == MouseButton.PRIMARY){
-                val newX = ((event.sceneX + dragDelta.x) / 32.0).roundToInt() * 32.0
-                val newY = floor((event.sceneY + dragDelta.y) / 32.0) * 32.0
+                val newX = ((event.sceneX + dragDelta.x) / VE_GRID_CELL_SIZE).roundToInt() * VE_GRID_CELL_SIZE
+                val newY = floor((event.sceneY + dragDelta.y) / VE_GRID_CELL_SIZE) * VE_GRID_CELL_SIZE
                 if(layoutX != newX || layoutY != newY){
                     val diffX = newX - layoutX
                     val diffY = newY - layoutY
@@ -88,11 +86,11 @@ abstract class Component:Region(), Externalizable {
     }
 
     fun magneticRelocate(x: Double, y:Double){
-        val newX = (x / 32.0).roundToInt() * 32.0
-        val newY = floor(y / 32.0) * 32.0
+        val newX = (x / VE_GRID_CELL_SIZE).roundToInt() * VE_GRID_CELL_SIZE
+        val newY = floor(y / VE_GRID_CELL_SIZE) * VE_GRID_CELL_SIZE
         if(layoutX != newX || layoutY != newY){
             relocate(newX, newY)
-            relocations.onNext(Unit)
+            conneectionsChanged.onNext(Unit)
         }
     }
 
@@ -104,10 +102,10 @@ abstract class Component:Region(), Externalizable {
         content.children.clear()
         content.children.addAll(
                 Label(javaClass.simpleName.replace(Regex("[A-Z]"), { matchResult -> " ${matchResult.value}" })).apply {
-                    style="-fx-font-weight: bold; -fx-font-style: italic;"
+                    style="-fx-font-weight: bold; -fx-font-style: italic; -fx-font-size: 8pt;"
                     alignment = Pos.CENTER
-                    prefWidth = 256.0 + 96.0 + 1.0
-                    prefHeight = 32.0
+                    prefWidth = VE_PIN_WIDTH + VE_KEK + 1.0
+                    prefHeight = VE_GRID_CELL_SIZE
                 }
         )
         content.children.addAll(parameters)
@@ -117,12 +115,13 @@ abstract class Component:Region(), Externalizable {
         parameters.forEachIndexed { index, node ->
             node.apply {
                 this.layoutX = 0.0
-                this.layoutY = index*32.0+32.0
-                this.minWidth(128.0 - 32.0)
-                this.maxWidth(128.0 - 32.0)
+                this.layoutY = index*VE_GRID_CELL_SIZE+VE_GRID_CELL_SIZE
+                this.minWidth(VE_PIN_WIDTH - VE_GRID_CELL_SIZE)
+                this.maxWidth(VE_PIN_WIDTH - VE_GRID_CELL_SIZE)
 
-                this.minHeight(32.0)
-                this.maxHeight(32.0)
+                this.minHeight(VE_GRID_CELL_SIZE)
+                this.maxHeight(VE_GRID_CELL_SIZE)
+                this.style = "-fx-font-size: 8pt;"
             }
         }
 
@@ -130,21 +129,27 @@ abstract class Component:Region(), Externalizable {
 
         visibleInputPins.forEachIndexed { index, pin ->
             pin.layoutX = 0.0
-            pin.layoutY = index*32.0+32.0 + parameters.size*32.0
+            pin.layoutY = index*VE_GRID_CELL_SIZE+VE_GRID_CELL_SIZE + parameters.size*VE_GRID_CELL_SIZE
             pin.updateUI()
         }
 
         outputPins.forEachIndexed { index, pin ->
-            pin.layoutX = 256.0 + 96.0 - 128.0
-            pin.layoutY = index*32.0+32.0
+            pin.layoutX = VE_KEK
+            pin.layoutY = index*VE_GRID_CELL_SIZE+VE_GRID_CELL_SIZE + visibleInputPins.size*VE_GRID_CELL_SIZE + parameters.size*VE_GRID_CELL_SIZE
             pin.updateUI()
         }
 
 
-        prefWidth = 256.0 + 96.0 + 1.0
-        prefHeight = max(visibleInputPins.size + parameters.size, outputPins.size)*32.0 + 1.0 + 32.0
-        width = 256.0 + 96.0 + 1.0
-        height = max(visibleInputPins.size + parameters.size, outputPins.size)*32.0 + 1.0 + 32.0
+        prefWidth = VE_PIN_WIDTH + VE_KEK + 1.0
+        prefHeight = getHeightInCells() * VE_GRID_CELL_SIZE + 1.0
+        width = VE_PIN_WIDTH + VE_KEK + 1.0
+        height = getHeightInCells() * VE_GRID_CELL_SIZE + 1.0
+        conneectionsChanged.onNext(Unit)
+    }
+
+    protected open fun getHeightInCells(): Int {
+        val visibleInputPins = inputPins.filter { it.isVisible }
+        return visibleInputPins.size + parameters.size + outputPins.size + 1
     }
 
     var serializationIndex = -1
@@ -152,7 +157,7 @@ abstract class Component:Region(), Externalizable {
     override fun writeExternal(o: ObjectOutput) {
         o.writeDouble(layoutX)
         o.writeDouble(layoutY)
-        o.writeObject(inputPins.map { it.valueControl?.value })
+        o.writeObject(inputPins.map { (it as? ComponentPinNumber)?.valueControl?.value} )
         o.writeInt(serializationIndex)
     }
 
@@ -161,7 +166,10 @@ abstract class Component:Region(), Externalizable {
         val inputPinsValues = o.readObject() as List<Double?>
         inputPinsValues.zip(inputPins).forEach {
             it.first?.let { v ->
-                it.second.valueControl?.value = v
+                val second = it.second
+                if(second is ComponentPinNumber){
+                    second.valueControl?.value = v
+                }
             }
         }
         serializationIndex = o.readInt()

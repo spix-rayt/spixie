@@ -171,9 +171,9 @@ fun convertRGBToHueChroma(r:Double, g:Double, b:Double): Pair<Double, Double> {
     return h/6 to s
 }
 
-val Pr = 0.2126;
-val Pg = 0.7152;
-val Pb = 0.0722;
+val Pr = 0.2126
+val Pg = 0.7152
+val Pb = 0.0722
 
 fun calcLuminance(r:Double, g:Double, b:Double): Double{
     return r*Pr + g*Pg + b*Pb
@@ -217,7 +217,7 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
     })
 }
 
-val F_100 = Fraction.getFraction(100.0)
+val F_100: Fraction = Fraction.getFraction(100.0)
 
 object DragAndDropType {
     val PIN = DataFormat("PIN")

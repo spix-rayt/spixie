@@ -11,7 +11,7 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
 import org.apache.commons.lang3.math.Fraction
 
-class ValueControl(initial: Double, private val dragDelta: Double, private val name: String) : HBox() {
+class NumberControl(initial: Double, private val dragDelta: Double, private val name: String) : HBox() {
     private var startDragValue = Fraction.ZERO
     private val labelName = Label()
     private val labelValue = Label()
@@ -28,20 +28,20 @@ class ValueControl(initial: Double, private val dragDelta: Double, private val n
 
     var min = Double.NEGATIVE_INFINITY
         private set
-    fun limitMin(min: Double): ValueControl{
+    fun limitMin(min: Double): NumberControl{
         this.min = min
         return this
     }
 
     var max = Double.POSITIVE_INFINITY
         private set
-    fun limitMax(max:Double): ValueControl{
+    fun limitMax(max:Double): NumberControl{
         this.max = max
         return this
     }
 
     override fun toString(): String {
-        return "ValueControl($name $value)"
+        return "NumberControl($name $value)"
     }
 
     init {
@@ -56,7 +56,7 @@ class ValueControl(initial: Double, private val dragDelta: Double, private val n
         labelValue.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                startDragValue = Fraction.getFraction(value).add(Fraction.getFraction(this@ValueControl.dragDelta).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble())))
+                startDragValue = Fraction.getFraction(value).add(Fraction.getFraction(this@NumberControl.dragDelta).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble())))
                 dragged = false
             }
         }
@@ -64,7 +64,7 @@ class ValueControl(initial: Double, private val dragDelta: Double, private val n
         labelValue.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
             if (mouseEvent.button == MouseButton.PRIMARY) {
                 mouseEvent.consume()
-                value = startDragValue.subtract(Fraction.getFraction(this@ValueControl.dragDelta).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble()))).toDouble()
+                value = startDragValue.subtract(Fraction.getFraction(this@NumberControl.dragDelta).multiplyBy(Fraction.getFraction(mouseEvent.y.toInt().toDouble()))).toDouble()
                 dragged = true
             }
         }

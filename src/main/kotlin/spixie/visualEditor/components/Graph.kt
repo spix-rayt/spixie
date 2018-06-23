@@ -4,7 +4,7 @@ import javafx.scene.control.Label
 import spixie.ArrangementGraphsContainer
 import spixie.Main
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ComponentPinNumber
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
@@ -23,9 +23,9 @@ class Graph(): Component(), Externalizable {
     private val label = Label("")
 
     init {
-        outputPins.add(ComponentPin(this, {
+        outputPins.add(ComponentPinNumber(this, {
             graph.getValue(Main.arrangementWindow.visualEditor.time)
-        }, "Value", Double::class.java, null))
+        }, "Value", null))
         updateVisual()
         content.children.addAll(label)
     }

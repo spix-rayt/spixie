@@ -11,7 +11,7 @@ class ArrangementGraphsContainer: Externalizable {
 
     fun getValue(time: Double): Double{
         return list.fold(0.0){ acc, arrangementGraph ->
-            acc + arrangementGraph.data.getValue(time) * (arrangementGraph.rangeToControl.value - arrangementGraph.rangeFromControl.value) + arrangementGraph.rangeFromControl.value
+            acc + arrangementGraph.data.getValue(time) * (arrangementGraph.rangeMaxControl.value - arrangementGraph.rangeMinControl.value) + arrangementGraph.rangeMinControl.value
         }
     }
 

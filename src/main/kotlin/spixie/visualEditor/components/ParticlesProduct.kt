@@ -1,17 +1,17 @@
 package spixie.visualEditor.components
 
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ComponentPinParticleArray
 import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
 
 class ParticlesProduct: Component() {
-    private val inParticlesA = ComponentPin(this, null, "ParticlesA", ParticleArray::class.java, null)
-    private val inParticlesB = ComponentPin(this, null, "ParticlesB", ParticleArray::class.java, null)
+    private val inParticlesA = ComponentPinParticleArray(this, null, "ParticlesA")
+    private val inParticlesB = ComponentPinParticleArray(this, null, "ParticlesB")
 
-    private val outParticles = ComponentPin(this, {
-        val particlesA = inParticlesA.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
-        val particlesB = inParticlesB.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
+    private val outParticles = ComponentPinParticleArray(this, {
+        val particlesA = inParticlesA.receiveValue()
+        val particlesB = inParticlesB.receiveValue()
 
 
         val resultArray = particlesB.array.flatMap { pb ->
@@ -23,7 +23,7 @@ class ParticlesProduct: Component() {
             }
         }
         ParticleArray(resultArray, resultArray.size.toFloat())
-    }, "Particles", ParticleArray::class.java, null)
+    }, "Particles")
 
     init {
         inputPins.add(inParticlesA)

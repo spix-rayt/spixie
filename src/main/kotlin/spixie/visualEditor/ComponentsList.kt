@@ -4,10 +4,9 @@ package spixie.visualEditor
 import io.reactivex.rxjavafx.observables.JavaFxObservable
 import javafx.collections.ObservableList
 import javafx.scene.Node
+import javafx.scene.control.ListView
 import javafx.scene.control.ScrollPane
 import javafx.scene.control.TextField
-import javafx.scene.control.TreeItem
-import javafx.scene.control.TreeView
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import spixie.Main
@@ -15,8 +14,8 @@ import spixie.visualEditor.components.*
 import spixie.visualEditor.components.transformers.*
 
 class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, forMain: Boolean, private val result: (component: Component) -> Unit): BorderPane() {
-    private val treeView = TreeView<Any>(TreeItem("Components"))
-    private val scrollPane = ScrollPane(treeView)
+    private val listView = ListView<Any>()
+    private val scrollPane = ScrollPane(listView)
     private val textField = TextField()
     private val basicItemsList = listOf(
             ComponentListItem(SimpleParticlesGenerator::class.java),
@@ -35,19 +34,8 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             ComponentListItem(Render::class.java)
     )
 
-    val basicItems = TreeItem<Any>("Basic").apply { isExpanded = true }
-    val moduleItems = TreeItem<Any>("Module").apply { isExpanded = true }
-    val graphItems = TreeItem<Any>("Graphs").apply { isExpanded = true }
-
     init {
-        treeView.apply {
-            root.children.addAll(basicItems, moduleItems)
-            if(forMain) {
-
-                root.children.addAll(graphItems)
-            }
-            root.isExpanded = true
-
+        listView.apply {
             setOnMouseClicked {
                 createSelected()
             }
@@ -56,7 +44,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         textField.focusedProperty().addListener { _, _, newValue ->
             if(!newValue){
                 scene?.let { scene ->
-                    if(scene.focusOwner == scrollPane || scene.focusOwner == treeView){
+                    if(scene.focusOwner == scrollPane || scene.focusOwner == listView){
                         textField.requestFocus()
                     }else{
                         containerChildrens.remove(this@ComponentsList)
@@ -67,32 +55,35 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
 
         JavaFxObservable.valuesOf(textField.textProperty()).startWith(textField.text).subscribe { filterText->
             val filterRegex = Regex(filterText.toLowerCase().map { ".*$it" }.joinToString(separator = "") + ".*")
-            val selectedItem = treeView.selectionModel.selectedItem
-            basicItems.children.setAll(
-                    basicItemsList
+            val selectedItem = listView.selectionModel.selectedItem
+            listView.items.clear()
+            listView.items.addAll(
+                    *basicItemsList
                             .filter { it.clazz.simpleName.toLowerCase().contains(filterRegex) }
-                            .map { TreeItem<Any>(it) }
+                            .toTypedArray()
             )
 
-            moduleItems.children.setAll(
-                    Main.arrangementWindow.visualEditor.modules
+            listView.items.addAll(
+                    *Main.arrangementWindow.visualEditor.modules
                             .filter { it.name.toLowerCase().contains(filterRegex) }
                             .filter { !it.isMain }
-                            .map { TreeItem<Any>(it) }
+                            .toTypedArray()
             )
 
-            graphItems.children.setAll(
-                    Main.arrangementWindow.graphs
-                            .filter { it.name.value.toLowerCase().contains(filterRegex) }
-                            .map { TreeItem<Any>(ComponentListGraphItem(it)) }
-            )
+            if(forMain){
+                listView.items.addAll(
+                        *Main.arrangementWindow.graphs
+                                .filter { ("g"+it.name.value).toLowerCase().contains(filterRegex) }
+                                .map { ComponentListGraphItem(it) }
+                                .toTypedArray()
+                )
+            }
 
-            val allSelectableItems = (basicItems.children + moduleItems.children + graphItems.children)
-            val find = allSelectableItems.find { it.value == selectedItem?.value }
+            val find = listView.items.find { it == selectedItem }
             if(find != null){
-                treeView.selectionModel.select(find)
+                listView.selectionModel.select(find)
             }else{
-                treeView.selectionModel.select(allSelectableItems.firstOrNull())
+                listView.selectionModel.select(listView.items.firstOrNull())
             }
         }
 
@@ -103,11 +94,11 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
                     event.consume()
                 }
                 if(event.code == KeyCode.DOWN){
-                    treeView.selectionModel.select(treeView.selectionModel.selectedIndex+1)
+                    listView.selectionModel.selectNext()
                     event.consume()
                 }
                 if(event.code == KeyCode.UP){
-                    treeView.selectionModel.select((treeView.selectionModel.selectedIndex-1).coerceAtLeast(0))
+                    listView.selectionModel.selectPrevious()
                     event.consume()
                 }
                 if(event.code == KeyCode.ENTER){
@@ -128,7 +119,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
     }
 
     private fun createSelected(){
-        val value = treeView.selectionModel.selectedItem?.value
+        val value = listView.selectionModel.selectedItem
         if (value is ComponentListItem) {
             result(value.clazz.newInstance() as @kotlin.ParameterName(name = "component") Component)
             containerChildrens.remove(this@ComponentsList)

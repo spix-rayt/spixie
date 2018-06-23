@@ -29,10 +29,10 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
 
     private fun borderMode() {
         children.clear()
-        val startHeightValue = ValueControl(1.0, 0.01, "StartHeight").limitMin(0.0).limitMax(1.0)
-        val startShiftValue = ValueControl(0.0, 0.01, "StartShift").limitMin(0.0).limitMax(1.0)
-        val endHeightValue = ValueControl(1.0, 0.01, "EndHeight").limitMin(0.0).limitMax(1.0)
-        val endShiftValue = ValueControl(0.0, 0.01, "EndShift").limitMin(0.0).limitMax(1.0)
+        val startHeightValue = NumberControl(1.0, 0.01, "StartHeight").limitMin(0.0).limitMax(1.0)
+        val startShiftValue = NumberControl(0.0, 0.01, "StartShift").limitMin(0.0).limitMax(1.0)
+        val endHeightValue = NumberControl(1.0, 0.01, "EndHeight").limitMin(0.0).limitMax(1.0)
+        val endShiftValue = NumberControl(0.0, 0.01, "EndShift").limitMin(0.0).limitMax(1.0)
 
         mode(start, end, listOf(startHeightValue, startShiftValue, endHeightValue, endShiftValue)){ data ->
             val startHeight = startHeightValue.value
@@ -52,7 +52,7 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
         }
     }
 
-    private inline fun mode(start: Int, end: Int, valueControls: List<ValueControl>, crossinline processData: (copy: GraphData) -> Unit){
+    private inline fun mode(start: Int, end: Int, valueControls: List<NumberControl>, crossinline processData: (copy: GraphData) -> Unit){
         children.clear()
         val copy = graph.data.copy(start, end)
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {

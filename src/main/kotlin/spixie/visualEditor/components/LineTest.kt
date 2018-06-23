@@ -2,18 +2,18 @@ package spixie.visualEditor.components
 
 import org.joml.Vector3f
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPin
+import spixie.visualEditor.ComponentPinParticleArray
 import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
 
 class LineTest: Component() {
-    private val inParticlesA = ComponentPin(this, null, "ParticlesA", ParticleArray::class.java, null)
-    private val inParticlesB = ComponentPin(this, null, "ParticlesB", ParticleArray::class.java, null)
+    private val inParticlesA = ComponentPinParticleArray(this, null, "ParticlesA")
+    private val inParticlesB = ComponentPinParticleArray(this, null, "ParticlesB")
 
 
-    private val outParticles = ComponentPin(this, {
-        val particlesA = inParticlesA.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
-        val particlesB = inParticlesB.receiveValue() ?: ParticleArray(arrayListOf(), 0.0f)
+    private val outParticles = ComponentPinParticleArray(this, {
+        val particlesA = inParticlesA.receiveValue()
+        val particlesB = inParticlesB.receiveValue()
 
         val resultArray = particlesA.array.zip(particlesB.array).map { (p1,p2) ->
             val v = Vector3f(p2.matrix.m30() - p1.matrix.m30(), p2.matrix.m31() - p1.matrix.m31(), p2.matrix.m32() - p1.matrix.m32()).normalize()
@@ -24,7 +24,7 @@ class LineTest: Component() {
             }
         }.flatten()
         ParticleArray(resultArray, resultArray.size.toFloat())
-    }, "Particles", ParticleArray::class.java, null)
+    }, "Particles")
 
     init {
         inputPins.add(inParticlesA)

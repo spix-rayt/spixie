@@ -49,9 +49,10 @@ class WorkingWindow : BorderPane() {
             isFocusTraversable = false
         }
 
-        val timeLabel = ValueLabel("Time")
-        Main.renderManager.time.timeChanges.subscribe { time ->
-            timeLabel.value = Math.round(time*1000)/1000.0
+        val timeLabel = Label().apply {
+            Main.renderManager.time.timeChanges.subscribe { time ->
+                text = "Time: ${Math.round(time*1000)/1000.0}"
+            }
         }
 
         val particlesCountLabel = Label()
