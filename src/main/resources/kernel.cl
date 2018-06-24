@@ -73,7 +73,7 @@ __kernel void renderParticles(__global float *particles, int width, int height, 
                 float d = fast_distance((float2)(p[i].x, p[i].y), pixelPosWithOffset)/p[i].size;
                 sum += (1.0f - linearstep(p[i].edge, 1.0f, d)) * p[i].a * ssaaPixelIntensity;
                 float d_glow = d/p[i].glow;
-                sum += (1.0f - linearstep(0.0f, 1.0f, d_glow)) * (1.0f - linearstep(0.0f, 1.0f, d_glow)) * p[i].a * ssaaPixelIntensity / p[i].glow * linearstep(p[i].edge, 1.0f, d);
+                sum += (1.0f - linearstep(0.0f, 1.0f, d_glow)) * (1.0f - linearstep(0.0f, 1.0f, d_glow)) * p[i].a * ssaaPixelIntensity / p[i].glow / p[i].glow * linearstep(p[i].edge, 1.0f, d);
             }
             sum = clamp(sum, 0.0f, 1.0f);
             red = red*(1.0f-sum) + p[i].r*sum;

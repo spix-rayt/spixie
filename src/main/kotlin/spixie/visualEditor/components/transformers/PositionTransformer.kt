@@ -9,7 +9,6 @@ import spixie.visualEditor.ParticleArray
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
-import kotlin.math.roundToLong
 
 class PositionTransformer: ParticleArrayTransformer(
         0.0,
@@ -28,7 +27,7 @@ class PositionTransformer: ParticleArrayTransformer(
         val axis = parameterAxis.value!!
         when(parameterMode.value!!){
             Mode.Simple -> {
-                val v = inputSimpleValue.receiveValue().toFloat()
+                val v = inputValue.receiveValue().toFloat()
                 when(axis){
                     Axis.X -> particles.array.forEach { it.matrix.translateLocal(v, 0.0f, 0.0f) }
                     Axis.Y -> particles.array.forEach { it.matrix.translateLocal(0.0f, v, 0.0f) }
@@ -36,8 +35,8 @@ class PositionTransformer: ParticleArrayTransformer(
                 }
             }
             Mode.Linear -> {
-                val first = inputLinearFirst.receiveValue()
-                val last = inputLinearLast.receiveValue()
+                val first = inputFirst.receiveValue()
+                val last = inputLast.receiveValue()
                 particles.array.forEachIndexed { index, particle ->
                     val t = if(particles.decimalSize>1) index.toDouble()/(particles.decimalSize-1.0) else 0.0
                     val v = linearInterpolate(first, last, t).toFloat()
@@ -49,16 +48,21 @@ class PositionTransformer: ParticleArrayTransformer(
                 }
             }
             Mode.Random -> {
-                val min = inputRandomMin.receiveValue()
-                val max = inputRandomMax.receiveValue().coerceAtLeast(min)
-                val stretch = inputRandomStretch.receiveValue()
-                val seed = inputRandomSeed.receiveValue().roundToLong()
+                val min = inputMin.receiveValue()
+                val max = inputMax.receiveValue().coerceAtLeast(min)
+                val offset = inputOffset.receiveValue()
+                val stretch = inputStretch.receiveValue()
+                val seed = inputSeed.receiveValue()
                 particles.array.forEachIndexed { index, particle ->
-                    val i = (index / stretch)
-                    val leftRandom  = rand(0, 0, 0, 0, seed, i.toLong()).toDouble()
-                    val rightRandom = rand(0, 0, 0, 0, seed, i.toLong()+1L).toDouble()
+                    val i = ((index+offset) / stretch)
+                    val leftRandom  = rand(0, 0, 0, 0, seed.toLong(), i.toLong()).toDouble()
+                    val rightRandom = rand(0, 0, 0, 0, seed.toLong(), i.toLong()+1L).toDouble()
                     val rand = perlinInterpolate(leftRandom, rightRandom, i%1)
-                    val v = (rand *(max - min)+min).toFloat()
+                    val leftRandom2  = rand(0, 0, 0, 0, seed.toLong()+1, i.toLong()).toDouble()
+                    val rightRandom2 = rand(0, 0, 0, 0, seed.toLong()+1, i.toLong()+1L).toDouble()
+                    val rand2 = perlinInterpolate(leftRandom2, rightRandom2, i%1)
+                    val finalRand = linearInterpolate(rand, rand2, seed%1)
+                    val v = (finalRand * (max - min) + min).toFloat()
                     when(axis){
                         Axis.X -> particle.matrix.translateLocal(v, 0.0f, 0.0f)
                         Axis.Y -> particle.matrix.translateLocal(0.0f, v, 0.0f)
@@ -71,7 +75,7 @@ class PositionTransformer: ParticleArrayTransformer(
     }
 
     override fun getHeightInCells(): Int {
-        return 9
+        return 10
     }
 
     override fun writeExternal(o: ObjectOutput) {
