@@ -2,6 +2,7 @@ package spixie.visualEditor.components
 
 import spixie.Main
 import spixie.opencl.RenderBufferBuilder
+import spixie.static.convertHueChromaLuminanceToRGB
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPinImageFloatBuffer
 import spixie.visualEditor.ComponentPinParticleArray
@@ -16,14 +17,20 @@ class Render: Component(), WithParticlesArrayInput {
         val renderBufferBuilder = RenderBufferBuilder(particles.array.size)
         particles.array.sortedBy { -it.matrix.m32() }.forEach { particle ->
             if(particle.matrix.m32()>=40){
+                val (red,green,blue) = convertHueChromaLuminanceToRGB(
+                        if(particle.hasColor()) particle.hue/6.0 else 2.0/6.0,
+                        particle.chroma.toDouble(),
+                        particle.luminance.toDouble()/2,
+                        false
+                )
                 renderBufferBuilder.addParticle(
                         particle.matrix.m30()/(particle.matrix.m32()/1000),
                         particle.matrix.m31()/(particle.matrix.m32()/1000),
                         particle.size/(particle.matrix.m32()/1000),
-                        particle.red,
-                        particle.green,
-                        particle.blue,
-                        particle.alpha,
+                        red.toFloat(),
+                        green.toFloat(),
+                        blue.toFloat(),
+                        particle.transparency,
                         particle.edge,
                         particle.glow
                 )

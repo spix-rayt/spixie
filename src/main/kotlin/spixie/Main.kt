@@ -5,6 +5,7 @@ import io.reactivex.subjects.PublishSubject
 import javafx.animation.AnimationTimer
 import javafx.application.Application
 import javafx.application.Platform
+import javafx.embed.swing.SwingFXUtils
 import javafx.event.EventHandler
 import javafx.scene.CacheHint
 import javafx.scene.Scene
@@ -26,6 +27,7 @@ import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.imageio.ImageIO
 
 class Main : Application() {
     @Throws(Exception::class)
@@ -136,6 +138,10 @@ class Main : Application() {
                 }
                 if(event.code == KeyCode.F2){
                     OpenCLInfoWindow(scene.window)
+                }
+                if(event.code == KeyCode.F8){
+                    if(!File("screenshots/").exists()) File("screenshots/").mkdir()
+                    ImageIO.write(SwingFXUtils.fromFXImage(imageView.image, null), "png", File("screenshots/${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.png"))
                 }
             }
         }

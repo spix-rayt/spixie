@@ -4,33 +4,45 @@ import org.joml.Matrix4f
 import spixie.static.mix
 import spixie.static.raw
 import java.nio.FloatBuffer
+import kotlin.math.absoluteValue
 
 class Particle {
-    var red:Float = 1.0f
-    var green:Float = 1.0f
-    var blue:Float = 1.0f
-    var alpha:Float = 1.0f
+    var hue:Float = Float.NaN
+        set(value){
+            if(value>=0){
+                field = value.rem(6.0f)
+            }else{
+                field = 6.0f - value.absoluteValue.rem(6.0f)
+            }
+        }
+    var chroma:Float = 1.0f
+    var luminance:Float = 1.0f
+    var transparency:Float = 1.0f
     var size:Float = 1.0f
     var edge: Float = 0.0f
     var glow: Float = 1.0f
     val matrix = Matrix4f()
 
+    fun hasColor(): Boolean {
+        return !hue.isNaN()
+    }
+
     fun copy(): Particle {
         return Particle().apply {
-            this.red = this@Particle.red
-            this.green = this@Particle.green
-            this.blue = this@Particle.blue
-            this.alpha = this@Particle.alpha
+            this.hue = this@Particle.hue
+            this.chroma = this@Particle.chroma
+            this.luminance = this@Particle.luminance
+            this.transparency = this@Particle.transparency
             this.size = this@Particle.size
             this.matrix.set(this@Particle.matrix)
         }
     }
 
     fun spixieHash(): Long {
-        return red.raw() mix
-                green.raw() mix
-                blue.raw() mix
-                alpha.raw() mix
+        return hue.raw() mix
+                chroma.raw() mix
+                luminance.raw() mix
+                transparency.raw() mix
                 size.raw() mix
                 matrix.m00().raw() mix
                 matrix.m01().raw() mix
@@ -51,10 +63,10 @@ class Particle {
     }
 
     fun saveTo(floatBuffer: FloatBuffer) {
-        floatBuffer.put(red)
-        floatBuffer.put(green)
-        floatBuffer.put(blue)
-        floatBuffer.put(alpha)
+        floatBuffer.put(hue)
+        floatBuffer.put(chroma)
+        floatBuffer.put(luminance)
+        floatBuffer.put(transparency)
         floatBuffer.put(size)
         floatBuffer.put(matrix.m00())
         floatBuffer.put(matrix.m01())
@@ -75,10 +87,10 @@ class Particle {
     }
 
     fun loadFrom(floatBuffer: FloatBuffer){
-        red = floatBuffer.get()
-        green = floatBuffer.get()
-        blue = floatBuffer.get()
-        alpha = floatBuffer.get()
+        hue = floatBuffer.get()
+        chroma = floatBuffer.get()
+        luminance = floatBuffer.get()
+        transparency = floatBuffer.get()
         size = floatBuffer.get()
         matrix.m00(floatBuffer.get())
         matrix.m01(floatBuffer.get())

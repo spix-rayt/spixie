@@ -20,7 +20,6 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
     private val basicItemsList = listOf(
             ComponentListItem(SimpleParticlesGenerator::class.java),
             ComponentListItem(ParticlesProduct::class.java),
-            ComponentListItem(ParticlesPower::class.java),
             ComponentListItem(MoveRotate::class.java),
             ComponentListItem(Color::class.java),
             ComponentListItem(Slice::class.java),
@@ -31,6 +30,10 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             ComponentListItem(ScaleTransformer::class.java),
             ComponentListItem(RotateTransformer::class.java),
             ComponentListItem(PositionTransformer::class.java),
+            ComponentListItem(HueTransformer::class.java),
+            ComponentListItem(LuminanceTransformer::class.java),
+            ComponentListItem(ChromaTransformer::class.java),
+            ComponentListItem(TransparencyTransformer::class.java),
             ComponentListItem(Render::class.java)
     )
 

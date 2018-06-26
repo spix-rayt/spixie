@@ -18,6 +18,21 @@ class ParticlesProduct: Component() {
             particlesA.array.map { pa ->
                 Particle().apply {
                     pb.matrix.mul(pa.matrix, matrix)
+
+                    if(pa.hasColor()){
+                        if(pb.hasColor()){
+                            this.hue = pa.hue+pb.hue
+                        }else{
+                            this.hue = pa.hue
+                        }
+                    }else{
+                        if(pb.hasColor()){
+                            this.hue = pb.hue
+                        }
+                    }
+                    this.chroma = pa.chroma*pb.chroma
+                    this.luminance = pa.luminance*pb.luminance
+                    this.transparency = pa.transparency*pb.transparency
                     this.size = pa.size*pb.size
                 }
             }

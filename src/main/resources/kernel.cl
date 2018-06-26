@@ -117,7 +117,7 @@ float calcLuminance(float r, float g, float b){
 
 float3 convertHueChromaLuminanceToRGB(float h, float c, float l){
     float rangeA = 0.0f;
-    float rangeB = 10.0f;
+    float rangeB = 1.0f;
     float r = 0.0f;
     float g = 0.0f;
     float b = 0.0f;
