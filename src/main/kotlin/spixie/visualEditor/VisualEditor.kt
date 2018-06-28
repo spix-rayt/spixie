@@ -12,9 +12,10 @@ import javafx.scene.paint.Color
 import javafx.stage.Screen
 import spixie.Main
 import spixie.WorkingWindowOpenableContent
+import spixie.visualEditor.components.ImageResult
 import spixie.visualEditor.components.MoveRotate
+import spixie.visualEditor.components.ParticlesResult
 import spixie.visualEditor.components.Render
-import spixie.visualEditor.components.Result
 
 const val VE_GRID_CELL_SIZE = 20.0
 const val VE_PIN_WIDTH = VE_GRID_CELL_SIZE * 5
@@ -49,6 +50,7 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
             if(event.code == KeyCode.INSERT){
                 val newModule = Module("m${modules.size}")
                 modules.add(newModule)
+                newModule.addComponent(ParticlesResult())
                 loadModule(newModule)
                 event.consume()
             }
@@ -98,19 +100,18 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
                 }
 
         currentModule.apply {
-            val resultComponent = Result()
+            val resultComponent = ImageResult()
             addComponent(resultComponent)
-            resultComponent.magneticRelocate(768.0, 0.0)
-
             val renderComponent = Render()
             addComponent(renderComponent)
-            renderComponent.magneticRelocate(384.0, 0.0)
             resultComponent.inputPins[0].connectWith(renderComponent.outputPins[0])
 
             val moveComponent = MoveRotate()
             addComponent(moveComponent)
             moveComponent.changeZ(1000.0)
-            renderComponent.inputPins[0].connectWith(moveComponent.outputPins[0])
+
+            renderComponent.magneticRelocate(moveComponent.layoutX, moveComponent.layoutY+moveComponent.height)
+            resultComponent.magneticRelocate(renderComponent.layoutX+renderComponent.width, renderComponent.layoutY+renderComponent.height-resultComponent.height)
         }
     }
 

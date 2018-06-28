@@ -4,7 +4,7 @@ import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPinImageFloatBuffer
 import spixie.visualEditor.ImageFloatBuffer
 
-class Result : Component() {
+class ImageResult : Component() {
     private val imageInput = ComponentPinImageFloatBuffer(this, null, "Image")
     init {
         inputPins.add(imageInput)

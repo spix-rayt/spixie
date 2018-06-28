@@ -11,21 +11,7 @@ import java.io.ObjectOutput
 class ModuleComponent: Component(), Externalizable {
     var module: Module? = null
     private val outParticles = ComponentPinParticleArray(this, {
-        /*module?.let { module ->
-            val cacheKey = module.calcHashOfConsts()
-            val hash = cache[cacheKey]
-            if(hash != null){
-                if(ParticleArray.cacheMap.containsKey(hash)){
-                    return@ComponentPin ParticleArray(hash)
-                }
-            }
-
-            val result = module.findResultComponent().getParticles()
-            result.saveInCache()
-            cache[cacheKey] = result.hash
-            return@ComponentPin result
-        }*/
-        ParticleArray(arrayListOf(), 0.0f)
+        module?.findParticlesResultComponent()?.getParticles() ?: ParticleArray(arrayListOf(), 0.0f)
     }, "Particles")
 
     init {
@@ -47,7 +33,6 @@ class ModuleComponent: Component(), Externalizable {
     }
 
     companion object {
-        val cache = hashMapOf<Long, Long>()
         const val serialVersionUID = 0L
     }
 }

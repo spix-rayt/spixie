@@ -14,10 +14,7 @@ import spixie.static.MAGIC
 import spixie.static.initCustomPanning
 import spixie.static.mix
 import spixie.static.raw
-import spixie.visualEditor.components.ModuleComponent
-import spixie.visualEditor.components.Result
-import spixie.visualEditor.components.WithParticlesArrayInput
-import spixie.visualEditor.components.WithParticlesArrayOutput
+import spixie.visualEditor.components.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
 import kotlin.math.max
@@ -135,9 +132,14 @@ class Module(var name: String) {
         components.children.remove(component)
     }
 
-    fun findResultComponent(): Result {
-        val result = components.children.find { it is Result } ?: throw Exception("Result component dont exist")
-        return result as Result
+    fun findResultComponent(): ImageResult {
+        val result = components.children.find { it is ImageResult } ?: throw Exception("Result component dont exist")
+        return result as ImageResult
+    }
+
+    fun findParticlesResultComponent(): ParticlesResult {
+        val result = components.children.find { it is ParticlesResult } ?: throw Exception("Result component dont exist")
+        return result as ParticlesResult
     }
 
     fun updateModuleComponents(){
