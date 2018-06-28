@@ -57,6 +57,11 @@ class VisualEditor: BorderPane(), WorkingWindowOpenableContent {
             if(event.code == KeyCode.SHIFT){
                 shiftKeyReleaseEvents.onNext(Unit)
             }
+            if(event.code == KeyCode.E){
+                if(!currentModule.isMain){
+                    ModuleSettingsDialog(this.scene.window, currentModule)
+                }
+            }
         }
 
         shiftKeyReleaseEvents
