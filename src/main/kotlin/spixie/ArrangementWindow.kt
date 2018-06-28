@@ -418,32 +418,33 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                     val secondsInPixel = (endSecond - startSecond) / spectrogram.width
 
                     val bufferedImage = BufferedImage(spectrogram.width.toInt(), spectrogram.height.toInt(), BufferedImage.TYPE_3BYTE_BGR)
-                    val floatArray = IntArray(bufferedImage.width * bufferedImage.height * 3)
+                    val pixelArray = IntArray(bufferedImage.width * bufferedImage.height * 3)
 
                     val spectra = Main.audio.spectra
-                    if (spectra.isNotEmpty()) {
-                        for (x in 0 until bufferedImage.width) {
-                            val time = ((startSecond + x * secondsInPixel) * 100).roundToInt()
-                            for (y in 0 until bufferedImage.height) {
-                                val offset = (y * bufferedImage.width + x) * 3
+                    for (x in 0 until bufferedImage.width) {
+                        val time = ((startSecond + x * secondsInPixel) * 100).roundToInt()
+                        for (y in 0 until bufferedImage.height) {
+                            val offset = (y * bufferedImage.width + x) * 3
+                            if (time >= 0 && time < spectra.size && spectra.size > 2) {
                                 val t = ((1.0 - (y.toDouble() / bufferedImage.height)).pow(1.7) * 0.99 + 0.01).coerceIn(0.0, 1.0) * (spectra[0].size - 2)
-                                if (time >= 0 && time < spectra.size) {
-                                    val v = linearInterpolate(spectra[time][t.toInt()], spectra[time][t.toInt() + 1], t % 1)
-                                    val vv = ((1.0 - v) * 255).toInt().coerceIn(0, 255)
-                                    floatArray[offset] = vv
-                                    floatArray[offset + 1] = vv
-                                    floatArray[offset + 2] = vv
-                                }
+                                val v = linearInterpolate(spectra[time][t.toInt()], spectra[time][t.toInt() + 1], t % 1)
+                                val vv = ((1.0 - v) * 255).toInt().coerceIn(0, 255)
+                                pixelArray[offset] = vv
+                                pixelArray[offset + 1] = vv
+                                pixelArray[offset + 2] = vv
+                            }else{
+                                pixelArray[offset] = 255
+                                pixelArray[offset + 1] = 255
+                                pixelArray[offset + 2] = 255
                             }
                         }
                     }
 
-                    bufferedImage.raster.setPixels(0, 0, bufferedImage.width, bufferedImage.height, floatArray)
+                    bufferedImage.raster.setPixels(0, 0, bufferedImage.width, bufferedImage.height, pixelArray)
                     Pair(newWaveformLayoutX, SwingFXUtils.toFXImage(bufferedImage, null))
                 }
                 .observeOn(JavaFxScheduler.platform())
                 .subscribe { (newWaveformLayoutX, fxImage)->
-                    spectrogram.graphicsContext2D.clearRect(0.0, 0.0, spectrogram.width, spectrogram.height)
                     spectrogram.graphicsContext2D.drawImage(fxImage, 0.0, 0.0)
                     spectrogram.layoutX = newWaveformLayoutX
                 }
