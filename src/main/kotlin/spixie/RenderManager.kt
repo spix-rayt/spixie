@@ -24,7 +24,7 @@ class RenderManager {
     val time = TimeProperty(bpm)
     val offset = NumberControl(0.0, 0.01, "Offset").apply {
         changes.subscribe {
-            Main.arrangementWindow.needRedrawWaveform = true
+            Main.arrangementWindow.requestRedrawSpectrogram()
         }
     }
     private val frameCache = ReferenceMap<Int, ByteArray>()
@@ -44,7 +44,7 @@ class RenderManager {
             limitMin(60.0)
             limitMax(999.0)
             changes.subscribe { _->
-                Main.arrangementWindow.needRedrawWaveform = true
+                Main.arrangementWindow.requestRedrawSpectrogram()
             }
 
             Observable.zip(changes, changes.skip(1), BiFunction { previous: Double, current: Double -> previous to current }).subscribe { pair ->

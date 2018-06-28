@@ -1,6 +1,10 @@
 package spixie
 
+import io.reactivex.BackpressureStrategy
+import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
+import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
+import io.reactivex.subjects.PublishSubject
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
@@ -20,15 +24,16 @@ import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.lang3.math.Fraction
 import spixie.static.initCustomPanning
+import spixie.static.linearInterpolate
 import spixie.static.runInUIAndWait
 import spixie.visualEditor.Component
 import spixie.visualEditor.Module
 import spixie.visualEditor.VisualEditor
-import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
@@ -67,50 +72,13 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                 updateTimePointer()
             }
         }
-    private val waveform = Canvas(1.0, 300.0)
+    private val spectrogram = Canvas(1.0, 300.0)
     private val graphsTree = Pane().apply {
         style="-fx-background-color: #22313FFF"
     }
     val graphs = arrayListOf<ArrangementGraphsContainer>()
 
-    private fun redrawWaveform() {
-        val newWaveformLayoutX = -content.layoutX - 100
-        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble() - Main.renderManager.offset.value
-        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble() - Main.renderManager.offset.value
-
-        val startSecond = startTime*3600/Main.renderManager.bpm.value/60
-        val endSecond = endTime*3600/Main.renderManager.bpm.value/60
-
-        val secondsInPixel = (endSecond - startSecond) / waveform.width
-
-
-        val bufferedImage = BufferedImage(waveform.width.toInt(), waveform.height.toInt(), BufferedImage.TYPE_4BYTE_ABGR)
-        val g = bufferedImage.createGraphics()
-        g.color = Color(66, 170, 255, 255)
-        val rms = Main.audio.rms
-        if(rms.isNotEmpty()){
-            var from = 0
-            for(x in 0 until bufferedImage.width){
-                var maxrms = 0.0f
-                val to = Math.round((startSecond + x * secondsInPixel)*100).toInt()
-                if(from > to){
-                    from = to
-                }
-                for(i in from..to){
-                    if(i>0 && i<rms.size){
-                        val r = rms[i]
-                        if(r>maxrms) maxrms = r
-                    }
-                }
-                from = to
-                g.drawLine(x, ((0.5+ maxrms /2)*waveform.height).toInt(), x, ((0.5- maxrms /2)*waveform.height).toInt())
-            }
-        }
-        val toFXImage = SwingFXUtils.toFXImage(bufferedImage, null)
-        waveform.graphicsContext2D.clearRect(0.0, 0.0, waveform.width, waveform.height)
-        waveform.graphicsContext2D.drawImage(toFXImage, 0.0, 0.0)
-        waveform.layoutX = newWaveformLayoutX
-    }
+    private val redrawSpectrogram = PublishSubject.create<Unit>()
 
     private fun updateGrid(){
         contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
@@ -118,8 +86,6 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
 
     var needRedrawAllGraphs = false
     private var needUpdateGrid = false
-    var needRedrawWaveform = false
-
     fun perFrame(){
         if(needRedrawAllGraphs){
             redrawGraph(null)
@@ -129,10 +95,10 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             updateGrid()
             needUpdateGrid = false
         }
-        if(needRedrawWaveform){
-            redrawWaveform()
-            needRedrawWaveform = false
-        }
+    }
+
+    fun requestRedrawSpectrogram(){
+        redrawSpectrogram.onNext(Unit)
     }
 
     fun redrawGraph(only: ArrangementGraph?){
@@ -248,8 +214,8 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
 
     init {
         widthProperty().addListener { _, _, newValue ->
-            waveform.width = newValue.toDouble() + 200.0
-            needRedrawWaveform = true
+            spectrogram.width = newValue.toDouble() + 200.0
+            requestRedrawSpectrogram()
             needRedrawAllGraphs = true
         }
 
@@ -332,7 +298,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    needRedrawWaveform = true
+                    requestRedrawSpectrogram()
                     needRedrawAllGraphs = true
                     updateTimePointer()
 
@@ -351,7 +317,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    needRedrawWaveform = true
+                    requestRedrawSpectrogram()
                     needRedrawAllGraphs = true
                     updateTimePointer()
                 }
@@ -401,7 +367,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
 
         needUpdateGrid = true
 
-        content.children.addAll(waveform, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
+        content.children.addAll(spectrogram, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
         center = contentPane.apply { children.add(content) }
 
         left = graphsTree.apply {
@@ -427,16 +393,60 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         contentPane.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
-            needRedrawWaveform = true
+            requestRedrawSpectrogram()
             needUpdateGrid = true
             needRedrawAllGraphs = true
         }
         content.layoutYProperty().addListener { _, _, y ->
-            waveform.layoutY = -y.toDouble()
+            spectrogram.layoutY = -y.toDouble()
             graphsTree.children[0].layoutY = y.toDouble()
             needUpdateGrid = true
             needRedrawAllGraphs = true
         }
+
+        redrawSpectrogram.toFlowable(BackpressureStrategy.LATEST)
+                .observeOn(Schedulers.newThread(), false, 1)
+                .map {
+                    val newWaveformLayoutX = -content.layoutX - 100
+
+                    val startTime = (-content.layoutX - 100) * 64 / 100.0 / zoom.value!!.toDouble() - Main.renderManager.offset.value
+                    val endTime = (-content.layoutX + width + 100) * 64 / 100.0 / zoom.value!!.toDouble() - Main.renderManager.offset.value
+
+                    val startSecond = startTime * 3600 / Main.renderManager.bpm.value / 60
+                    val endSecond = endTime * 3600 / Main.renderManager.bpm.value / 60
+
+                    val secondsInPixel = (endSecond - startSecond) / spectrogram.width
+
+                    val bufferedImage = BufferedImage(spectrogram.width.toInt(), spectrogram.height.toInt(), BufferedImage.TYPE_3BYTE_BGR)
+                    val floatArray = IntArray(bufferedImage.width * bufferedImage.height * 3)
+
+                    val spectra = Main.audio.spectra
+                    if (spectra.isNotEmpty()) {
+                        for (x in 0 until bufferedImage.width) {
+                            val time = ((startSecond + x * secondsInPixel) * 100).roundToInt()
+                            for (y in 0 until bufferedImage.height) {
+                                val offset = (y * bufferedImage.width + x) * 3
+                                val t = ((1.0 - (y.toDouble() / bufferedImage.height)).pow(1.7) * 0.99 + 0.01).coerceIn(0.0, 1.0) * (spectra[0].size - 2)
+                                if (time >= 0 && time < spectra.size) {
+                                    val v = linearInterpolate(spectra[time][t.toInt()], spectra[time][t.toInt() + 1], t % 1)
+                                    val vv = ((1.0 - v) * 255).toInt().coerceIn(0, 255)
+                                    floatArray[offset] = vv
+                                    floatArray[offset + 1] = vv
+                                    floatArray[offset + 2] = vv
+                                }
+                            }
+                        }
+                    }
+
+                    bufferedImage.raster.setPixels(0, 0, bufferedImage.width, bufferedImage.height, floatArray)
+                    Pair(newWaveformLayoutX, SwingFXUtils.toFXImage(bufferedImage, null))
+                }
+                .observeOn(JavaFxScheduler.platform())
+                .subscribe { (newWaveformLayoutX, fxImage)->
+                    spectrogram.graphicsContext2D.clearRect(0.0, 0.0, spectrogram.width, spectrogram.height)
+                    spectrogram.graphicsContext2D.drawImage(fxImage, 0.0, 0.0)
+                    spectrogram.layoutX = newWaveformLayoutX
+                }
     }
 
     fun save(): ByteArray {
