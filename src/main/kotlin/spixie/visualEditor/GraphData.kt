@@ -1,136 +1,117 @@
 package spixie.visualEditor
 
 import spixie.static.linearInterpolate
+import java.io.Serializable
 
 class GraphData {
-    var points = floatArrayOf(0.0f)
-    val jumpPoints = hashMapOf<Int, Pair<Float, Float>>()
-
-    fun resizeIfNeed(newSize: Int){
-        if(newSize > points.size){
-            points = points.copyOf(newSize)
-        }
-    }
+    val values = arrayListOf<Fragment>()
 
     fun getValue(time: Double): Double {
         val x = time*100.0
         val xi = x.toInt()
-        return when{
-            x<0 -> getLeftValue(0).toDouble()
-            x>=points.lastIndex -> getRightValue(points.lastIndex).toDouble()
-            else -> {
-                val t = (x%1)
-                linearInterpolate(getRightValue(xi).toDouble(), getLeftValue(xi+1).toDouble(), t)
-            }
+        val t = (x%1)
+        val rightValue = getRightValue(xi)
+        val leftValue = getLeftValue(xi + 1)
+        return if(rightValue.isNaN() || leftValue.isNaN()){
+            Double.NaN
+        }else{
+            linearInterpolate(rightValue.toDouble(), leftValue.toDouble(), t)
         }
     }
 
     fun getLeftValue(index: Int): Float {
-        val coercedIndex = index.coerceIn(0, points.lastIndex)
-        return points[coercedIndex].let {
-            if(it == JUMP_POINT){
-                jumpPoints[coercedIndex]!!.first
-            }else{
-                it
+        var result = Float.NaN
+        var right = Float.NaN
+        values.forEach {
+            val start = it.start
+            val end = it.start + it.data.lastIndex
+            if(index in start..end){
+                if(index==start){
+                    right = it.data[index-start]
+                }else{
+                    result = it.data[index-start]
+                }
             }
         }
+        return if (result.isNaN())
+            right
+        else
+            result
     }
 
     fun getRightValue(index: Int): Float {
-        val coercedIndex = index.coerceIn(0, points.lastIndex)
-        return points[coercedIndex].let {
-            if(it == JUMP_POINT){
-                jumpPoints[coercedIndex]!!.second
-            }else{
-                it
-            }
-        }
-    }
-
-    fun setJumpPoint(x: Int, jump: Pair<Float, Float>){
-        jumpPoints[x] = jump
-        points[x] = JUMP_POINT
-    }
-
-    fun copy(from:Int, to:Int): GraphData {
-        val slicedPoints = points.sliceArray(from..to)
-        val slicedJumps = jumpPoints.filterKeys { (from..to).contains(it) }.mapKeys { it.key - from }
-        return GraphData().apply {
-            points = slicedPoints
-            jumpPoints.putAll(slicedJumps)
-        }
-    }
-
-    fun paste(from:Int, data: GraphData){
-        resizeIfNeed(from+data.points.size)
-        data.points.forEachIndexed { index, f ->
-            when (index) {
-                0 -> {
-                    val v = data.points[0]
-                    if(v == JUMP_POINT){
-                        setJumpPoint(from, getLeftValue(from) to data.jumpPoints[0]!!.second)
-                    }else{
-                        setJumpPoint(from, getLeftValue(from) to v)
-                    }
-                }
-                data.points.lastIndex -> {
-                    val v = data.points[index]
-                    if(v == JUMP_POINT){
-                        setJumpPoint(index+from, data.jumpPoints[index]!!.first to getRightValue(index+from))
-                    }else{
-                        setJumpPoint(index+from, v to getRightValue(index+from))
-                    }
-                }
-                else -> {
-                    this.points[index+from] = f
-                    if(f == JUMP_POINT){
-                        setJumpPoint(index+from, data.jumpPoints[index]!!)
-                    }
-                }
-            }
-        }
-    }
-
-    fun del(start: Int, end:Int){
-        val startValue = getLeftValue(start)
-        val endValue = getRightValue(end)
-        resizeIfNeed(end+1)
-        for(i in start..end){
-            val t = (i - start) / (end - start).toDouble()
-            points[i] = linearInterpolate(startValue.toDouble(), endValue.toDouble(), t).toFloat()
-        }
-    }
-
-    fun reverse(from: Int, to:Int){
-        for(i in from..to){
-            if(i<points.size){
-                val v = points[i]
-                if(v != JUMP_POINT){
-                    points[i] = 1.0f - v
+        var result = Float.NaN
+        var left = Float.NaN
+        values.forEach {
+            val start = it.start
+            val end = it.start + it.data.lastIndex
+            if(index in start..end){
+                if(index==end){
+                    left = it.data[index-start]
                 }else{
-                    when(i){
-                        from -> {
-                            jumpPoints[i]?.let {
-                                jumpPoints[i] = it.first to (1.0f - it.second)
-                            }
-                        }
-                        to -> {
-                            jumpPoints[i]?.let {
-                                jumpPoints[i] = (1.0f - it.first) to it.second
-                            }
-                        }
-                        else ->{
-                            jumpPoints[i]?.let {
-                                jumpPoints[i] = (1.0f - it.first) to (1.0f - it.second)
-                            }
-                        }
-                    }
+                    result = it.data[index-start]
+                }
+            }
+        }
+        return if (result.isNaN())
+            left
+        else
+            result
+    }
+
+    fun add(fragment: Fragment){
+        values.add(fragment)
+    }
+
+    fun copy(from: Int, to:Int): List<Fragment> {
+        return if(from<to){
+            values.mapNotNull {
+                val start = it.start
+                val end = it.start + it.data.lastIndex
+                when{
+                    from<=start && to>=end -> Fragment(it.start, it.data.clone())
+                    from>=end -> null
+                    to<=start -> null
+                    from>start && to<end -> Fragment(from, it.data.sliceArray((from-start)..(to-start)))
+                    from>start-> Fragment(from, it.data.sliceArray((from-start)..(end-start)))
+                    to<end -> Fragment(start, it.data.sliceArray(0..(to-start)))
+                    else -> null
+                }
+            }
+        }else{
+            listOf()
+        }
+    }
+
+    fun delete(deleteStart: Int, deleteEnd:Int){
+        if(deleteStart<deleteEnd){
+            val newValues = values.flatMap {
+                val start = it.start
+                val end = it.start + it.data.lastIndex
+                when{
+                    deleteStart<=start && deleteEnd>=end -> listOf()
+                    deleteEnd<=start -> listOf(it)
+                    deleteStart>=end -> listOf(it)
+                    deleteStart<=start && deleteEnd<end -> listOf(Fragment(deleteEnd, it.data.sliceArray((deleteEnd-start)..(end-start))))
+                    deleteStart>start && deleteEnd<end -> listOf(Fragment(start, it.data.sliceArray(0..(deleteStart-start))), Fragment(deleteEnd, it.data.sliceArray((deleteEnd-start)..(end-start))))
+                    deleteStart>start && deleteEnd>=end -> listOf(Fragment(start, it.data.sliceArray(0..(deleteStart-start))))
+                    else -> listOf(it) //unreachable
+                }
+            }
+            values.clear()
+            values.addAll(newValues)
+        }
+    }
+
+    fun reverse(from: Int, to: Int){
+        if(from<to){
+            values.forEach {
+                for(i in (from-it.start).coerceAtLeast(0)..(to-it.start).coerceAtMost(it.data.lastIndex)){
+                    it.data[i] = 1.0f - it.data[i]
                 }
             }
         }
     }
 
-    companion object {
-        const val JUMP_POINT = -1.0f
-    }
+    class Fragment(val start: Int, var data: FloatArray): Serializable
 }

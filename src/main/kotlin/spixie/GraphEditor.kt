@@ -39,27 +39,27 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
             val startShift = startShiftValue.value
             val endHeight = endHeightValue.value
             val endShift = endShiftValue.value
-            for(i in 0..(end-start)){
-                val t = i / (end-start).toDouble()
-                val height = linearInterpolate(startHeight, endHeight, t)
-                val shift = linearInterpolate(startShift, endShift, t)
-                if(data.points[i] == GraphData.JUMP_POINT){
-                    data.jumpPoints[i] = (data.jumpPoints[i]!!.first*height + (1.0 - height)*shift).toFloat() to (data.jumpPoints[i]!!.second*height + (1.0 - height)*shift).toFloat()
-                }else{
-                    data.points[i] = (data.points[i]*height + (1.0 - height)*shift).toFloat()
+            data.forEach { fragment->
+                for(i in 0..fragment.data.lastIndex){
+                    val t = (i+fragment.start-start) / (end-start).toDouble()
+                    val height = linearInterpolate(startHeight, endHeight, t)
+                    val shift = linearInterpolate(startShift, endShift, t)
+                    fragment.data[i] = (fragment.data[i]*height + (1.0 - height)*shift).toFloat()
                 }
             }
         }
     }
 
-    private inline fun mode(start: Int, end: Int, valueControls: List<NumberControl>, crossinline processData: (copy: GraphData) -> Unit){
+    private inline fun mode(start: Int, end: Int, valueControls: List<NumberControl>, crossinline processData: (copy: List<GraphData.Fragment>) -> Unit){
         children.clear()
         val copy = graph.data.copy(start, end)
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
-            graph.data.resizeIfNeed(end+1)
-            val data = GraphData().apply { points = copy.points.clone(); jumpPoints.putAll(copy.jumpPoints) }
+            val data = copy.map { GraphData.Fragment(it.start, it.data.clone()) }
             processData(data)
-            graph.data.paste(start,  data)
+            graph.data.delete(start, end)
+            data.forEach {
+                graph.data.add(it)
+            }
             Main.arrangementWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })

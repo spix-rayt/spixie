@@ -83,27 +83,29 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         }
     }
 
-    private var copyData = GraphData()
-    private var copyLength = 0
+    private var copyData = listOf<GraphData.Fragment>()
+    private var copyStart = 0
 
     fun copy(){
         graph?.let { graph ->
             copyData = graph.data.copy(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            copyLength = timeEnd.multiplyBy(F_100).toInt() - timeStart.multiplyBy(F_100).toInt()
+            copyStart = timeStart.multiplyBy(F_100).toInt()
         }
     }
 
     fun paste(){
         graph?.let { graph->
-            graph.data.del(timeStart.multiplyBy(F_100).toInt(), timeStart.multiplyBy(F_100).toInt() + copyLength)
-            graph.data.paste(timeStart.multiplyBy(F_100).toInt(), copyData)
+            val offset = timeStart.multiplyBy(F_100).toInt() - copyStart
+            copyData.forEach {
+                graph.data.add(GraphData.Fragment(it.start+offset, it.data.clone()))
+            }
             Main.arrangementWindow.needRedrawAllGraphs = true
         }
     }
 
     fun del() {
         graph?.let { graph ->
-            graph.data.del(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
+            graph.data.delete(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
             Main.arrangementWindow.needRedrawAllGraphs = true
         }
     }
@@ -111,11 +113,14 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
     fun duplicate(){
         graph?.let { graph->
             val p = graph.data.copy(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
+            val pStart = timeStart.multiplyBy(F_100).toInt()
             val l = timeEnd.subtract(timeStart)
             timeEnd = timeEnd.add(l)
             timeStart = timeStart.add(l)
-            graph.data.del(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            graph.data.paste(timeStart.multiplyBy(F_100).toInt(), p)
+            val offset = timeStart.multiplyBy(F_100).toInt() - pStart
+            p.forEach {
+                graph.data.add(GraphData.Fragment(it.start+offset, it.data.clone()))
+            }
             Main.arrangementWindow.needRedrawAllGraphs = true
         }
     }

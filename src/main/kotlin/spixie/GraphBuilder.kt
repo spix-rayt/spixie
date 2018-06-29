@@ -40,83 +40,74 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
         val intervalValue = NumberControl(1.0, 1.0, "Interval").limitMin(1.0)
         val seedValue = NumberControl(1.0, 1.0, "Seed").limitMin(0.0)
 
-        mode(start, end, listOf(intervalValue, seedValue)){
+        mode(start, end, listOf(intervalValue, seedValue)){ fragment->
             val seed = seedValue.value.toLong() + 1L
             val interval = intervalValue.value.toInt()
-            for(i in start..end){
-                val n = i-start
+            fragment.data = FloatArray(fragment.data.size){ i->
+                val n = i
                 val d = n%interval
                 val v1 = n-d
-                if(d==0 && i != start && i != end){
-                    graph.data.setJumpPoint(i, rand(0, 0, 0, 0, seed, (v1+start-interval).toLong()) to rand(0, 0, 0, 0, seed, (v1+start).toLong()))
-                }else{
-                    graph.data.points[i] = rand(0, 0, 0, 0, seed, (v1+start).toLong())
-                }
+                rand(0, 0, 0, 0, seed, (v1+start).toLong())
             }
         }
     }
 
     private fun sineMode() {
-        val startValue = NumberControl(graph.data.getRightValue(start).toDouble(), 0.001, "Start").limitMin(-1.0).limitMax(1.0)
+        val startValue = NumberControl(graph.data.getRightValue(start).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(-1.0).limitMax(1.0)
         val frequencyValue = NumberControl(1.0, 0.01, "Frequency").limitMin(0.01)
 
-        mode(start, end, listOf(startValue, frequencyValue)){
-            for(i in start..end){
-                val t = (((i - start) / 100.0) *frequencyValue.value + (startValue.value/2+0.75)*4) * Math.PI / 2
-                graph.data.points[i] = ((Math.sin(t)+1.0)/2).toFloat()
+        mode(start, end, listOf(startValue, frequencyValue)){ fragment->
+            fragment.data = FloatArray(fragment.data.size){ i->
+                val t = ((i / 100.0) *frequencyValue.value + (startValue.value/2+0.75)*4) * Math.PI / 2
+                ((Math.sin(t)+1.0)/2).toFloat()
             }
         }
     }
 
     private fun curveMode(){
-        val startValue = NumberControl(graph.data.getRightValue(start).toDouble(), 0.001, "Start").limitMin(0.0).limitMax(1.0)
+        val startValue = NumberControl(graph.data.getRightValue(start).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(0.0).limitMax(1.0)
         val curvatureValue = NumberControl(0.0, 0.01, "Curvature")
-        val endValue = NumberControl(graph.data.getLeftValue(end).toDouble(), 0.001, "End").limitMin(0.0).limitMax(1.0)
-        mode(start, end, listOf(startValue, curvatureValue, endValue)) {
-            for(i in start..end){
+        val endValue = NumberControl(graph.data.getLeftValue(end).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "End").limitMin(0.0).limitMax(1.0)
+        mode(start, end, listOf(startValue, curvatureValue, endValue)) { fragment->
+            fragment.data = FloatArray(fragment.data.size){ i->
                 val curvature = if(startValue.value > endValue.value) -curvatureValue.value else curvatureValue.value
                 val t = if(curvature > 0){
-                    1.0-((i - start) / (end - start).toDouble())
+                    1.0-(i / (end - start).toDouble())
                 }else {
-                    ((i - start) / (end - start).toDouble())
+                    (i / (end - start).toDouble())
                 }
                 val curvaturePower = if(curvature>0) curvature+1.0 else - curvature+1.0
 
                 if(curvature <= 0){
-                    graph.data.points[i] = linearInterpolate(startValue.value, endValue.value, Math.pow(t, curvaturePower)).toFloat()
+                    linearInterpolate(startValue.value, endValue.value, Math.pow(t, curvaturePower)).toFloat()
                 }else{
-                    graph.data.points[i] = linearInterpolate(endValue.value, startValue.value, Math.pow(t, curvaturePower)).toFloat()
+                    linearInterpolate(endValue.value, startValue.value, Math.pow(t, curvaturePower)).toFloat()
                 }
             }
         }
     }
 
     private fun tanhMode(){
-        val startValue = NumberControl(graph.data.getRightValue(start).toDouble(), 0.001, "Start").limitMin(0.0).limitMax(1.0)
+        val startValue = NumberControl(graph.data.getRightValue(start).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(0.0).limitMax(1.0)
         val stretchValue = NumberControl(10.0, 0.01, "Stretch").limitMin(0.01)
-        val endValue = NumberControl(graph.data.getLeftValue(end).toDouble(), 0.001, "End").limitMin(0.0).limitMax(1.0)
+        val endValue = NumberControl(graph.data.getLeftValue(end).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "End").limitMin(0.0).limitMax(1.0)
 
-        mode(start, end, listOf(startValue, stretchValue, endValue)){
+        mode(start, end, listOf(startValue, stretchValue, endValue)){ fragment->
             val min = min(startValue.value, endValue.value)
             val max = max(startValue.value, endValue.value)
-            for(i in start..end){
-                val t = ((i - start) / (end - start).toDouble()*2-1)*stretchValue.value* sign(endValue.value - startValue.value)
-                graph.data.points[i] = (((tanh(t)+tanh(stretchValue.value))/(tanh(stretchValue.value)*2)*(max-min))+min).toFloat()
+            fragment.data = FloatArray(fragment.data.size){ i->
+                val t = (i / (end - start).toDouble()*2-1)*stretchValue.value* sign(endValue.value - startValue.value)
+                (((tanh(t)+tanh(stretchValue.value))/(tanh(stretchValue.value)*2)*(max-min))+min).toFloat()
             }
         }
     }
 
-    private inline fun mode(start: Int, end: Int, valueControls: List<NumberControl>, crossinline updateData: () -> Unit){
+    private inline fun mode(start: Int, end: Int, valueControls: List<NumberControl>, crossinline processData: (fragment: GraphData.Fragment) -> Unit){
         children.clear()
-        val startLeftValue = graph.data.getLeftValue(start).toDouble()
-        val endRightValue = graph.data.getRightValue(end).toDouble()
+        val fragment = GraphData.Fragment(start, FloatArray(end-start+1))
+        graph.data.add(fragment)
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
-            graph.data.resizeIfNeed(end+1)
-            updateData()
-            graph.data.setJumpPoint(start, startLeftValue.toFloat() to graph.data.points[start])
-            graph.data.points[start] = GraphData.JUMP_POINT
-            graph.data.setJumpPoint(end, graph.data.points[end] to endRightValue.toFloat())
-            graph.data.points[end] = GraphData.JUMP_POINT
+            processData(fragment)
             Main.arrangementWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })

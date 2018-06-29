@@ -22,15 +22,14 @@ class ArrangementGraph: Externalizable {
     }
 
     override fun readExternal(o: ObjectInput) {
-        data.points = o.readObject() as FloatArray
-        data.jumpPoints.putAll(o.readObject() as HashMap<Int, Pair<Float, Float>>)
+        data.values.clear()
+        data.values.addAll(o.readObject() as ArrayList<GraphData.Fragment>)
         rangeMinControl.value = o.readDouble()
         rangeMaxControl.value = o.readDouble()
     }
 
     override fun writeExternal(o: ObjectOutput) {
-        o.writeObject(data.points)
-        o.writeObject(data.jumpPoints)
+        o.writeObject(data.values)
         o.writeDouble(rangeMinControl.value)
         o.writeDouble(rangeMaxControl.value)
     }
