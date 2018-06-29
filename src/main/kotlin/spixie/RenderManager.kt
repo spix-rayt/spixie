@@ -81,7 +81,7 @@ class RenderManager {
                             val bufferedImage = image.toBufferedImageAndRelease()
                             lastRenderedParticlesCount.onNext(image.particlesCount)
                             images.onNext(SwingFXUtils.toFXImage(bufferedImage, null))
-                            Flowable.fromCallable { bufferedImage.toPNGByteArray() }
+                            Flowable.fromCallable { bufferedImage.toJPEGByteArray() }
                                     .subscribeOn(Schedulers.computation())
                                     .observeOn(renderThread)
                                     .subscribe {
@@ -107,11 +107,13 @@ class RenderManager {
         forceRender.onNext(Unit)
     }
 
-    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean, offsetAudio: Double) {
+    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean, offsetAudio: Double, lowQuality: Boolean) {
         Thread(Runnable {
-            val w = 1920
-            val h = 1080
-            val fps = 60
+            val downscale = if(lowQuality) 2 else 1
+            val fpsskip = if(lowQuality) 3 else 1
+            val w = 1920 / downscale
+            val h = 1080 / downscale
+            val fps = 60 / fpsskip
             val countFrames = endFrame-startFrame+1
             val ifAudio = { v: String-> if(audio) v else null }
             val processBuilder = ProcessBuilder(
@@ -128,8 +130,9 @@ class RenderManager {
                             "-c:v", "libx264",
                             "-tune", "animation",
                             "-x264-params","keyint=10",
-                            "-crf", "17",
+                            "-crf", if(lowQuality) "23" else "17",
                             "-pix_fmt", "yuv420p",
+                            if(lowQuality) "-filter" else null, if(lowQuality) "minterpolate='fps=60'" else null,
                             ifAudio("-c:a"), ifAudio("aac"),
                             "-shortest",
                             "out.mp4"
@@ -143,19 +146,19 @@ class RenderManager {
             try{
                 kotlin.run {
                     val bufferedImage1 = BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR)
-                    for(frame in 0 until startFrame){
+                    for(frame in 0 until startFrame step fpsskip){
                         ImageIO.write(bufferedImage1, "png", outputStream)
                     }
                 }
 
-                for (frame in startFrame..endFrame) {
+                for (frame in startFrame..endFrame step fpsskip) {
                     if(!process.isAlive){
                         break
                     }
                     val bufferedImage = Flowable.fromArray(*((0 until motionBlurIterations).toList().toTypedArray()))
                             .subscribeOn(renderThread)
                             .map { k->
-                                Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k + 1) / motionBlurIterations.toDouble()), 1).buffer
+                                Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k + 1) / motionBlurIterations.toDouble()), downscale).buffer
                             }
                             .map { buffer->
                                 Main.opencl.brightPixelsToWhite(buffer, w, h).also { buffer.release() }

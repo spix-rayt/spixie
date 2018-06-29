@@ -25,9 +25,10 @@ class RenderDialog(owner: Window): Stage() {
         val progressBar = ProgressBar(0.0)
         val renderButton = Button("Render")
         val checkBoxAudio = CheckBox().apply { isSelected=true }
+        val checkBoxLowQuality = CheckBox()
         val remainingTimeLabel = Label("")
-        val grid = GridPane()
 
+        val grid = GridPane()
         grid.add(
                 Label().apply {
                     val textF = { v:Int -> "Motion Blur: ${if(v==1) "Off" else "x$v slower render"}" }
@@ -41,9 +42,11 @@ class RenderDialog(owner: Window): Stage() {
         grid.add(motionBlurSlider, 1, 0)
         grid.add(Label("Audio"), 0, 1)
         grid.add(checkBoxAudio, 1, 1)
-        grid.add(progressBar,0, 2, 2, 1)
-        grid.add(remainingTimeLabel, 0, 3)
-        grid.add(renderButton, 0, 4, 2, 1)
+        grid.add(Label("Low Quality"), 0, 2)
+        grid.add(checkBoxLowQuality, 1, 2)
+        grid.add(progressBar,0, 3, 2, 1)
+        grid.add(remainingTimeLabel, 0, 4)
+        grid.add(renderButton, 0, 5, 2, 1)
 
         grid.columnConstraints.addAll(ColumnConstraints(300.0), ColumnConstraints(500.0))
         grid.vgap = 8.0
@@ -75,7 +78,8 @@ class RenderDialog(owner: Window): Stage() {
                         selectedFrames.first,
                         selectedFrames.second,
                         checkBoxAudio.isSelected,
-                        Main.renderManager.offset.value/Main.renderManager.bpm.value*60.0
+                        Main.renderManager.offset.value/Main.renderManager.bpm.value*60.0,
+                        checkBoxLowQuality.isSelected
                 )
             }
             setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE)

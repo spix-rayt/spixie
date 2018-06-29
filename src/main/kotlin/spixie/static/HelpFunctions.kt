@@ -14,7 +14,9 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.nio.FloatBuffer
 import java.util.concurrent.CountDownLatch
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.plugins.jpeg.JPEGImageWriteParam
 
 fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     val nozerop0 = (p0 and  0x7FFFFFFFFFFFFFFF) + 1
@@ -74,9 +76,19 @@ fun Float.raw():Long{
     return this.toDouble().raw()
 }
 
-fun BufferedImage.toPNGByteArray():ByteArray {
+fun BufferedImage.toJPEGByteArray():ByteArray {
     val byteArrayOutputStream = ByteArrayOutputStream()
-    ImageIO.write(this, "png", byteArrayOutputStream)
+    ImageIO.getImageWritersByFormatName("jpg").next().run {
+        output = ImageIO.createImageOutputStream(byteArrayOutputStream)
+        write(
+                null,
+                IIOImage(this@toJPEGByteArray, null, null),
+                JPEGImageWriteParam(null).apply {
+                    compressionMode = JPEGImageWriteParam.MODE_EXPLICIT
+                    compressionQuality = 0.7f
+                }
+        )
+    }
     return byteArrayOutputStream.toByteArray()
 }
 
