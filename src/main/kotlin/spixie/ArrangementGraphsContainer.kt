@@ -12,14 +12,16 @@ class ArrangementGraphsContainer: Externalizable {
 
     fun getValue(time: Double): Double{
         return list.fold(0.0){ acc, arrangementGraph ->
-            acc + arrangementGraph.data.getValue(time) * (arrangementGraph.rangeMaxControl.value - arrangementGraph.rangeMinControl.value) + arrangementGraph.rangeMinControl.value
+            val v = arrangementGraph.data.getValue(time).let { if(it.isNaN()) 0.0 else it }
+            acc + v * (arrangementGraph.rangeMaxControl.value - arrangementGraph.rangeMinControl.value) + arrangementGraph.rangeMinControl.value
         }
     }
 
     fun getSum(time: Double): Double{
         return list.fold(0.0){ acc, arrangementGraph ->
             acc + (0..(time*100).roundToInt()).fold(0.0) {acc2, t ->
-                acc2 + arrangementGraph.data.getLeftValue(t) * (arrangementGraph.rangeMaxControl.value - arrangementGraph.rangeMinControl.value) + arrangementGraph.rangeMinControl.value
+                val v = arrangementGraph.data.getLeftValue(t).let { if(it.isNaN()) 0.0f else it }
+                acc2 + v * (arrangementGraph.rangeMaxControl.value - arrangementGraph.rangeMinControl.value) + arrangementGraph.rangeMinControl.value
             }
         }/100.0
     }
