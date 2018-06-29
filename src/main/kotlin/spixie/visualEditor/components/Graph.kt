@@ -1,5 +1,7 @@
 package spixie.visualEditor.components
 
+import javafx.collections.FXCollections
+import javafx.scene.control.ChoiceBox
 import javafx.scene.control.Label
 import spixie.ArrangementGraphsContainer
 import spixie.Main
@@ -20,19 +22,37 @@ class Graph(): Component(), Externalizable {
         }
     }
 
+    enum class Mode {
+        Value, Sum
+    }
+
     private val label = Label("")
+    private val parameterMode = ChoiceBox<Mode>(FXCollections.observableArrayList(Mode.values().toList()))
 
     init {
+        parameters.add(parameterMode)
         outputPins.add(ComponentPinNumber(this, {
-            graph.getValue(Main.arrangementWindow.visualEditor.time)
+            when(parameterMode.value){
+                Mode.Value -> {
+                    graph.getValue(Main.arrangementWindow.visualEditor.time)
+                }
+                Mode.Sum -> {
+                    graph.getSum(Main.arrangementWindow.visualEditor.time)
+                }
+            }
         }, "Value", null))
         updateVisual()
         content.children.addAll(label)
+        parameterMode.selectionModel.select(0)
+        parameterMode.selectionModel.selectedItemProperty().addListener { _, _, _ ->
+            Main.renderManager.requestRender()
+        }
     }
 
     override fun writeExternal(o: ObjectOutput) {
         super.writeExternal(o)
         o.writeObject(graph)
+        o.writeUTF(parameterMode.value.name)
     }
 
     override fun readExternal(o: ObjectInput) {
@@ -42,6 +62,7 @@ class Graph(): Component(), Externalizable {
         graph.name.changes.subscribe { newName->
             label.text = newName
         }
+        parameterMode.selectionModel.select(Graph.Mode.valueOf(o.readUTF()))
     }
 
     companion object {
