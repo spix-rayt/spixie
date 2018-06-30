@@ -24,7 +24,7 @@ class RenderManager {
     val time = TimeProperty(bpm)
     val offset = NumberControl(0.0, 0.01, "Offset").apply {
         changes.subscribe {
-            Main.arrangementWindow.requestRedrawSpectrogram()
+            Main.arrangementWindow.spectrogram.requestRedraw()
         }
     }
     private val frameCache = ReferenceMap<Int, ByteArray>()
@@ -44,7 +44,7 @@ class RenderManager {
             limitMin(60.0)
             limitMax(999.0)
             changes.subscribe { _->
-                Main.arrangementWindow.requestRedrawSpectrogram()
+                Main.arrangementWindow.spectrogram.requestRedraw()
             }
 
             Observable.zip(changes, changes.skip(1), BiFunction { previous: Double, current: Double -> previous to current }).subscribe { pair ->
@@ -158,7 +158,14 @@ class RenderManager {
                     val bufferedImage = Flowable.fromArray(*((0 until motionBlurIterations).toList().toTypedArray()))
                             .subscribeOn(renderThread)
                             .map { k->
-                                Main.arrangementWindow.visualEditor.render(linearInterpolate(frameToTime(frame - 1, bpm.value), frameToTime(frame, bpm.value), (k + 1) / motionBlurIterations.toDouble()), downscale).buffer
+                                Main.arrangementWindow.visualEditor.render(
+                                        linearInterpolate(
+                                                frameToTime(frame - fpsskip, bpm.value),
+                                                frameToTime(frame, bpm.value),
+                                                (k + 1) / motionBlurIterations.toDouble()
+                                        ),
+                                        downscale
+                                ).buffer
                             }
                             .map { buffer->
                                 Main.opencl.brightPixelsToWhite(buffer, w, h).also { buffer.release() }

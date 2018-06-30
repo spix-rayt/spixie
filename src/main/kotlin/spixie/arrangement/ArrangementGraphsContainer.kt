@@ -1,12 +1,13 @@
-package spixie
+package spixie.arrangement
 
+import spixie.TextControl
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
 import kotlin.math.roundToInt
 
 class ArrangementGraphsContainer: Externalizable {
-    val name = ValueTextControl("", "")
+    val name = TextControl("", "")
     val list = arrayListOf(ArrangementGraph())
     var expanded = true
 

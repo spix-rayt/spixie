@@ -1,8 +1,9 @@
-package spixie
+package spixie.arrangement
 
 import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.layout.Region
 import org.apache.commons.lang3.math.Fraction
+import spixie.Main
 import spixie.static.F_100
 import spixie.visualEditor.GraphData
 
@@ -59,7 +60,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         graph?.let { graph->
             val start = timeStart.multiplyBy(F_100).toInt()
             val end = timeEnd.multiplyBy(F_100).toInt()
-            val graphBuilder = GraphBuilder(start, if(end>start) end else start+1, graph)
+            val graphBuilder = GraphBuilder(start, if (end > start) end else start + 1, graph)
             val subscribe = zoom.subscribe {
                 graphBuilder.layoutX = layoutX
                 graphBuilder.layoutY = layoutY + height + 10.0
@@ -73,7 +74,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         graph?.let { graph->
             val start = timeStart.multiplyBy(F_100).toInt()
             val end = timeEnd.multiplyBy(F_100).toInt()
-            val graphEditor = GraphEditor(start, if(end>start) end else start+1, graph)
+            val graphEditor = GraphEditor(start, if (end > start) end else start + 1, graph)
             val subscribe = zoom.subscribe {
                 graphEditor.layoutX = layoutX
                 graphEditor.layoutY = layoutY + height + 10.0

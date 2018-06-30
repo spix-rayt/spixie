@@ -35,7 +35,6 @@ abstract class ComponentPin(val component: Component, val getValue: (() -> Any)?
 
             minHeight = VE_GRID_CELL_SIZE
             maxHeight = VE_GRID_CELL_SIZE
-            style="-fx-font-size: 8pt;"
         }
 
         setOnContextMenuRequested { event->

@@ -1,10 +1,12 @@
-package spixie
+package spixie.arrangement
 
 import io.reactivex.Observable
 import javafx.scene.control.Button
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
+import spixie.Main
+import spixie.NumberControl
 import spixie.static.linearInterpolate
 import spixie.static.rand
 import spixie.visualEditor.GraphData
@@ -53,7 +55,7 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
     }
 
     private fun sineMode() {
-        val startValue = NumberControl(graph.data.getRightValue(start).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(-1.0).limitMax(1.0)
+        val startValue = NumberControl(graph.data.getRightValue(start).let { if (it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(-1.0).limitMax(1.0)
         val frequencyValue = NumberControl(1.0, 0.01, "Frequency").limitMin(0.01)
 
         mode(start, end, listOf(startValue, frequencyValue)){ fragment->
@@ -65,9 +67,9 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
     }
 
     private fun curveMode(){
-        val startValue = NumberControl(graph.data.getRightValue(start).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(0.0).limitMax(1.0)
+        val startValue = NumberControl(graph.data.getRightValue(start).let { if (it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(0.0).limitMax(1.0)
         val curvatureValue = NumberControl(0.0, 0.01, "Curvature")
-        val endValue = NumberControl(graph.data.getLeftValue(end).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "End").limitMin(0.0).limitMax(1.0)
+        val endValue = NumberControl(graph.data.getLeftValue(end).let { if (it.isNaN()) 0.0 else it.toDouble() }, 0.001, "End").limitMin(0.0).limitMax(1.0)
         mode(start, end, listOf(startValue, curvatureValue, endValue)) { fragment->
             fragment.data = FloatArray(fragment.data.size){ i->
                 val curvature = if(startValue.value > endValue.value) -curvatureValue.value else curvatureValue.value
@@ -88,9 +90,9 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
     }
 
     private fun tanhMode(){
-        val startValue = NumberControl(graph.data.getRightValue(start).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(0.0).limitMax(1.0)
+        val startValue = NumberControl(graph.data.getRightValue(start).let { if (it.isNaN()) 0.0 else it.toDouble() }, 0.001, "Start").limitMin(0.0).limitMax(1.0)
         val stretchValue = NumberControl(10.0, 0.01, "Stretch").limitMin(0.01)
-        val endValue = NumberControl(graph.data.getLeftValue(end).let { if(it.isNaN()) 0.0 else it.toDouble() }, 0.001, "End").limitMin(0.0).limitMax(1.0)
+        val endValue = NumberControl(graph.data.getLeftValue(end).let { if (it.isNaN()) 0.0 else it.toDouble() }, 0.001, "End").limitMin(0.0).limitMax(1.0)
 
         mode(start, end, listOf(startValue, stretchValue, endValue)){ fragment->
             val min = min(startValue.value, endValue.value)

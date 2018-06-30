@@ -58,18 +58,22 @@ class RenderDialog(owner: Window): Stage() {
                 val selectedFrames = Main.arrangementWindow.getSelectedFrames()
                 val lastFramesRenderTime = mutableListOf<Double>()
                 val stopWatch = StopWatch.createStarted()
+                var lastRenderedFrame = 0
                 Main.renderManager.renderToFile(
                         { currentFrame, framesCount ->
                             progressBar.progress = currentFrame / framesCount.toDouble()
-                            val t = stopWatch.getTime(TimeUnit.MILLISECONDS)/1000.0
+                            val t = stopWatch.getTime(TimeUnit.MILLISECONDS) / 1000.0 / (currentFrame-lastRenderedFrame)
                             stopWatch.reset()
                             stopWatch.start()
-                            lastFramesRenderTime.add(t)
-                            if(lastFramesRenderTime.size>10) {
-                                lastFramesRenderTime.removeAt(0)
-                                val average = lastFramesRenderTime.average()
-                                remainingTimeLabel.text = "${SimpleDateFormat("mm:ss").format(Date(((framesCount-currentFrame)*average*1000.0).roundToLong()))} (${(average*1000.0).roundToInt()} ms / frame)"
+                            if(lastRenderedFrame != 0){
+                                lastFramesRenderTime.add(t)
+                                if(lastFramesRenderTime.size>10) {
+                                    lastFramesRenderTime.removeAt(0)
+                                    val average = lastFramesRenderTime.average()
+                                    remainingTimeLabel.text = "${SimpleDateFormat("HH:mm:ss").format(Date(((framesCount-currentFrame)*average*1000.0).roundToLong()))} (${(average*1000.0).roundToInt()} ms / frame)"
+                                }
                             }
+                            lastRenderedFrame = currentFrame
                         },
                         {
                             grid.isDisable = false

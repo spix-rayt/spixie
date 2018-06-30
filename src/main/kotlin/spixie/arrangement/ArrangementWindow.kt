@@ -1,13 +1,8 @@
-package spixie
+package spixie.arrangement
 
-import io.reactivex.BackpressureStrategy
-import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
-import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
-import io.reactivex.subjects.PublishSubject
-import javafx.embed.swing.SwingFXUtils
+import javafx.application.Platform
 import javafx.scene.Group
-import javafx.scene.canvas.Canvas
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.MenuItem
 import javafx.scene.input.KeyCode
@@ -23,25 +18,24 @@ import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.lang3.math.Fraction
+import spixie.Main
+import spixie.WorkingWindow
 import spixie.static.initCustomPanning
-import spixie.static.linearInterpolate
 import spixie.static.runInUIAndWait
 import spixie.visualEditor.Component
 import spixie.visualEditor.Module
 import spixie.visualEditor.VisualEditor
-import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
-import kotlin.math.pow
 import kotlin.math.roundToInt
 
-class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
+class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
     private val contentPane = Pane()
     private val content = Group()
     val graphBuilderGroup = Group()
     private val grid = Group()
-    val graphCanvases = Group()
+    private val graphCanvases = Group()
     val visualEditor = VisualEditor()
     private val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
     private val zoom = BehaviorSubject.createDefault(Fraction.getFraction(64.0))
@@ -72,13 +66,11 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                 updateTimePointer()
             }
         }
-    private val spectrogram = Canvas(1.0, 300.0)
+    val spectrogram = Spectrogram(content)
     private val graphsTree = Pane().apply {
-        style="-fx-background-color: #22313FFF"
+        style="-fx-background-color: #101B2CFF"
     }
     val graphs = arrayListOf<ArrangementGraphsContainer>()
-
-    private val redrawSpectrogram = PublishSubject.create<Unit>()
 
     private fun updateGrid(){
         contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
@@ -97,14 +89,10 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         }
     }
 
-    fun requestRedrawSpectrogram(){
-        redrawSpectrogram.onNext(Unit)
-    }
-
     fun redrawGraph(only: ArrangementGraph?){
         val newGraphsLayoutX = -content.layoutX - 100
-        val startTime = (-content.layoutX - 100)*64/100.0/zoom.value!!.toDouble()
-        val endTime = (-content.layoutX + width + 100)*64/100.0/zoom.value!!.toDouble()
+        val startTime = calcTimeOfX(-content.layoutX - 100)
+        val endTime = calcTimeOfX(-content.layoutX + width + 100)
         val redraw = { graph: ArrangementGraph ->
             val canvas = graph.canvas
             canvas.width = width + 200.0
@@ -140,7 +128,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         }
     }
 
-    fun updateGraphTree(){
+    private fun updateGraphTree(){
         graphCanvases.children.clear()
         val graphsTreeContent = graphsTree.children[0] as Pane
         graphsTreeContent.children.clear()
@@ -215,7 +203,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
     init {
         widthProperty().addListener { _, _, newValue ->
             spectrogram.width = newValue.toDouble() + 200.0
-            requestRedrawSpectrogram()
+            spectrogram.requestRedraw()
             needRedrawAllGraphs = true
         }
 
@@ -233,7 +221,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             updateCursor(event)
             if(event.isControlDown){
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
-                Main.renderManager.time.time = screenToLocal.x*64/100.0/zoom.value!!.toDouble()
+                Main.renderManager.time.time = calcTimeOfX(screenToLocal.x)
             }
         })
 
@@ -257,13 +245,13 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                             if(restartAudio){
                                 Main.audio.pause()
                             }
-                            Main.renderManager.time.time = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
+                            Main.renderManager.time.time = calcTimeOfX(cursor.startX-0.5)
                             if(restartAudio){
-                                Main.audio.play(Duration.seconds(Math.round((Main.renderManager.time.time-Main.renderManager.offset.value)*3600/Main.renderManager.bpm.value)/60.0))
+                                Main.audio.play(Duration.seconds(Math.round((Main.renderManager.time.time- Main.renderManager.offset.value)*3600/ Main.renderManager.bpm.value)/60.0))
                             }
                         }
-                        val time1 = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
-                        val time2 = (pressedCursorX-0.5)*64/100.0/zoom.value!!.toDouble()
+                        val time1 = calcTimeOfX(cursor.startX-0.5)
+                        val time2 = calcTimeOfX(pressedCursorX-0.5)
                         if(time1 < time2){
                             selectionBlock.timeStart = Fraction.getFraction(time1)
                             selectionBlock.timeEnd = Fraction.getFraction(time2)
@@ -287,7 +275,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         setOnScroll { event ->
             if(event.deltaY<0){
                 if(zoom.value!!.compareTo(Fraction.ONE) != 0){
-                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
+                    val cursorTime = calcTimeOfX(cursor.startX-0.5)
                     zoom.onNext(zoom.value!!.divideBy(Fraction.getFraction(2.0)))
                     var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
                     content.layoutX += (cursor.startX - cursorNewX).roundToInt()
@@ -298,7 +286,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    requestRedrawSpectrogram()
+                    spectrogram.requestRedraw()
                     needRedrawAllGraphs = true
                     updateTimePointer()
 
@@ -306,7 +294,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             }
             if(event.deltaY>0){
                 if(zoom.value!!.compareTo(Fraction.getFraction(4096.0)) != 0){
-                    val cursorTime = (cursor.startX-0.5)*64/100.0/zoom.value!!.toDouble()
+                    val cursorTime = calcTimeOfX(cursor.startX-0.5)
                     zoom.onNext(zoom.value!!.multiplyBy(Fraction.getFraction(2.0)))
                     var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
                     content.layoutX += (cursor.startX - cursorNewX).roundToInt()
@@ -317,7 +305,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
                     cursor.startX = cursorNewX
                     cursor.endX = cursorNewX
 
-                    requestRedrawSpectrogram()
+                    spectrogram.requestRedraw()
                     needRedrawAllGraphs = true
                     updateTimePointer()
                 }
@@ -393,7 +381,7 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
         contentPane.clip = Rectangle(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
 
         content.layoutXProperty().addListener { _, _, _ ->
-            requestRedrawSpectrogram()
+            spectrogram.requestRedraw()
             needUpdateGrid = true
             needRedrawAllGraphs = true
         }
@@ -403,51 +391,10 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             needUpdateGrid = true
             needRedrawAllGraphs = true
         }
+    }
 
-        redrawSpectrogram.toFlowable(BackpressureStrategy.LATEST)
-                .observeOn(Schedulers.newThread(), false, 1)
-                .map {
-                    val newWaveformLayoutX = -content.layoutX - 100
-
-                    val startTime = (-content.layoutX - 100) * 64 / 100.0 / zoom.value!!.toDouble() - Main.renderManager.offset.value
-                    val endTime = (-content.layoutX + width + 100) * 64 / 100.0 / zoom.value!!.toDouble() - Main.renderManager.offset.value
-
-                    val startSecond = startTime * 3600 / Main.renderManager.bpm.value / 60
-                    val endSecond = endTime * 3600 / Main.renderManager.bpm.value / 60
-
-                    val secondsInPixel = (endSecond - startSecond) / spectrogram.width
-
-                    val bufferedImage = BufferedImage(spectrogram.width.toInt(), spectrogram.height.toInt(), BufferedImage.TYPE_3BYTE_BGR)
-                    val pixelArray = IntArray(bufferedImage.width * bufferedImage.height * 3)
-
-                    val spectra = Main.audio.spectra
-                    for (x in 0 until bufferedImage.width) {
-                        val time = ((startSecond + x * secondsInPixel) * 100).roundToInt()
-                        for (y in 0 until bufferedImage.height) {
-                            val offset = (y * bufferedImage.width + x) * 3
-                            if (time >= 0 && time < spectra.size && spectra.size > 2) {
-                                val t = ((1.0 - (y.toDouble() / bufferedImage.height)).pow(1.7) * 0.99 + 0.01).coerceIn(0.0, 1.0) * (spectra[0].size - 2)
-                                val v = linearInterpolate(spectra[time][t.toInt()], spectra[time][t.toInt() + 1], t % 1)
-                                val vv = ((1.0 - v) * 255).toInt().coerceIn(0, 255)
-                                pixelArray[offset] = vv
-                                pixelArray[offset + 1] = vv
-                                pixelArray[offset + 2] = vv
-                            }else{
-                                pixelArray[offset] = 255
-                                pixelArray[offset + 1] = 255
-                                pixelArray[offset + 2] = 255
-                            }
-                        }
-                    }
-
-                    bufferedImage.raster.setPixels(0, 0, bufferedImage.width, bufferedImage.height, pixelArray)
-                    Pair(newWaveformLayoutX, SwingFXUtils.toFXImage(bufferedImage, null))
-                }
-                .observeOn(JavaFxScheduler.platform())
-                .subscribe { (newWaveformLayoutX, fxImage)->
-                    spectrogram.graphicsContext2D.drawImage(fxImage, 0.0, 0.0)
-                    spectrogram.layoutX = newWaveformLayoutX
-                }
+    fun calcTimeOfX(x: Double): Double {
+        return x*64/100.0/zoom.value!!.toDouble()
     }
 
     fun save(): ByteArray {
@@ -492,11 +439,12 @@ class ArrangementWindow: BorderPane(), WorkingWindowOpenableContent {
             Main.renderManager.clearCache()
         }catch (e:Exception){
             e.printStackTrace()
+            Platform.exit()
         }
     }
 
     fun getSelectedFrames(): Pair<Int, Int>{
-        return (selectionBlock.timeStart.toDouble()*3600/Main.renderManager.bpm.value).toInt() to (selectionBlock.timeEnd.toDouble()*3600/Main.renderManager.bpm.value).toInt()
+        return (selectionBlock.timeStart.toDouble()*3600/ Main.renderManager.bpm.value).toInt() to (selectionBlock.timeEnd.toDouble()*3600/ Main.renderManager.bpm.value).toInt()
     }
 
     private fun updateCursor(event:MouseEvent){

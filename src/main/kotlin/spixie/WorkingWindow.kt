@@ -51,7 +51,7 @@ class WorkingWindow : BorderPane() {
 
         val timeLabel = Label().apply {
             Main.renderManager.time.timeChanges.subscribe { time ->
-                text = "Time: ${Math.round(time*1000)/1000.0}"
+                text = "Time: ${String.format("%.3f", Math.round(time*1000)/1000.0)}"
             }
         }
 
@@ -80,13 +80,15 @@ class WorkingWindow : BorderPane() {
         }
     }
 
-    private val centerStack = LinkedList<WorkingWindowOpenableContent>()
+    private val centerStack = LinkedList<OpenableContent>()
 
-    fun open(workingWindowOpenableContent: WorkingWindowOpenableContent){
-        if(center != null && center != workingWindowOpenableContent){
-            centerStack.add(center as WorkingWindowOpenableContent)
+    fun open(openableContent: OpenableContent){
+        if(center != null && center != openableContent){
+            centerStack.add(center as OpenableContent)
         }
-        center = workingWindowOpenableContent as Node
+        center = openableContent as Node
         center.requestFocus()
     }
+
+    interface OpenableContent
 }

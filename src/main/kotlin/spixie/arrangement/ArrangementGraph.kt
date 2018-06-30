@@ -1,6 +1,8 @@
-package spixie
+package spixie.arrangement
 
 import javafx.scene.canvas.Canvas
+import spixie.Main
+import spixie.NumberControl
 import spixie.visualEditor.GraphData
 import java.io.Externalizable
 import java.io.ObjectInput

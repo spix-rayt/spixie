@@ -3,8 +3,8 @@ package spixie.visualEditor.components
 import javafx.collections.FXCollections
 import javafx.scene.control.ChoiceBox
 import javafx.scene.control.Label
-import spixie.ArrangementGraphsContainer
 import spixie.Main
+import spixie.arrangement.ArrangementGraphsContainer
 import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPinNumber
 import java.io.Externalizable
@@ -32,7 +32,7 @@ class Graph(): Component(), Externalizable {
     init {
         parameters.add(parameterMode)
         outputPins.add(ComponentPinNumber(this, {
-            when(parameterMode.value){
+            when(parameterMode.value!!){
                 Mode.Value -> {
                     graph.getValue(Main.arrangementWindow.visualEditor.time)
                 }

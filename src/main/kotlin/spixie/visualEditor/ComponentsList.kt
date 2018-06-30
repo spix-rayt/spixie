@@ -9,6 +9,7 @@ import javafx.scene.control.ScrollPane
 import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
+import spixie.arrangement.ArrangementGraphsContainer
 import spixie.Main
 import spixie.visualEditor.components.*
 import spixie.visualEditor.components.transformers.*
@@ -134,6 +135,18 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         if(value is ComponentListGraphItem){
             result(Graph(value.graph))
             containerChildrens.remove(this@ComponentsList)
+        }
+    }
+
+    class ComponentListGraphItem(val graph: ArrangementGraphsContainer) {
+        override fun toString(): String {
+            return "Graph: ${graph.name.value}"
+        }
+    }
+
+    class ComponentListItem(val clazz: Class<*>) {
+        override fun toString(): String {
+            return clazz.simpleName
         }
     }
 }

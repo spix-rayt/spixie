@@ -15,7 +15,7 @@ import javax.sound.sampled.AudioSystem
 
 class Audio {
     @Volatile private var play = false
-    var spectra = listOf<DoubleArray>()
+    @Volatile var spectra = listOf<DoubleArray>()
 
     @Volatile private var mediaPlayer:MediaPlayer? = null
     private val stopWatch = StopWatch()
@@ -57,8 +57,8 @@ class Audio {
     fun load(file:File){
         mediaPlayer?.stop()
         mediaPlayer = null
-        spectra = listOf<DoubleArray>()
-        Main.arrangementWindow.requestRedrawSpectrogram()
+        spectra = listOf()
+        Main.arrangementWindow.spectrogram.requestRedraw()
         Thread(Runnable {
             val exitValue = ProcessBuilder(
                     listOfNotNull(
@@ -117,7 +117,7 @@ class Audio {
                         }
                     }.toDoubleArray()
                 }
-                Main.arrangementWindow.requestRedrawSpectrogram()
+                Main.arrangementWindow.spectrogram.requestRedraw()
 
 
                 try {

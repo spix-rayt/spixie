@@ -18,6 +18,7 @@ import javafx.scene.layout.StackPane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import javafx.util.Duration
+import spixie.arrangement.ArrangementWindow
 import spixie.opencl.OpenCLApi
 import spixie.opencl.OpenCLInfoWindow
 import java.io.File
@@ -194,5 +195,6 @@ class Main : Application() {
 }
 
 fun main(args: Array<String>) {
+    Locale.setDefault(Locale.ENGLISH)
     Application.launch(Main::class.java)
 }

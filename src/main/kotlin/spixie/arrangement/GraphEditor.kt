@@ -1,10 +1,12 @@
-package spixie
+package spixie.arrangement
 
 import io.reactivex.Observable
 import javafx.scene.control.Button
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
+import spixie.Main
+import spixie.NumberControl
 import spixie.static.linearInterpolate
 import spixie.visualEditor.GraphData
 import java.util.concurrent.TimeUnit

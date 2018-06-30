@@ -102,7 +102,7 @@ abstract class Component:Region(), Externalizable {
         content.children.clear()
         content.children.addAll(
                 Label(javaClass.simpleName.replace(Regex("[A-Z]"), { matchResult -> " ${matchResult.value}" })).apply {
-                    style="-fx-font-weight: bold; -fx-font-style: italic; -fx-font-size: 8pt;"
+                    style="-fx-font-weight: bold; -fx-font-style: italic;"
                     alignment = Pos.CENTER
                     prefWidth = VE_PIN_WIDTH + VE_KEK + 1.0
                     prefHeight = VE_GRID_CELL_SIZE
@@ -121,7 +121,6 @@ abstract class Component:Region(), Externalizable {
 
                 this.minHeight(VE_GRID_CELL_SIZE)
                 this.maxHeight(VE_GRID_CELL_SIZE)
-                this.style = "-fx-font-size: 8pt;"
             }
         }
 
