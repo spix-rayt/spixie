@@ -4,13 +4,12 @@ import spixie.NumberControl
 import spixie.visualEditor.*
 
 class SimpleParticlesGenerator: Component(), WithParticlesArrayOutput {
-    private val inCount = ComponentPinNumber(this, null, "Count", NumberControl(1.0, 0.1, "").limitMin(0.0))
-
+    private val inCount = ComponentPinNumber(this, null, "Count", NumberControl(1.0, "").limitMin(0.0))
 
     private val outParticles = ComponentPinParticleArray(this, {
         val count = inCount.receiveValue()
 
-        ParticleArray(Array(count.toInt(), { Particle() }).toList(), count.toFloat())
+        ParticleArray(Array(count.toInt()) { Particle() }.toList(), count.toFloat())
     }, "Particles")
 
     init {

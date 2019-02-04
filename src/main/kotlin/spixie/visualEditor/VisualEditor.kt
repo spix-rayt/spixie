@@ -24,15 +24,16 @@ const val VE_KEK = VE_GRID_CELL_SIZE*4
 class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
     var currentModule = Module("Main")
         private set
+
     val modules = arrayListOf(currentModule)
+
     var time = 0.0
-    private set
+        private set
+
     var downscale = 1
-    private set
+        private set
 
     init {
-        loadModule(currentModule)
-
         val shiftKeyReleaseEvents = PublishSubject.create<Unit>()
 
         setOnMouseClicked { event ->
@@ -118,6 +119,8 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
             renderComponent.magneticRelocate(moveComponent.layoutX, moveComponent.layoutY+moveComponent.height)
             resultComponent.magneticRelocate(renderComponent.layoutX+renderComponent.width, renderComponent.layoutY+renderComponent.height-resultComponent.height)
         }
+
+        loadModule(currentModule)
     }
 
     fun loadModule(module: Module){
@@ -134,7 +137,8 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
 
     private fun homeLayout(){
         val visualBounds = Screen.getPrimary().visualBounds
-        currentModule.content.layoutX = visualBounds.width/2
-        currentModule.content.layoutY = visualBounds.height/2
+        val resultComponent = currentModule.findResultComponentNode()
+        currentModule.content.layoutX = visualBounds.width/2 - resultComponent.layoutX
+        currentModule.content.layoutY = visualBounds.height/2 - resultComponent.layoutY
     }
 }

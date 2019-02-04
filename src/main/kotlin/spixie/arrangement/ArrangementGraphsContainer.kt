@@ -8,7 +8,9 @@ import kotlin.math.roundToInt
 
 class ArrangementGraphsContainer: Externalizable {
     val name = TextControl("", "")
+
     val list = arrayListOf(ArrangementGraph())
+
     var expanded = true
 
     fun getValue(time: Double): Double{

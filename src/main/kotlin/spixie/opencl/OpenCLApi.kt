@@ -4,6 +4,7 @@ import com.jogamp.opencl.*
 import spixie.Main
 import spixie.static.roundUp
 import java.nio.FloatBuffer
+import java.util.concurrent.TimeUnit
 
 class OpenCLApi {
     private val context:CLContext = CLContext.create(
@@ -14,8 +15,11 @@ class OpenCLApi {
                 }
             }
     )
+
     private val device:CLDevice
+
     private val program:CLProgram
+
     private val queue: CLCommandQueue
 
     init {
@@ -25,32 +29,107 @@ class OpenCLApi {
         program = context.createProgram(javaClass.getResourceAsStream("/kernel.cl")).build()
     }
 
-    fun render(particlesArray:FloatBuffer, realWidth:Int, realHeight: Int): CLBuffer<FloatBuffer> {
-        val width=realWidth.roundUp(64)
-        val height=realHeight
-
-        val particlesCount = (particlesArray.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE).roundUp(64)
+    fun render(renderBuffer: RenderBuffer, width:Int, height: Int): CLBuffer<FloatBuffer> {
+        val tilesCount = ((width+7)/8) * ((height+7)/8)
+        val particlesCount = (renderBuffer.particles.capacity()/ RenderBufferBuilder.PARTICLE_FLOAT_SIZE)
         if(particlesCount == 0){
-            return createZeroBuffer(realWidth*realHeight*4)
+            return createZeroBuffer(width*height*4)
         }
 
-        val outputImage = context.createFloatBuffer(realWidth * realHeight * 4, CLMemory.Mem.READ_WRITE)
-        val inputParticles = context.createFloatBuffer(particlesCount * RenderBufferBuilder.PARTICLE_FLOAT_SIZE, CLMemory.Mem.READ_ONLY)
+        val outputImage = context.createFloatBuffer(width * height * 4, CLMemory.Mem.READ_WRITE)
 
-        inputParticles.buffer.put(particlesArray)
+        val inputParticles = context.createFloatBuffer(renderBuffer.particles.capacity(), CLMemory.Mem.READ_ONLY)
+        inputParticles.buffer.put(renderBuffer.particles)
         inputParticles.buffer.rewind()
 
-        val kernel = program.createCLKernel("renderParticles")
-        kernel.putArgs(inputParticles)
-        kernel.putArg(width)
-        kernel.putArg(height)
-        kernel.putArg(realWidth)
-        kernel.putArg(particlesCount)
-        kernel.putArgs(outputImage)
+        val particleBox = context.createIntBuffer(particlesCount, CLMemory.Mem.READ_WRITE)
+        particleBox.buffer.rewind()
+
+        val tiles = context.createIntBuffer(10000000, CLMemory.Mem.READ_WRITE)
+        tiles.buffer.rewind()
+
+        val tileStart = context.createIntBuffer(tilesCount, CLMemory.Mem.READ_WRITE)
+        tileStart.buffer.rewind()
+
+        val tileSize = context.createIntBuffer(tilesCount, CLMemory.Mem.READ_WRITE)
+        tileSize.buffer.rewind()
+
+        val atomicTileIndex = context.createIntBuffer(1, CLMemory.Mem.READ_WRITE)
+        atomicTileIndex.buffer.put(0)
+        atomicTileIndex.buffer.rewind()
+
+        val atomicParticleIndex = context.createIntBuffer(1, CLMemory.Mem.READ_WRITE)
+        atomicParticleIndex.buffer.put(0)
+        atomicParticleIndex.buffer.rewind()
 
         queue.putWriteBuffer(inputParticles, false)
-                .put1DRangeKernel(kernel, 0L, (width * height).toLong(), 64L)
+        queue.putWriteBuffer(atomicTileIndex, false)
+        queue.putWriteBuffer(atomicParticleIndex, false)
+
+        kotlin.run {
+            val kernel = program.createCLKernel("clearTileSize")
+            kernel.putArg(tileSize)
+            kernel.putArg(width)
+            kernel.putArg(height)
+            queue.put1DRangeKernel(kernel, 0L, 1L, 1L)
+        }
+
+        kotlin.run {
+            val kernel = program.createCLKernel("fillTileSize")
+            kernel.putArg(inputParticles)
+            kernel.putArg(particleBox)
+            kernel.putArg(tileSize)
+            kernel.putArg(width)
+            kernel.putArg(height)
+            kernel.putArg(particlesCount)
+            kernel.putArg(atomicParticleIndex)
+            queue.put1DRangeKernel(kernel, 0L, 51200L, 512L)
+        }
+
+        kotlin.run {
+            val kernel = program.createCLKernel("fillTileStart")
+            kernel.putArg(tileStart)
+            kernel.putArg(tileSize)
+            kernel.putArg(width)
+            kernel.putArg(height)
+            queue.put1DRangeKernel(kernel, 0L, 1L, 1L)
+        }
+
+        kotlin.run {
+            val kernel = program.createCLKernel("fillTiles")
+            kernel.putArg(particleBox)
+            kernel.putArg(tiles)
+            kernel.putArg(tileStart)
+            kernel.putArg(width)
+            kernel.putArg(height)
+            kernel.putArg(particlesCount)
+            kernel.putArg(atomicTileIndex)
+            queue.put1DRangeKernel(kernel, 0L, 102400L, 1024L)
+            queue.putWriteBuffer(atomicTileIndex, false)
+        }
+
+        kotlin.run {
+            val kernel = program.createCLKernel("renderParticles")
+            kernel.putArg(inputParticles)
+            kernel.putArg(tiles)
+            kernel.putArg(tileStart)
+            kernel.putArg(tileSize)
+            kernel.putArg(width)
+            kernel.putArg(height)
+            kernel.putArg(particlesCount)
+            kernel.putArg(atomicTileIndex)
+            kernel.putArg(outputImage)
+
+            queue.put1DRangeKernel(kernel, 0L, 51200L, 512L)
+        }
+
+
         inputParticles.release()
+        tiles.release()
+        tileStart.release()
+        tileSize.release()
+        atomicTileIndex.release()
+        atomicParticleIndex.release()
         return outputImage
     }
 

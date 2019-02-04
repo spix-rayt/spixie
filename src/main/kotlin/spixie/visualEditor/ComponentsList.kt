@@ -16,17 +16,20 @@ import spixie.visualEditor.components.transformers.*
 
 class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, forMain: Boolean, private val result: (component: Component) -> Unit): BorderPane() {
     private val listView = ListView<Any>()
+
     private val scrollPane = ScrollPane(listView)
+
     private val textField = TextField()
+
     private val basicItemsList = listOf(
             ComponentListItem(SimpleParticlesGenerator::class.java),
             ComponentListItem(ParticlesProduct::class.java),
             ComponentListItem(MoveRotate::class.java),
             ComponentListItem(Color::class.java),
             ComponentListItem(Slice::class.java),
+            ComponentListItem(ModFilter::class.java),
             ComponentListItem(LineTest::class.java),
             ComponentListItem(SizeTransformer::class.java),
-            ComponentListItem(GlowTransformer::class.java),
             ComponentListItem(EdgeTransformer::class.java),
             ComponentListItem(ScaleTransformer::class.java),
             ComponentListItem(RotateTransformer::class.java),
@@ -35,7 +38,11 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             ComponentListItem(LuminanceTransformer::class.java),
             ComponentListItem(ChromaTransformer::class.java),
             ComponentListItem(TransparencyTransformer::class.java),
-            ComponentListItem(Render::class.java)
+            ComponentListItem(Render::class.java),
+            ComponentListItem(FuncConst::class.java),
+            ComponentListItem(FuncLinear::class.java),
+            ComponentListItem(FuncSin::class.java),
+            ComponentListItem(FuncRandom::class.java)
     )
 
     init {

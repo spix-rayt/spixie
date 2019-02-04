@@ -10,9 +10,12 @@ import java.io.ObjectOutput
 
 class ArrangementGraph: Externalizable {
     val data = GraphData()
+
     val canvas = Canvas(1.0, 100.0)
-    val rangeMinControl = NumberControl(0.0, 0.1, "Min")
-    val rangeMaxControl = NumberControl(1.0, 0.1, "Max")
+
+    val rangeMinControl = NumberControl(0.0, "Min")
+
+    val rangeMaxControl = NumberControl(1.0, "Max")
 
     init {
         rangeMinControl.changes.subscribe {

@@ -7,28 +7,24 @@ import spixie.visualEditor.Component
 import spixie.visualEditor.ComponentPinNumber
 import spixie.visualEditor.ComponentPinParticleArray
 import spixie.visualEditor.ParticleArray
+import kotlin.math.roundToInt
 
-class Slice: Component(), WithParticlesArrayInput, WithParticlesArrayOutput {
+class ModFilter: Component(), WithParticlesArrayInput, WithParticlesArrayOutput {
     private val inParticles = ComponentPinParticleArray(this, null, "Particles")
-    private val inStart = ComponentPinNumber(this, null, "Start", NumberControl(0.0, "").limitMin(0.0).limitMax(100.0))
-    private val inEnd = ComponentPinNumber(this, null, "End", NumberControl(100.0, "").limitMin(0.0).limitMax(100.0))
+
+    private val inSkip = ComponentPinNumber(this, null, "Skip", NumberControl(0.0, "").limitMin(0.0))
 
     private val outParticles = ComponentPinParticleArray(this, {
         val particles = inParticles.receiveValue()
-        val start = Fraction.getFraction(inStart.receiveValue()).divideBy(F_100)
-        val end = Fraction.getFraction(inEnd.receiveValue()).divideBy(F_100)
+        val skip = inSkip.receiveValue().roundToInt() + 1
 
-        val from = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(start).toInt().coerceIn(0..100)
-        val to = Fraction.getFraction(particles.array.size.toDouble()).multiplyBy(end).toInt().coerceIn(0..100)
-
-        val resultArray = particles.array.slice(from until to)
+        val resultArray = particles.array.filterIndexed { index, _ -> index%skip==0 }
         ParticleArray(resultArray, resultArray.size.toFloat())
     }, "Particles")
 
     init {
         inputPins.add(inParticles)
-        inputPins.add(inStart)
-        inputPins.add(inEnd)
+        inputPins.add(inSkip)
         outputPins.add(outParticles)
         updateVisual()
     }

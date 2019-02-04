@@ -13,9 +13,11 @@ import javafx.scene.shape.Circle
 import spixie.Main
 import spixie.static.DragAndDropType
 
-abstract class ComponentPin(val component: Component, val getValue: (() -> Any)?, val name: String): HBox() {
+abstract class ComponentPin(val component: Component, val name: String): HBox() {
     private val backgroundCircle = Circle(VE_GRID_CELL_SIZE/2, VE_GRID_CELL_SIZE/2, 2.0, Color.BLACK)
+
     private val selectionCircle = Circle(VE_GRID_CELL_SIZE/2, VE_GRID_CELL_SIZE/2, 1.0, Color.WHITE)
+
     val circle = StackPane(backgroundCircle, selectionCircle).apply {
         minWidth = VE_GRID_CELL_SIZE
         maxWidth = VE_GRID_CELL_SIZE
@@ -23,7 +25,9 @@ abstract class ComponentPin(val component: Component, val getValue: (() -> Any)?
         minHeight = VE_GRID_CELL_SIZE
         maxHeight = VE_GRID_CELL_SIZE
     }
+
     open val connections = mutableListOf<ComponentPin>()
+
     open val imaginaryConnections = mutableListOf<ComponentPin>()
 
     protected val label = Label(name)
@@ -128,8 +132,6 @@ abstract class ComponentPin(val component: Component, val getValue: (() -> Any)?
     protected fun isOutputPin(): Boolean {
         return component.outputPins.contains(this)
     }
-
-    abstract fun receiveValue(): Any
 
     open fun updateUI(){
         if(isInputPin()){

@@ -20,16 +20,22 @@ import kotlin.math.roundToInt
 
 abstract class Component:Region(), Externalizable {
     val parameters = arrayListOf<Node>()
+
     val inputPins = arrayListOf<ComponentPin>()
+
     val outputPins = arrayListOf<ComponentPin>()
+
     val content = Group()
 
     private var dragDelta = Point2D(0.0, 0.0)
 
 
     val conneectionsChanged = PublishSubject.create<Unit>()
+
     val disconnectPinRequest = PublishSubject.create<ComponentPin>()
+
     val relocateSelectedRequests = PublishSubject.create<Pair<Double, Double>>()
+
     var selected = false
         set(value) {
             field=value
@@ -69,6 +75,26 @@ abstract class Component:Region(), Externalizable {
 
         setOnContextMenuRequested { event->
             ContextMenu(
+                    MenuItem("Add atop").apply {
+                        setOnAction {
+                            val point2D = parent.screenToLocal(event.screenX, event.screenY)
+                            Main.arrangementWindow.visualEditor.currentModule.apply {
+                                openComponentsList(point2D) { result ->
+                                    result.magneticRelocate(this@Component.layoutX, this@Component.layoutY)
+                                    val componentsToRelocate = mutableListOf(result)
+                                    var c = findComponentAboveOf(this@Component)
+                                    while (c != null) {
+                                        componentsToRelocate.add(c)
+                                        c = findComponentAboveOf(c)
+                                    }
+                                    componentsToRelocate.forEach {
+                                        it.relativelyMagneticRelocate(0.0, -result.height)
+                                    }
+                                    addComponent(result)
+                                }
+                            }
+                        }
+                    },
                     MenuItem("Delete").apply {
                         setOnAction {
                             Main.arrangementWindow.visualEditor.modules.forEach {
@@ -87,7 +113,8 @@ abstract class Component:Region(), Externalizable {
 
     fun magneticRelocate(x: Double, y:Double){
         val newX = (x / VE_GRID_CELL_SIZE).roundToInt() * VE_GRID_CELL_SIZE
-        val newY = floor(y / VE_GRID_CELL_SIZE) * VE_GRID_CELL_SIZE
+        //val newY = floor(y / VE_GRID_CELL_SIZE) * VE_GRID_CELL_SIZE
+        val newY = (y / VE_GRID_CELL_SIZE).roundToInt() * VE_GRID_CELL_SIZE
         if(layoutX != newX || layoutY != newY){
             relocate(newX, newY)
             conneectionsChanged.onNext(Unit)
@@ -98,10 +125,14 @@ abstract class Component:Region(), Externalizable {
         magneticRelocate(layoutX + x, layoutY + y)
     }
 
+    fun getReadableName(): String {
+        return javaClass.simpleName.replace(Regex("[A-Z]"), { matchResult -> " ${matchResult.value}" })
+    }
+
     fun updateVisual(){
         content.children.clear()
         content.children.addAll(
-                Label(javaClass.simpleName.replace(Regex("[A-Z]"), { matchResult -> " ${matchResult.value}" })).apply {
+                Label(getReadableName()).apply {
                     style="-fx-font-weight: bold; -fx-font-style: italic;"
                     alignment = Pos.CENTER
                     prefWidth = VE_PIN_WIDTH + VE_KEK + 1.0

@@ -55,11 +55,11 @@ class WorkingWindow : BorderPane() {
             }
         }
 
-        val particlesCountLabel = Label()
-        Main.renderManager.lastRenderedParticlesCount.observeOn(JavaFxScheduler.platform()).subscribe {
-            particlesCountLabel.text = "($it Particles)"
+        val lastRenderInfo = Label()
+        Main.renderManager.lastRenderInfoSubject.observeOn(JavaFxScheduler.platform()).subscribe {
+            lastRenderInfo.text = it
         }
-        menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Main.renderManager.bpm, Main.renderManager.offset, Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) }, particlesCountLabel)
+        menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Main.renderManager.bpm, Main.renderManager.offset, Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) }, lastRenderInfo)
 
         menuBar.addEventHandler(KeyEvent.ANY){ event ->
             center.fireEvent(event.copyFor(center, center))

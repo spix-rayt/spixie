@@ -4,12 +4,12 @@ import javafx.geometry.Pos
 import spixie.Main
 import spixie.NumberControl
 
-class ComponentPinNumber(component: Component, getValue: (() -> Double)?, name: String, val valueControl: NumberControl?): ComponentPin(component, getValue, name) {
-    override fun receiveValue(): Double{
+class ComponentPinNumber(component: Component, val getValue: (() -> Double)?, name: String, val valueControl: NumberControl?): ComponentPin(component, name) {
+    fun receiveValue(): Double{
         val allConnections = (connections + imaginaryConnections).toSet()
         val values = allConnections
                 .sortedBy { it.component.layoutY }
-                .mapNotNull { it.getValue?.invoke() as? Double }
+                .mapNotNull { (it as? ComponentPinNumber)?.getValue?.invoke() }
         return if(values.isEmpty())
             valueControl?.value ?: 0.0
         else

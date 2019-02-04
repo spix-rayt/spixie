@@ -12,32 +12,39 @@ import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.image.Image
 import org.apache.commons.collections4.map.ReferenceMap
+import org.apache.commons.lang3.time.StopWatch
 import spixie.static.*
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.util.*
+import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
 class RenderManager {
-    val bpm = NumberControl(160.0, 1.0, "BPM")
+    val bpm = NumberControl(160.0, "BPM")
+
     val time = TimeProperty(bpm)
-    val offset = NumberControl(0.0, 0.01, "Offset").apply {
+
+    val offset = NumberControl(0.0, "Offset").apply {
         changes.subscribe {
             Main.arrangementWindow.spectrogram.requestRedraw()
         }
     }
+
     private val frameCache = ReferenceMap<Int, ByteArray>()
+
     private val forceRender = BehaviorSubject.createDefault(Unit).toSerialized()
+
     @Volatile var autoRenderNextFrame = false
-    val lastRenderedParticlesCount = BehaviorSubject.createDefault(0).toSerialized()
+
+    val lastRenderInfoSubject = BehaviorSubject.createDefault("0 particles - 0 ms").toSerialized()
 
     var scaleDown:Int = 2
         set(value) {
             field = value
             requestRender()
         }
-
 
     init {
         bpm.apply {
@@ -77,9 +84,11 @@ class RenderManager {
                     try {
                         val frame = Math.round(t*3600/bpm.value).toInt()
                         if (!Main.audio.isPlaying()) {
+                            val stopWatch = StopWatch.createStarted()
                             val image = Main.arrangementWindow.visualEditor.render(t, scaleDown)
                             val bufferedImage = image.toBufferedImageAndRelease()
-                            lastRenderedParticlesCount.onNext(image.particlesCount)
+                            stopWatch.stop()
+                            lastRenderInfoSubject.onNext("${image.particlesCount.toString().padStart(8, ' ')} particles ${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
                             images.onNext(SwingFXUtils.toFXImage(bufferedImage, null))
                             Flowable.fromCallable { bufferedImage.toJPEGByteArray() }
                                     .subscribeOn(Schedulers.computation())

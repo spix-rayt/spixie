@@ -122,7 +122,7 @@ class Main : Application() {
                     renderManager.time.frame += 1
                 }
                 if(event.code == KeyCode.P){
-                    if(renderManager.autoRenderNextFrame != true){
+                    if(!renderManager.autoRenderNextFrame){
                         renderManager.autoRenderNextFrame = true
                         renderManager.time.frame = renderManager.time.frame/3*3
                         renderManager.requestRender()
@@ -144,6 +144,28 @@ class Main : Application() {
                     if(!File("screenshots/").exists()) File("screenshots/").mkdir()
                     ImageIO.write(SwingFXUtils.fromFXImage(imageView.image, null), "png", File("screenshots/${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.png"))
                 }
+
+                if(event.code == KeyCode.DIGIT1) {
+                    dragMultiplier = 100.0
+                }
+                if(event.code == KeyCode.DIGIT2) {
+                    dragMultiplier = 10.0
+                }
+                if(event.code == KeyCode.DIGIT3) {
+                    dragMultiplier = 1.0
+                }
+                if(event.code == KeyCode.DIGIT4) {
+                    dragMultiplier = 0.1
+                }
+                if(event.code == KeyCode.DIGIT5) {
+                    dragMultiplier = 0.01
+                }
+                if(event.code == KeyCode.DIGIT6) {
+                    dragMultiplier = 0.001
+                }
+                if(event.code == KeyCode.DIGIT7) {
+                    dragMultiplier = 0.0001
+                }
             }
         }
 
@@ -154,10 +176,33 @@ class Main : Application() {
             if(event.code == KeyCode.P){
                 renderManager.autoRenderNextFrame = false
             }
+            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
+                if(event.code == KeyCode.DIGIT1) {
+                    dragMultiplier = 0.0
+                }
+                if(event.code == KeyCode.DIGIT2) {
+                    dragMultiplier = 0.0
+                }
+                if(event.code == KeyCode.DIGIT3) {
+                    dragMultiplier = 0.0
+                }
+                if(event.code == KeyCode.DIGIT4) {
+                    dragMultiplier = 0.0
+                }
+                if(event.code == KeyCode.DIGIT5) {
+                    dragMultiplier = 0.0
+                }
+                if(event.code == KeyCode.DIGIT6) {
+                    dragMultiplier = 0.0
+                }
+                if(event.code == KeyCode.DIGIT7) {
+                    dragMultiplier = 0.0
+                }
+            }
         }
 
         stage.onCloseRequest = EventHandler<WindowEvent> {
-            val bytes = arrangementWindow.save()
+            val bytes = arrangementWindow.serialize()
             if(!File("save/").exists()) File("save/").mkdir()
             if(File("save/save.spixie").exists()){
                 Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
@@ -168,7 +213,7 @@ class Main : Application() {
 
         File("save/save.spixie").let {
             if(it.exists()){
-                arrangementWindow.load(ObjectInputStream(it.inputStream()))
+                arrangementWindow.deserializeAndLoad(ObjectInputStream(it.inputStream()))
             }
         }
 
@@ -181,6 +226,10 @@ class Main : Application() {
                 }
             }
         }.start()
+
+        if(File("audio.aiff").exists()) {
+            audio.load(File("audio.aiff"))
+        }
     }
 
     companion object {
@@ -189,12 +238,13 @@ class Main : Application() {
         val arrangementWindow = ArrangementWindow()
         val audio = Audio()
         val opencl = OpenCLApi()
+        var dragMultiplier = 0.0
 
         var dragAndDropObject: Any = Any()
     }
 }
 
-fun main(args: Array<String>) {
+fun main() {
     Locale.setDefault(Locale.ENGLISH)
     Application.launch(Main::class.java)
 }

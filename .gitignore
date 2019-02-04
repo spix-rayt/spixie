@@ -14,3 +14,10 @@ cache
 # Intellij project files
 .idea/
 *.iml
+/out
+*.ipr
+*.iws
+
+# Gradle
+.gradle
+/build/

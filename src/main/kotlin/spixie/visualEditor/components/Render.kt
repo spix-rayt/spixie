@@ -14,7 +14,10 @@ class Render: Component(), WithParticlesArrayInput {
     private val outImage = ComponentPinImageFloatBuffer(this, {
         val particles = inParticles.receiveValue()
 
-        val renderBufferBuilder = RenderBufferBuilder(particles.array.size)
+        val w = 1920/Main.arrangementWindow.visualEditor.downscale
+        val h = 1080/Main.arrangementWindow.visualEditor.downscale
+
+        val renderBufferBuilder = RenderBufferBuilder(particles.array.size, w, h)
         particles.array.sortedBy { -it.matrix.m32() }.forEach { particle ->
             if(particle.matrix.m32()>=40){
                 val (red,green,blue) = convertHueChromaLuminanceToRGB(
@@ -31,13 +34,10 @@ class Render: Component(), WithParticlesArrayInput {
                         green.toFloat(),
                         blue.toFloat(),
                         particle.transparency,
-                        particle.edge,
-                        particle.glow
+                        particle.edge
                 )
             }
         }
-        val w = 1920/Main.arrangementWindow.visualEditor.downscale
-        val h = 1080/Main.arrangementWindow.visualEditor.downscale
         val image = Main.opencl.render(renderBufferBuilder.complete(), w, h)
 
         ImageFloatBuffer(image, w, h, particlesCount = particles.array.size)

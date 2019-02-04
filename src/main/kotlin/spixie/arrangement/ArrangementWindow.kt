@@ -32,14 +32,23 @@ import kotlin.math.roundToInt
 
 class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
     private val contentPane = Pane()
+
     private val content = Group()
+
     val graphBuilderGroup = Group()
+
     private val grid = Group()
+
     private val graphCanvases = Group()
+
     val visualEditor = VisualEditor()
+
     private val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
+
     private val zoom = BehaviorSubject.createDefault(Fraction.getFraction(64.0))
+
     private val selectionBlock = ArrangementSelectionBlock(zoom)
+
     private val timePointer = Line(-0.5, 0.0, -0.5, 10000.0).apply {
         strokeWidth = 32.0
         startXProperty().addListener { _, _, newValue ->
@@ -57,8 +66,8 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
                     Stop(1.0, javafx.scene.paint.Color(1.0, 0.0, 0.0, 0.0))
             )
         }
-
     }
+
     var timePointerCentering = false
         set(value) {
             field = value
@@ -66,10 +75,13 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
                 updateTimePointer()
             }
         }
+
     val spectrogram = Spectrogram(content)
+
     private val graphsTree = Pane().apply {
         style="-fx-background-color: #101B2CFF"
     }
+
     val graphs = arrayListOf<ArrangementGraphsContainer>()
 
     private fun updateGrid(){
@@ -77,7 +89,9 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
     }
 
     var needRedrawAllGraphs = false
+
     private var needUpdateGrid = false
+
     fun perFrame(){
         if(needRedrawAllGraphs){
             redrawGraph(null)
@@ -217,26 +231,26 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
             updateCursor(event)
         }
 
-        contentPane.addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
+        contentPane.addEventFilter(MouseEvent.MOUSE_DRAGGED) { event ->
             updateCursor(event)
             if(event.isControlDown){
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
                 Main.renderManager.time.time = calcTimeOfX(screenToLocal.x)
             }
-        })
+        }
 
         var mousePressedCursorX:Double? = null
         var mousePressedLine:Int? = null
-        contentPane.addEventHandler(MouseEvent.MOUSE_PRESSED, { event ->
+        contentPane.addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
             if(event.isConsumed) return@addEventHandler
             if(event.button == MouseButton.PRIMARY){
                 mousePressedCursorX = cursor.startX
                 mousePressedLine = (content.screenToLocal(event.screenX, event.screenY).y/100.0).toInt()
             }
             requestFocus()
-        })
+        }
 
-        contentPane.addEventHandler(MouseEvent.MOUSE_RELEASED, { event ->
+        contentPane.addEventHandler(MouseEvent.MOUSE_RELEASED) { event ->
             if(event.button == MouseButton.PRIMARY){
                 mousePressedCursorX?.let { pressedCursorX ->
                     mousePressedLine?.let { pressedLine ->
@@ -270,47 +284,49 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
                 }
             }
             requestFocus()
-        })
+        }
 
         setOnScroll { event ->
-            if(event.deltaY<0){
-                if(zoom.value!!.compareTo(Fraction.ONE) != 0){
-                    val cursorTime = calcTimeOfX(cursor.startX-0.5)
-                    zoom.onNext(zoom.value!!.divideBy(Fraction.getFraction(2.0)))
-                    var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
-                    content.layoutX += (cursor.startX - cursorNewX).roundToInt()
-                    if(content.layoutX > 0) {
-                        cursorNewX += content.layoutX
-                        content.layoutX = 0.0
+            if(event.isControlDown){
+                if(event.deltaY<0){
+                    if(zoom.value!!.compareTo(Fraction.ONE) != 0){
+                        val cursorTime = calcTimeOfX(cursor.startX-0.5)
+                        zoom.onNext(zoom.value!!.divideBy(Fraction.getFraction(2.0)))
+                        var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
+                        content.layoutX += (cursor.startX - cursorNewX).roundToInt()
+                        if(content.layoutX > 0) {
+                            cursorNewX += content.layoutX
+                            content.layoutX = 0.0
+                        }
+                        cursor.startX = cursorNewX
+                        cursor.endX = cursorNewX
+
+                        spectrogram.requestRedraw()
+                        needRedrawAllGraphs = true
+                        updateTimePointer()
+
                     }
-                    cursor.startX = cursorNewX
-                    cursor.endX = cursorNewX
-
-                    spectrogram.requestRedraw()
-                    needRedrawAllGraphs = true
-                    updateTimePointer()
-
                 }
-            }
-            if(event.deltaY>0){
-                if(zoom.value!!.compareTo(Fraction.getFraction(4096.0)) != 0){
-                    val cursorTime = calcTimeOfX(cursor.startX-0.5)
-                    zoom.onNext(zoom.value!!.multiplyBy(Fraction.getFraction(2.0)))
-                    var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
-                    content.layoutX += (cursor.startX - cursorNewX).roundToInt()
-                    if(content.layoutX > 0) {
-                        cursorNewX += content.layoutX
-                        content.layoutX = 0.0
+                if(event.deltaY>0){
+                    if(zoom.value!!.compareTo(Fraction.getFraction(4096.0)) != 0){
+                        val cursorTime = calcTimeOfX(cursor.startX-0.5)
+                        zoom.onNext(zoom.value!!.multiplyBy(Fraction.getFraction(2.0)))
+                        var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
+                        content.layoutX += (cursor.startX - cursorNewX).roundToInt()
+                        if(content.layoutX > 0) {
+                            cursorNewX += content.layoutX
+                            content.layoutX = 0.0
+                        }
+                        cursor.startX = cursorNewX
+                        cursor.endX = cursorNewX
+
+                        spectrogram.requestRedraw()
+                        needRedrawAllGraphs = true
+                        updateTimePointer()
                     }
-                    cursor.startX = cursorNewX
-                    cursor.endX = cursorNewX
-
-                    spectrogram.requestRedraw()
-                    needRedrawAllGraphs = true
-                    updateTimePointer()
                 }
+                event.consume()
             }
-            event.consume()
         }
 
         setOnKeyPressed { event ->
@@ -355,7 +371,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
 
         needUpdateGrid = true
 
-        content.children.addAll(spectrogram, grid, graphCanvases, selectionBlock, cursor, timePointer, graphBuilderGroup)
+        content.children.addAll(grid, graphCanvases, spectrogram, selectionBlock, cursor, timePointer, graphBuilderGroup)
         center = contentPane.apply { children.add(content) }
 
         left = graphsTree.apply {
@@ -397,7 +413,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
         return x*64/100.0/zoom.value!!.toDouble()
     }
 
-    fun save(): ByteArray {
+    fun serialize(): ByteArray {
         val byteArrayOutputStream = ByteArrayOutputStream()
         val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
 
@@ -413,7 +429,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
         return byteArrayOutputStream.toByteArray()
     }
 
-    fun load(objectInputStream: ObjectInputStream){
+    fun deserializeAndLoad(objectInputStream: ObjectInputStream){
         try{
             Main.renderManager.bpm.value = objectInputStream.readDouble()
             Main.renderManager.offset.value = objectInputStream.readDouble()

@@ -7,13 +7,18 @@ import spixie.visualEditor.ComponentPinParticleArray
 
 class MoveRotate: Component(), WithParticlesArrayInput, WithParticlesArrayOutput {
     private val inParticles = ComponentPinParticleArray(this, null, "Particles")
-    private val inX = ComponentPinNumber(this, null, "X", NumberControl(0.0, 5.00, ""))
-    private val inY = ComponentPinNumber(this, null, "Y", NumberControl(0.0, 5.00, ""))
-    private val inZ = ComponentPinNumber(this, null, "Z", NumberControl(0.0, 5.00, ""))
-    private val inRotateX = ComponentPinNumber(this, null, "RotateX", NumberControl(0.0, 0.01, ""))
-    private val inRotateY = ComponentPinNumber(this, null, "RotateY", NumberControl(0.0, 0.01, ""))
-    private val inRotateZ = ComponentPinNumber(this, null, "RotateZ", NumberControl(0.0, 0.01, ""))
 
+    private val inX = ComponentPinNumber(this, null, "X", NumberControl(0.0, ""))
+
+    private val inY = ComponentPinNumber(this, null, "Y", NumberControl(0.0, ""))
+
+    private val inZ = ComponentPinNumber(this, null, "Z", NumberControl(0.0, ""))
+
+    private val inRotateX = ComponentPinNumber(this, null, "RotateX", NumberControl(0.0, ""))
+
+    private val inRotateY = ComponentPinNumber(this, null, "RotateY", NumberControl(0.0, ""))
+
+    private val inRotateZ = ComponentPinNumber(this, null, "RotateZ", NumberControl(0.0, ""))
 
     private val outParticles = ComponentPinParticleArray(this, {
         val particles = inParticles.receiveValue()

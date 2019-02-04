@@ -6,6 +6,7 @@ import javafx.scene.Group
 import javafx.scene.input.DataFormat
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
+import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Pane
 import org.apache.commons.lang3.math.Fraction
 import spixie.Main
@@ -201,9 +202,9 @@ fun convertRGBToHueChroma(r:Double, g:Double, b:Double): Pair<Double, Double> {
     return h/6 to s
 }
 
-val Pr = 0.2126
-val Pg = 0.7152
-val Pb = 0.0722
+const val Pr = 0.2126
+const val Pg = 0.7152
+const val Pb = 0.0722
 
 fun calcLuminance(r:Double, g:Double, b:Double): Double{
     return r*Pr + g*Pg + b*Pb
@@ -224,7 +225,7 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
     var layoutXOnStartDrag = 0.0
     var layoutYOnStartDrag = 0.0
 
-    addEventHandler(MouseEvent.MOUSE_PRESSED){ event->
+    addEventHandler(MouseEvent.MOUSE_PRESSED) { event->
         if(event.button == MouseButton.MIDDLE){
             mouseXOnStartDrag = event.screenX
             mouseYOnStartDrag = event.screenY
@@ -234,7 +235,7 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
         }
     }
 
-    addEventFilter(MouseEvent.MOUSE_DRAGGED, { event ->
+    addEventFilter(MouseEvent.MOUSE_DRAGGED) { event ->
         if(event.isMiddleButtonDown){
             if(allDirections){
                 content.layoutX = layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag)
@@ -244,7 +245,19 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
                 content.layoutY = minOf(layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag), 0.0)
             }
         }
-    })
+    }
+
+    addEventHandler(ScrollEvent.SCROLL) { event ->
+        if(!event.isControlDown){
+            if(allDirections){
+                content.layoutX = content.layoutX + event.deltaX
+                content.layoutY = content.layoutY + event.deltaY
+            }else{
+                content.layoutX = minOf(content.layoutX + event.deltaX, 0.0)
+                content.layoutY = minOf(content.layoutY + event.deltaY, 0.0)
+            }
+        }
+    }
 }
 
 val F_100: Fraction = Fraction.getFraction(100.0)

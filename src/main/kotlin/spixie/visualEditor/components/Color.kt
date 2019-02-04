@@ -7,10 +7,14 @@ import spixie.visualEditor.ComponentPinParticleArray
 
 class Color: Component(), WithParticlesArrayInput, WithParticlesArrayOutput {
     private val inParticles = ComponentPinParticleArray(this, null, "Particles")
-    private val inHue = ComponentPinNumber(this, null, "Hue", NumberControl(2.0, 0.01, ""))
-    private val inChroma = ComponentPinNumber(this, null, "Chroma", NumberControl(1.0, 0.01, "").limitMin(0.0).limitMax(1.0))
-    private val inLuminance = ComponentPinNumber(this, null, "Luminance", NumberControl(1.0, 0.002, "").limitMin(0.0))
-    private val inTransparency = ComponentPinNumber(this, null, "Transparency", NumberControl(1.0, 0.001, "").limitMin(0.0).limitMax(1.0))
+
+    private val inHue = ComponentPinNumber(this, null, "Hue", NumberControl(2.0, ""))
+
+    private val inChroma = ComponentPinNumber(this, null, "Chroma", NumberControl(1.0, "").limitMin(0.0).limitMax(1.0))
+
+    private val inLuminance = ComponentPinNumber(this, null, "Luminance", NumberControl(1.0, "").limitMin(0.0))
+
+    private val inTransparency = ComponentPinNumber(this, null, "Transparency", NumberControl(1.0, "").limitMin(0.0).limitMax(1.0))
 
     private val outParticles = ComponentPinParticleArray(this, {
         val particles = inParticles.receiveValue()

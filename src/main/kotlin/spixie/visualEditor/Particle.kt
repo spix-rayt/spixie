@@ -15,12 +15,17 @@ class Particle {
                 field = 6.0f - value.absoluteValue.rem(6.0f)
             }
         }
+
     var chroma:Float = 1.0f
+
     var luminance:Float = 1.0f
+
     var transparency:Float = 1.0f
+
     var size:Float = 1.0f
+
     var edge: Float = 0.0f
-    var glow: Float = 1.0f
+
     val matrix = Matrix4f()
 
     fun hasColor(): Boolean {

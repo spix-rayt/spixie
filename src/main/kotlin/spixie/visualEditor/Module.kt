@@ -3,6 +3,7 @@ package spixie.visualEditor
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import javafx.geometry.Point2D
 import javafx.scene.Group
+import javafx.scene.Node
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.Pane
 import javafx.scene.paint.Color
@@ -23,9 +24,13 @@ import kotlin.math.roundToInt
 
 class Module(var name: String) {
     val contentPane = Pane()
+
     private val components = Group()
+
     val content = Group()
+
     private val connects = Group()
+
     private var selectedComponents = arrayOf<Component>()
         set(value) {
             selectedComponents.forEach { it.selected = false }
@@ -76,9 +81,9 @@ class Module(var name: String) {
 
         contentPane.setOnMouseClicked { event ->
             if(event.button == MouseButton.SECONDARY){
-                val screenToLocal = components.screenToLocal(event.screenX, event.screenY)
-                ComponentsList(screenToLocal.x, screenToLocal.y, content.children, isMain) { result ->
-                    result.magneticRelocate(screenToLocal.x - result.width / 2, screenToLocal.y)
+                val point2D = components.screenToLocal(event.screenX, event.screenY)
+                openComponentsList(point2D) { result->
+                    result.magneticRelocate(point2D.x - result.width / 2, point2D.y)
                     addComponent(result)
                 }
             }
@@ -94,12 +99,20 @@ class Module(var name: String) {
         }
     }
 
+    fun openComponentsList(point2D: Point2D, result: (component: Component) -> Unit) {
+        ComponentsList(point2D.x, point2D.y, content.children, isMain) {
+            result(it)
+        }
+    }
+
     private fun clearComponents(){
         components.children.clear()
     }
 
     fun addComponent(component: Component){
+        components.children.add(component)
         component.conneectionsChanged
+                .startWith(Unit)
                 .debounce(17L, TimeUnit.MILLISECONDS)
                 .observeOn(JavaFxScheduler.platform())
                 .subscribe{
@@ -125,7 +138,6 @@ class Module(var name: String) {
                 it.relativelyMagneticRelocate(x, y)
             }
         }
-        components.children.add(component)
     }
 
     fun removeComponent(component: Component){
@@ -140,6 +152,10 @@ class Module(var name: String) {
     fun findParticlesResultComponent(): ParticlesResult {
         val result = components.children.find { it is ParticlesResult } ?: throw Exception("Result component dont exist")
         return result as ParticlesResult
+    }
+
+    fun findResultComponentNode(): Node {
+        return components.children.find { it is ImageResult || it is ParticlesResult } ?: throw Exception("Result component dont exist")
     }
 
     fun updateModuleComponents(){
@@ -194,22 +210,44 @@ class Module(var name: String) {
                     }
                 }
                 if(component is WithParticlesArrayOutput){
-                    components.children.forEach { component2 ->
-                        if(component2 is Component && component2 is WithParticlesArrayInput){
-                            if(component.layoutX.roundToInt() == component2.layoutX.roundToInt()){
-                                if((component.layoutY+component.height).roundToInt() == component2.layoutY.roundToInt()+1){
-                                    val outputPin = component.getParticlesArrayOutput()
-                                    val inputPin = component2.getParticlesArrayInput()
-                                    connectPins(outputPin, inputPin, Color.DARKVIOLET.deriveColor(0.0, 1.0, 1.0, 0.15))
-                                    inputPin.imaginaryConnections.add(outputPin)
-                                }
-                            }
+                    findComponentBelowOf(component).let { belowComponent ->
+                        if(belowComponent is WithParticlesArrayInput) {
+                            val outputPin = component.getParticlesArrayOutput()
+                            val inputPin = belowComponent.getParticlesArrayInput()
+                            connectPins(outputPin, inputPin, Color.DARKVIOLET.deriveColor(0.0, 1.0, 1.0, 0.15))
+                            inputPin.imaginaryConnections.add(outputPin)
                         }
                     }
                 }
             }
         }
         Main.renderManager.requestRender()
+    }
+
+    fun findComponentBelowOf(component: Component): Component? {
+        components.children.forEach { component2 ->
+            if(component2 is Component){
+                if(component.layoutX.roundToInt() == component2.layoutX.roundToInt()){
+                    if((component.layoutY+(component.height-1)).roundToInt() == component2.layoutY.roundToInt()){
+                        return component2
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    fun findComponentAboveOf(component: Component): Component? {
+        components.children.forEach { component2 ->
+            if(component2 is Component){
+                if(component.layoutX.roundToInt() == component2.layoutX.roundToInt()){
+                    if(component.layoutY.roundToInt() == (component2.layoutY + (component2.height-1)).roundToInt()){
+                        return component2
+                    }
+                }
+            }
+        }
+        return null
     }
 
 
@@ -221,9 +259,9 @@ class Module(var name: String) {
         cubicCurve.startY = (aBounds.minY + aBounds.maxY) / 2
         cubicCurve.endX = (bBounds.minX + bBounds.maxX) / 2
         cubicCurve.endY = (bBounds.minY + bBounds.maxY) / 2
-        cubicCurve.controlX1 = cubicCurve.startX + (cubicCurve.endX - cubicCurve.startX).absoluteValue.coerceIn(64.0..800.0)/2
+        cubicCurve.controlX1 = cubicCurve.startX + (cubicCurve.endX - cubicCurve.startX).absoluteValue.coerceIn(42.0..128.0)/2
         cubicCurve.controlY1 = cubicCurve.startY
-        cubicCurve.controlX2 = cubicCurve.endX - (cubicCurve.endX - cubicCurve.startX).absoluteValue.coerceIn(64.0..800.0)/2
+        cubicCurve.controlX2 = cubicCurve.endX - (cubicCurve.endX - cubicCurve.startX).absoluteValue.coerceIn(42.0..128.0)/2
         cubicCurve.controlY2 = cubicCurve.endY
         cubicCurve.fill = Color.TRANSPARENT
         cubicCurve.strokeWidth = 3.0
