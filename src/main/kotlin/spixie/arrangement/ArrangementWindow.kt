@@ -18,11 +18,10 @@ import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.lang3.math.Fraction
-import spixie.Main
+import spixie.Core
 import spixie.WorkingWindow
 import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
-import spixie.visualEditor.Component
 import spixie.visualEditor.Module
 import spixie.visualEditor.VisualEditor
 import java.io.ByteArrayOutputStream
@@ -223,7 +222,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
 
         contentPane.initCustomPanning(content, false)
 
-        Main.renderManager.time.timeChanges.subscribe {
+        Core.renderManager.time.timeChanges.subscribe {
             updateTimePointer()
         }
 
@@ -235,7 +234,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
             updateCursor(event)
             if(event.isControlDown){
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
-                Main.renderManager.time.time = calcTimeOfX(screenToLocal.x)
+                Core.renderManager.time.time = calcTimeOfX(screenToLocal.x)
             }
         }
 
@@ -255,13 +254,13 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
                 mousePressedCursorX?.let { pressedCursorX ->
                     mousePressedLine?.let { pressedLine ->
                         if(pressedCursorX == cursor.startX){
-                            val restartAudio = Main.audio.isPlaying()
+                            val restartAudio = Core.audio.isPlaying()
                             if(restartAudio){
-                                Main.audio.pause()
+                                Core.audio.pause()
                             }
-                            Main.renderManager.time.time = calcTimeOfX(cursor.startX-0.5)
+                            Core.renderManager.time.time = calcTimeOfX(cursor.startX-0.5)
                             if(restartAudio){
-                                Main.audio.play(Duration.seconds(Math.round((Main.renderManager.time.time- Main.renderManager.offset.value)*3600/ Main.renderManager.bpm.value)/60.0))
+                                Core.audio.play(Duration.seconds(Math.round((Core.renderManager.time.time- Core.renderManager.offset.value)*3600/ Core.renderManager.bpm.value)/60.0))
                             }
                         }
                         val time1 = calcTimeOfX(cursor.startX-0.5)
@@ -349,7 +348,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
                     timePointerCentering = true
                 }
                 if(event.code == KeyCode.V){
-                    Main.workingWindow.open(visualEditor)
+                    Core.workingWindow.open(visualEditor)
                 }
                 if(event.code == KeyCode.Q){
                     selectionBlock.buildGraph()
@@ -417,10 +416,10 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
         val byteArrayOutputStream = ByteArrayOutputStream()
         val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
 
-        objectOutputStream.writeDouble(Main.renderManager.bpm.value)
-        objectOutputStream.writeDouble(Main.renderManager.offset.value)
+        objectOutputStream.writeDouble(Core.renderManager.bpm.value)
+        objectOutputStream.writeDouble(Core.renderManager.offset.value)
 
-        val modules = visualEditor.modules.map { it.toSerializable() }
+        val modules = visualEditor.modules.map { it.serialize() }
         objectOutputStream.writeObject(modules)
 
         objectOutputStream.writeObject(graphs)
@@ -431,13 +430,13 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
 
     fun deserializeAndLoad(objectInputStream: ObjectInputStream){
         try{
-            Main.renderManager.bpm.value = objectInputStream.readDouble()
-            Main.renderManager.offset.value = objectInputStream.readDouble()
+            Core.renderManager.bpm.value = objectInputStream.readDouble()
+            Core.renderManager.offset.value = objectInputStream.readDouble()
             visualEditor.modules.clear()
-            val modules = objectInputStream.readObject() as List<Triple<String, List<Component>, List<Pair<Pair<Int, String>, Pair<Int, String>>>>>
+            val modules = objectInputStream.readObject() as List<Module.SerializedModule>
             modules.forEach {
-                val module = Module(it.first).apply {
-                    fromSerializable(it)
+                val module = Module(it.name).apply {
+                    deserizalize(it)
                     reconnectPins()
                 }
                 visualEditor.modules.add(module)
@@ -452,7 +451,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
             graphs.addAll(objectInputStream.readObject() as ArrayList<ArrangementGraphsContainer>)
             updateGraphTree()
             needRedrawAllGraphs = true
-            Main.renderManager.clearCache()
+            Core.renderManager.clearCache()
         }catch (e:Exception){
             e.printStackTrace()
             Platform.exit()
@@ -460,7 +459,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
     }
 
     fun getSelectedFrames(): Pair<Int, Int>{
-        return (selectionBlock.timeStart.toDouble()*3600/ Main.renderManager.bpm.value).toInt() to (selectionBlock.timeEnd.toDouble()*3600/ Main.renderManager.bpm.value).toInt()
+        return (selectionBlock.timeStart.toDouble()*3600/ Core.renderManager.bpm.value).toInt() to (selectionBlock.timeEnd.toDouble()*3600/ Core.renderManager.bpm.value).toInt()
     }
 
     private fun updateCursor(event:MouseEvent){
@@ -471,7 +470,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
     }
 
     private fun updateTimePointer(){
-        val x = Math.round(zoom.value!!.toDouble() / 64.0 * Main.renderManager.time.time * 100.0).toDouble()
+        val x = Math.round(zoom.value!!.toDouble() / 64.0 * Core.renderManager.time.time * 100.0).toDouble()
         timePointer.startX = x
         timePointer.endX = x
         if(timePointerCentering){

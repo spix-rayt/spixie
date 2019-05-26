@@ -1,6 +1,8 @@
 package spixie
 
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
+import io.reactivex.rxkotlin.Observables
+import io.reactivex.subjects.BehaviorSubject
 import io.reactivex.subjects.PublishSubject
 import javafx.animation.AnimationTimer
 import javafx.application.Application
@@ -18,8 +20,6 @@ import javafx.scene.layout.StackPane
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
 import javafx.util.Duration
-import spixie.arrangement.ArrangementWindow
-import spixie.opencl.OpenCLApi
 import spixie.opencl.OpenCLInfoWindow
 import java.io.File
 import java.io.ObjectInputStream
@@ -59,9 +59,11 @@ class Main : Application() {
         scene.stylesheets.add("style.css")
         scene.focusOwnerProperty().addListener { _, _, newValue ->
             if(newValue == null){
-                Main.workingWindow.center.requestFocus()
+                Core.workingWindow.center.requestFocus()
             }
         }
+
+
 
         stage.apply {
             title = "Render"
@@ -72,69 +74,65 @@ class Main : Application() {
             isFullScreen = true
         }
 
-        workingWindow.prefWidthProperty().bind(scene.widthProperty())
-        workingWindow.prefHeightProperty().bind(scene.heightProperty())
-        root.children.addAll(workingWindow)
-        workingWindow.open(arrangementWindow)
-
-        val windowOpacity = arrayOf(1.0f)
-        workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+        Core.workingWindow.prefWidthProperty().bind(scene.widthProperty())
+        Core.workingWindow.prefHeightProperty().bind(scene.heightProperty())
+        root.children.addAll(Core.workingWindow)
+        Core.workingWindow.open(Core.arrangementWindow)
+        val windowOpacity = BehaviorSubject.createDefault(1.0)
+        val windowHide = BehaviorSubject.createDefault(false)
+        Observables.combineLatest(windowOpacity, windowHide) { opacity, hide ->
+            Core.workingWindow.opacity = if(hide) 0.0 else opacity
+        }.subscribe()
 
         var playStartTime = 0.0
 
         root.onKeyPressed = EventHandler<KeyEvent> { event ->
             if(event.isControlDown && !event.isAltDown && !event.isShiftDown){
                 if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
-                    windowOpacity[0] = 1.0f
-                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                    windowOpacity.onNext(1.0)
                 }
                 if (event.code == KeyCode.DIGIT2 && event.isControlDown) {
-                    windowOpacity[0] = 0.8f
-                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                    windowOpacity.onNext(0.8)
                 }
                 if (event.code == KeyCode.DIGIT3 && event.isControlDown) {
-                    windowOpacity[0] = 0.6f
-                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                    windowOpacity.onNext(0.6)
                 }
                 if (event.code == KeyCode.DIGIT4 && event.isControlDown) {
-                    windowOpacity[0] = 0.4f
-                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                    windowOpacity.onNext(0.4)
                 }
                 if (event.code == KeyCode.DIGIT5 && event.isControlDown) {
-                    windowOpacity[0] = 0.2f
-                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                    windowOpacity.onNext(0.2)
                 }
                 if (event.code == KeyCode.DIGIT6 && event.isControlDown) {
-                    windowOpacity[0] = 0.0f
-                    workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                    windowOpacity.onNext(0.0)
                 }
             }
 
             if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
                 if (event.code == KeyCode.TAB) {
-                    workingWindow.style = "-fx-opacity: 0.0"
+                    windowHide.onNext(true)
                 }
 
                 if(event.code == KeyCode.A){
-                    renderManager.time.frame = (renderManager.time.frame-1).coerceAtLeast(0)
+                    Core.renderManager.time.frame = (Core.renderManager.time.frame-1).coerceAtLeast(0)
                 }
                 if(event.code == KeyCode.D){
-                    renderManager.time.frame += 1
+                    Core.renderManager.time.frame += 1
                 }
                 if(event.code == KeyCode.P){
-                    if(!renderManager.autoRenderNextFrame){
-                        renderManager.autoRenderNextFrame = true
-                        renderManager.time.frame = renderManager.time.frame/3*3
-                        renderManager.requestRender()
+                    if(!Core.renderManager.autoRenderNextFrame){
+                        Core.renderManager.autoRenderNextFrame = true
+                        Core.renderManager.time.frame = Core.renderManager.time.frame/3*3
+                        Core.renderManager.requestRender()
                     }
                 }
                 if(event.code == KeyCode.SPACE){
-                    if(audio.isPlaying()){
-                        audio.pause()
-                        Platform.runLater { renderManager.time.time = playStartTime }
+                    if(Core.audio.isPlaying()){
+                        Core.audio.pause()
+                        Platform.runLater { Core.renderManager.time.time = playStartTime }
                     }else{
-                        playStartTime = renderManager.time.time
-                        audio.play(Duration.seconds(Math.round((playStartTime-Main.renderManager.offset.value)*3600/Main.renderManager.bpm.value)/60.0))
+                        playStartTime = Core.renderManager.time.time
+                        Core.audio.play(Duration.seconds(Math.round((playStartTime-Core.renderManager.offset.value)*3600/Core.renderManager.bpm.value)/60.0))
                     }
                 }
                 if(event.code == KeyCode.F2){
@@ -144,65 +142,20 @@ class Main : Application() {
                     if(!File("screenshots/").exists()) File("screenshots/").mkdir()
                     ImageIO.write(SwingFXUtils.fromFXImage(imageView.image, null), "png", File("screenshots/${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.png"))
                 }
-
-                if(event.code == KeyCode.DIGIT1) {
-                    dragMultiplier = 100.0
-                }
-                if(event.code == KeyCode.DIGIT2) {
-                    dragMultiplier = 10.0
-                }
-                if(event.code == KeyCode.DIGIT3) {
-                    dragMultiplier = 1.0
-                }
-                if(event.code == KeyCode.DIGIT4) {
-                    dragMultiplier = 0.1
-                }
-                if(event.code == KeyCode.DIGIT5) {
-                    dragMultiplier = 0.01
-                }
-                if(event.code == KeyCode.DIGIT6) {
-                    dragMultiplier = 0.001
-                }
-                if(event.code == KeyCode.DIGIT7) {
-                    dragMultiplier = 0.0001
-                }
             }
         }
 
         root.onKeyReleased = EventHandler<KeyEvent> { event ->
             if (event.code == KeyCode.TAB) {
-                workingWindow.style = "-fx-opacity: " + windowOpacity[0]
+                windowHide.onNext(false)
             }
             if(event.code == KeyCode.P){
-                renderManager.autoRenderNextFrame = false
-            }
-            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
-                if(event.code == KeyCode.DIGIT1) {
-                    dragMultiplier = 0.0
-                }
-                if(event.code == KeyCode.DIGIT2) {
-                    dragMultiplier = 0.0
-                }
-                if(event.code == KeyCode.DIGIT3) {
-                    dragMultiplier = 0.0
-                }
-                if(event.code == KeyCode.DIGIT4) {
-                    dragMultiplier = 0.0
-                }
-                if(event.code == KeyCode.DIGIT5) {
-                    dragMultiplier = 0.0
-                }
-                if(event.code == KeyCode.DIGIT6) {
-                    dragMultiplier = 0.0
-                }
-                if(event.code == KeyCode.DIGIT7) {
-                    dragMultiplier = 0.0
-                }
+                Core.renderManager.autoRenderNextFrame = false
             }
         }
 
         stage.onCloseRequest = EventHandler<WindowEvent> {
-            val bytes = arrangementWindow.serialize()
+            val bytes = Core.arrangementWindow.serialize()
             if(!File("save/").exists()) File("save/").mkdir()
             if(File("save/save.spixie").exists()){
                 Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
@@ -213,34 +166,23 @@ class Main : Application() {
 
         File("save/save.spixie").let {
             if(it.exists()){
-                arrangementWindow.deserializeAndLoad(ObjectInputStream(it.inputStream()))
+                Core.arrangementWindow.deserializeAndLoad(ObjectInputStream(it.inputStream()))
             }
         }
 
-        renderManager.renderStart(images)
+        Core.renderManager.renderStart(images)
         object : AnimationTimer() {
             override fun handle(now: Long) {
-                renderManager.perFrame()
-                if(workingWindow.opacity != 0.0){
-                    arrangementWindow.perFrame()
+                Core.renderManager.perFrame()
+                if(Core.workingWindow.opacity != 0.0){
+                    Core.arrangementWindow.perFrame()
                 }
             }
         }.start()
 
-        if(File("audio.aiff").exists()) {
-            audio.load(File("audio.aiff"))
-        }
-    }
-
-    companion object {
-        var renderManager = RenderManager()
-        val workingWindow = WorkingWindow()
-        val arrangementWindow = ArrangementWindow()
-        val audio = Audio()
-        val opencl = OpenCLApi()
-        var dragMultiplier = 0.0
-
-        var dragAndDropObject: Any = Any()
+        /*if(File("audio.aiff").exists()) {
+            Core.audio.load(File("audio.aiff"))
+        }*/
     }
 }
 

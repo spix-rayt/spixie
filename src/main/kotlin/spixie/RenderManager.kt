@@ -28,7 +28,7 @@ class RenderManager {
 
     val offset = NumberControl(0.0, "Offset").apply {
         changes.subscribe {
-            Main.arrangementWindow.spectrogram.requestRedraw()
+            Core.arrangementWindow.spectrogram.requestRedraw()
         }
     }
 
@@ -51,7 +51,7 @@ class RenderManager {
             limitMin(60.0)
             limitMax(999.0)
             changes.subscribe { _->
-                Main.arrangementWindow.spectrogram.requestRedraw()
+                Core.arrangementWindow.spectrogram.requestRedraw()
             }
 
             Observable.zip(changes, changes.skip(1), BiFunction { previous: Double, current: Double -> previous to current }).subscribe { pair ->
@@ -67,9 +67,9 @@ class RenderManager {
 
     fun renderStart(images: Subject<Image>) {
         perFrame = {
-            if(Main.audio.isPlaying()){
-                val seconds = Main.audio.getTime()
-                time.time = (frameToTime((seconds*60).roundToInt(), Main.renderManager.bpm.value) + offset.value).coerceAtLeast(0.0)
+            if(Core.audio.isPlaying()){
+                val seconds = Core.audio.getTime()
+                time.time = (frameToTime((seconds*60).roundToInt(), Core.renderManager.bpm.value) + offset.value).coerceAtLeast(0.0)
                 frameCache[time.frame/3*3]?.let {
                     val byteArrayInputStream = ByteArrayInputStream(it)
                     images.onNext(Image(byteArrayInputStream))
@@ -83,9 +83,9 @@ class RenderManager {
                 .subscribe { t ->
                     try {
                         val frame = Math.round(t*3600/bpm.value).toInt()
-                        if (!Main.audio.isPlaying()) {
+                        if (!Core.audio.isPlaying()) {
                             val stopWatch = StopWatch.createStarted()
-                            val image = Main.arrangementWindow.visualEditor.render(t, scaleDown)
+                            val image = Core.arrangementWindow.visualEditor.render(t, scaleDown)
                             val bufferedImage = image.toBufferedImageAndRelease()
                             stopWatch.stop()
                             lastRenderInfoSubject.onNext("${image.particlesCount.toString().padStart(8, ' ')} particles ${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
@@ -167,7 +167,7 @@ class RenderManager {
                     val bufferedImage = Flowable.fromArray(*((0 until motionBlurIterations).toList().toTypedArray()))
                             .subscribeOn(renderThread)
                             .map { k->
-                                Main.arrangementWindow.visualEditor.render(
+                                Core.arrangementWindow.visualEditor.render(
                                         linearInterpolate(
                                                 frameToTime(frame - fpsskip, bpm.value),
                                                 frameToTime(frame, bpm.value),
@@ -177,10 +177,10 @@ class RenderManager {
                                 ).buffer
                             }
                             .map { buffer->
-                                Main.opencl.brightPixelsToWhite(buffer, w, h).also { buffer.release() }
+                                Core.opencl.brightPixelsToWhite(buffer, w, h).also { buffer.release() }
                             }
-                            .reduce(Main.opencl.createZeroBuffer(w*h*3)) { accum, pixelsBuffer->
-                                Main.opencl.pixelSum(accum, pixelsBuffer, w, h, 1.0f/motionBlurIterations)
+                            .reduce(Core.opencl.createZeroBuffer(w*h*3)) { accum, pixelsBuffer->
+                                Core.opencl.pixelSum(accum, pixelsBuffer, w, h, 1.0f/motionBlurIterations)
                                 pixelsBuffer.release()
                                 accum
                             }

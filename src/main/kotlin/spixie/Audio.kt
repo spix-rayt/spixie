@@ -61,7 +61,7 @@ class Audio {
         mediaPlayer?.stop()
         mediaPlayer = null
         spectra = listOf()
-        Main.arrangementWindow.spectrogram.requestRedraw()
+        Core.arrangementWindow.spectrogram.requestRedraw()
         Thread(Runnable {
             val exitValue = if (file.canonicalPath == File("audio.aiff").canonicalPath) {
                 0
@@ -124,7 +124,7 @@ class Audio {
                         }
                     }.toDoubleArray()
                 }
-                Main.arrangementWindow.spectrogram.requestRedraw()
+                Core.arrangementWindow.spectrogram.requestRedraw()
 
 
                 try {

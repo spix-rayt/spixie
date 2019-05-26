@@ -3,6 +3,7 @@ package spixie.arrangement
 import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.layout.Region
 import org.apache.commons.lang3.math.Fraction
+import spixie.Core
 import spixie.Main
 import spixie.static.F_100
 import spixie.visualEditor.GraphData
@@ -26,20 +27,20 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         set(value) {
             field = value
             updateLayout()
-            Main.arrangementWindow.graphBuilderGroup.children.clear()
+            Core.arrangementWindow.graphBuilderGroup.children.clear()
         }
     var timeEnd: Fraction = Fraction.ZERO
         set(value) {
             field = value
             updateLayout()
-            Main.arrangementWindow.graphBuilderGroup.children.clear()
+            Core.arrangementWindow.graphBuilderGroup.children.clear()
         }
 
     var line = 0
         set(value) {
             field = value
             layoutY = value*100.0
-            Main.arrangementWindow.graphBuilderGroup.children.clear()
+            Core.arrangementWindow.graphBuilderGroup.children.clear()
         }
 
     var graph: ArrangementGraph? = null
@@ -66,7 +67,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
                 graphBuilder.layoutY = layoutY + height + 10.0
             }
             graphBuilder.parentProperty().addListener { _, _, newValue -> if(newValue == null) subscribe.dispose() }
-            Main.arrangementWindow.graphBuilderGroup.children.setAll(graphBuilder)
+            Core.arrangementWindow.graphBuilderGroup.children.setAll(graphBuilder)
         }
     }
 
@@ -80,7 +81,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
                 graphEditor.layoutY = layoutY + height + 10.0
             }
             graphEditor.parentProperty().addListener { _, _, newValue -> if(newValue == null) subscribe.dispose() }
-            Main.arrangementWindow.graphBuilderGroup.children.setAll(graphEditor)
+            Core.arrangementWindow.graphBuilderGroup.children.setAll(graphEditor)
         }
     }
 
@@ -100,14 +101,14 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
             copyData.forEach {
                 graph.data.add(GraphData.Fragment(it.start+offset, it.data.clone()))
             }
-            Main.arrangementWindow.needRedrawAllGraphs = true
+            Core.arrangementWindow.needRedrawAllGraphs = true
         }
     }
 
     fun del() {
         graph?.let { graph ->
             graph.data.delete(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            Main.arrangementWindow.needRedrawAllGraphs = true
+            Core.arrangementWindow.needRedrawAllGraphs = true
         }
     }
 
@@ -122,14 +123,14 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
             p.forEach {
                 graph.data.add(GraphData.Fragment(it.start+offset, it.data.clone()))
             }
-            Main.arrangementWindow.needRedrawAllGraphs = true
+            Core.arrangementWindow.needRedrawAllGraphs = true
         }
     }
 
     fun reverse(){
         graph?.let { graph->
             graph.data.reverse(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            Main.arrangementWindow.needRedrawAllGraphs = true
+            Core.arrangementWindow.needRedrawAllGraphs = true
         }
     }
 }

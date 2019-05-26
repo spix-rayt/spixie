@@ -1,6 +1,7 @@
 package spixie.arrangement
 
 import javafx.scene.canvas.Canvas
+import spixie.Core
 import spixie.Main
 import spixie.NumberControl
 import spixie.visualEditor.GraphData
@@ -19,10 +20,10 @@ class ArrangementGraph: Externalizable {
 
     init {
         rangeMinControl.changes.subscribe {
-            Main.renderManager.requestRender()
+            Core.renderManager.requestRender()
         }
         rangeMaxControl.changes.subscribe {
-            Main.renderManager.requestRender()
+            Core.renderManager.requestRender()
         }
     }
 

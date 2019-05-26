@@ -5,6 +5,7 @@ import javafx.scene.control.Button
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
+import spixie.Core
 import spixie.Main
 import spixie.NumberControl
 import spixie.static.linearInterpolate
@@ -62,7 +63,7 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
             data.forEach {
                 graph.data.add(it)
             }
-            Main.arrangementWindow.redrawGraph(graph)
+            Core.arrangementWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })
     }

@@ -5,6 +5,7 @@ import javafx.scene.control.Button
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
+import spixie.Core
 import spixie.Main
 import spixie.NumberControl
 import spixie.static.linearInterpolate
@@ -110,7 +111,7 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
         graph.data.add(fragment)
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
             processData(fragment)
-            Main.arrangementWindow.redrawGraph(graph)
+            Core.arrangementWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })
     }

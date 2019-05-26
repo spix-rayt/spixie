@@ -55,11 +55,11 @@ class RenderDialog(owner: Window): Stage() {
             setOnAction {
                 progressBar.progress = 0.0
                 grid.isDisable = true
-                val selectedFrames = Main.arrangementWindow.getSelectedFrames()
+                val selectedFrames = Core.arrangementWindow.getSelectedFrames()
                 val lastFramesRenderTime = mutableListOf<Double>()
                 val stopWatch = StopWatch.createStarted()
                 var lastRenderedFrame = 0
-                Main.renderManager.renderToFile(
+                Core.renderManager.renderToFile(
                         { currentFrame, framesCount ->
                             progressBar.progress = currentFrame / framesCount.toDouble()
                             val t = stopWatch.getTime(TimeUnit.MILLISECONDS) / 1000.0 / (currentFrame-lastRenderedFrame)
@@ -82,7 +82,7 @@ class RenderDialog(owner: Window): Stage() {
                         selectedFrames.first,
                         selectedFrames.second,
                         checkBoxAudio.isSelected,
-                        Main.renderManager.offset.value/Main.renderManager.bpm.value*60.0,
+                        Core.renderManager.offset.value/Core.renderManager.bpm.value*60.0,
                         checkBoxLowQuality.isSelected
                 )
             }

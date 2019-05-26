@@ -1,7 +1,7 @@
 package spixie.visualEditor.components
 
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPinParticleArray
+import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.Module
 import spixie.visualEditor.ParticleArray
 import java.io.Externalizable
@@ -10,13 +10,15 @@ import java.io.ObjectOutput
 
 class ModuleComponent: Component(), Externalizable {
     var module: Module? = null
-    private val outParticles = ComponentPinParticleArray(this, {
-        module?.findParticlesResultComponent()?.getParticles() ?: ParticleArray(arrayListOf(), 0.0f)
-    }, "Particles")
+    private val outParticles = ComponentPinParticleArray("Particles").apply {
+        getValue = {
+            module?.findParticlesResultComponent()?.getParticles() ?: ParticleArray(arrayListOf(), 0.0f)
+        }
+    }
 
-    init {
+    override fun configInit() {
         outputPins.add(outParticles)
-        updateVisual()
+        updateUI()
     }
 
     override fun writeExternal(o: ObjectOutput) {

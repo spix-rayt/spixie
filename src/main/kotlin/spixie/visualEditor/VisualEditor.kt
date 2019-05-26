@@ -10,12 +10,14 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.stage.Screen
+import spixie.Core
 import spixie.Main
 import spixie.WorkingWindow
 import spixie.visualEditor.components.ImageResult
 import spixie.visualEditor.components.MoveRotate
 import spixie.visualEditor.components.ParticlesResult
 import spixie.visualEditor.components.Render
+import java.lang.Exception
 
 const val VE_GRID_CELL_SIZE = 20.0
 const val VE_PIN_WIDTH = VE_GRID_CELL_SIZE * 5
@@ -51,7 +53,7 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
             if(event.code == KeyCode.INSERT){
                 val newModule = Module("m${modules.size}")
                 modules.add(newModule)
-                newModule.addComponent(ParticlesResult())
+                newModule.addComponent(ParticlesResult().apply { creationInit(); configInit() })
                 loadModule(newModule)
                 event.consume()
             }
@@ -73,7 +75,7 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
                     val root = scene.root as StackPane
                     if(root.children.find { it is ListView<*> } == null){
                         val listView = ListView<Any>().apply {
-                            Main.arrangementWindow.visualEditor.modules.forEach { this.items.add(it) }
+                            Core.arrangementWindow.visualEditor.modules.forEach { this.items.add(it) }
                             maxWidth = 250.0
                             maxHeight = 450.0
                         }
@@ -87,12 +89,12 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
                                 root.children.remove(listView)
                             }
                         }
-                        listView.selectionModel.select(Main.arrangementWindow.visualEditor.currentModule)
+                        listView.selectionModel.select(Core.arrangementWindow.visualEditor.currentModule)
                         listView.requestFocus()
                         listView.setOnKeyPressed { event ->
                             if(event.code == KeyCode.ENTER){
                                 (listView.selectionModel.selectedItem as? Module)?.let {
-                                    Main.arrangementWindow.visualEditor.loadModule(it)
+                                    Core.arrangementWindow.visualEditor.loadModule(it)
                                     listView.toBack()
                                     root.children.remove(listView)
                                 }
@@ -106,18 +108,28 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
                 }
 
         currentModule.apply {
-            val resultComponent = ImageResult()
+            val resultComponent = ImageResult().apply {
+                creationInit()
+                configInit()
+            }
             addComponent(resultComponent)
-            val renderComponent = Render()
+            val renderComponent = Render().apply {
+                creationInit()
+                configInit()
+            }
             addComponent(renderComponent)
             resultComponent.inputPins[0].connectWith(renderComponent.outputPins[0])
 
-            val moveComponent = MoveRotate()
+            val moveComponent = MoveRotate().apply {
+                creationInit()
+                configInit()
+            }
             addComponent(moveComponent)
             moveComponent.changeZ(1000.0)
+            renderComponent.inputPins[0].connectWith(moveComponent.outputPins[0])
 
-            renderComponent.magneticRelocate(moveComponent.layoutX, moveComponent.layoutY+moveComponent.height)
-            resultComponent.magneticRelocate(renderComponent.layoutX+renderComponent.width, renderComponent.layoutY+renderComponent.height-resultComponent.height)
+            renderComponent.magneticRelocate(moveComponent.layoutX + moveComponent.width + VE_GRID_CELL_SIZE, moveComponent.layoutY + moveComponent.height - renderComponent.height)
+            resultComponent.magneticRelocate(renderComponent.layoutX+renderComponent.width + VE_GRID_CELL_SIZE, renderComponent.layoutY+renderComponent.height-resultComponent.height)
         }
 
         loadModule(currentModule)
@@ -132,7 +144,8 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
     fun render(time:Double, downscale: Int): ImageFloatBuffer {
         this.time = time
         this.downscale = downscale
-        return modules.find { it.isMain }?.findResultComponent()?.getImage() ?: ImageFloatBuffer(Main.opencl.createZeroBuffer(4), 1, 1)
+        val mainModule = modules.find { it.isMain } ?: throw Exception("Main module does not exist")
+        return mainModule.findResultComponent().getImage()
     }
 
     private fun homeLayout(){

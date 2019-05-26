@@ -1,6 +1,7 @@
 package spixie.opencl
 
 import com.jogamp.opencl.*
+import spixie.Core
 import spixie.Main
 import spixie.static.roundUp
 import java.nio.FloatBuffer
@@ -66,7 +67,7 @@ class OpenCLApi {
         queue.putWriteBuffer(atomicTileIndex, false)
         queue.putWriteBuffer(atomicParticleIndex, false)
 
-        kotlin.run {
+        run {
             val kernel = program.createCLKernel("clearTileSize")
             kernel.putArg(tileSize)
             kernel.putArg(width)
@@ -74,7 +75,7 @@ class OpenCLApi {
             queue.put1DRangeKernel(kernel, 0L, 1L, 1L)
         }
 
-        kotlin.run {
+        run {
             val kernel = program.createCLKernel("fillTileSize")
             kernel.putArg(inputParticles)
             kernel.putArg(particleBox)
@@ -86,7 +87,7 @@ class OpenCLApi {
             queue.put1DRangeKernel(kernel, 0L, 51200L, 512L)
         }
 
-        kotlin.run {
+        run {
             val kernel = program.createCLKernel("fillTileStart")
             kernel.putArg(tileStart)
             kernel.putArg(tileSize)
@@ -95,7 +96,7 @@ class OpenCLApi {
             queue.put1DRangeKernel(kernel, 0L, 1L, 1L)
         }
 
-        kotlin.run {
+        run {
             val kernel = program.createCLKernel("fillTiles")
             kernel.putArg(particleBox)
             kernel.putArg(tiles)
@@ -108,7 +109,7 @@ class OpenCLApi {
             queue.putWriteBuffer(atomicTileIndex, false)
         }
 
-        kotlin.run {
+        run {
             val kernel = program.createCLKernel("renderParticles")
             kernel.putArg(inputParticles)
             kernel.putArg(tiles)
@@ -179,7 +180,7 @@ class OpenCLApi {
     }
 
     fun readAndRelease(buffer: CLBuffer<FloatBuffer>): FloatArray {
-        Main.opencl.queue.putReadBuffer(buffer, true)
+        Core.opencl.queue.putReadBuffer(buffer, true)
         val result = FloatArray(buffer.buffer.capacity())
         buffer.buffer.get(result)
         buffer.release()

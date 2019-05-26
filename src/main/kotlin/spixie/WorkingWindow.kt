@@ -27,7 +27,7 @@ class WorkingWindow : BorderPane() {
                             FileChooser.ExtensionFilter("All files", "*.*")
                     )
                     showOpenDialog(this@WorkingWindow.scene.window)?.let { file->
-                        Main.audio.load(file)
+                        Core.audio.load(file)
                     }
                     center.requestFocus()
                 }
@@ -44,22 +44,22 @@ class WorkingWindow : BorderPane() {
             minorTickCount = 0
             isSnapToTicks = true
             valueProperty().addListener { _, _, newValue ->
-                Main.renderManager.scaleDown = 1 shl newValue.toInt()
+                Core.renderManager.scaleDown = 1 shl newValue.toInt()
             }
             isFocusTraversable = false
         }
 
         val timeLabel = Label().apply {
-            Main.renderManager.time.timeChanges.subscribe { time ->
+            Core.renderManager.time.timeChanges.subscribe { time ->
                 text = "Time: ${String.format("%.3f", Math.round(time*1000)/1000.0)}"
             }
         }
 
         val lastRenderInfo = Label()
-        Main.renderManager.lastRenderInfoSubject.observeOn(JavaFxScheduler.platform()).subscribe {
+        Core.renderManager.lastRenderInfoSubject.observeOn(JavaFxScheduler.platform()).subscribe {
             lastRenderInfo.text = it
         }
-        menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Main.renderManager.bpm, Main.renderManager.offset, Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) }, lastRenderInfo)
+        menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Core.renderManager.bpm, Core.renderManager.offset, Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) }, lastRenderInfo)
 
         menuBar.addEventHandler(KeyEvent.ANY){ event ->
             center.fireEvent(event.copyFor(center, center))

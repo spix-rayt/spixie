@@ -9,6 +9,7 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Pane
 import org.apache.commons.lang3.math.Fraction
+import spixie.Core
 import spixie.Main
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -212,9 +213,9 @@ fun calcLuminance(r:Double, g:Double, b:Double): Double{
 
 fun CLBuffer<FloatBuffer>.toBufferedImage(width: Int, height: Int): BufferedImage {
     val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
-    val forSave = Main.opencl.forSave(this, width, height)
+    val forSave = Core.opencl.forSave(this, width, height)
     this.release()
-    val floatArray = Main.opencl.readAndRelease(forSave)
+    val floatArray = Core.opencl.readAndRelease(forSave)
     bufferedImage.raster.setPixels(0, 0, width, height, floatArray)
     return bufferedImage
 }

@@ -3,10 +3,10 @@ package spixie.visualEditor.components
 import javafx.collections.FXCollections
 import javafx.scene.control.ChoiceBox
 import javafx.scene.control.Label
-import spixie.Main
+import spixie.Core
 import spixie.arrangement.ArrangementGraphsContainer
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPinNumber
+import spixie.visualEditor.pins.ComponentPinNumber
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
@@ -31,22 +31,32 @@ class Graph(): Component(), Externalizable {
 
     init {
         parameters.add(parameterMode)
-        outputPins.add(ComponentPinNumber(this, {
-            when(parameterMode.value!!){
-                Mode.Value -> {
-                    graph.getValue(Main.arrangementWindow.visualEditor.time)
-                }
-                Mode.Sum -> {
-                    graph.getSum(Main.arrangementWindow.visualEditor.time)
+        outputPins.add(ComponentPinNumber("Value", null).apply {
+            getValue = {
+                when (parameterMode.value!!) {
+                    Mode.Value -> {
+                        graph.getValue(Core.arrangementWindow.visualEditor.time)
+                    }
+                    Mode.Sum -> {
+                        graph.getSum(Core.arrangementWindow.visualEditor.time)
+                    }
                 }
             }
-        }, "Value", null))
-        updateVisual()
+        })
+        updateUI()
         content.children.addAll(label)
         parameterMode.selectionModel.select(0)
         parameterMode.selectionModel.selectedItemProperty().addListener { _, _, _ ->
-            Main.renderManager.requestRender()
+            Core.renderManager.requestRender()
         }
+    }
+
+    override fun creationInit() {
+        //TODO
+    }
+
+    override fun configInit() {
+
     }
 
     override fun writeExternal(o: ObjectOutput) {
@@ -62,7 +72,7 @@ class Graph(): Component(), Externalizable {
         graph.name.changes.subscribe { newName->
             label.text = newName
         }
-        parameterMode.selectionModel.select(Graph.Mode.valueOf(o.readUTF()))
+        parameterMode.selectionModel.select(Mode.valueOf(o.readUTF()))
     }
 
     companion object {

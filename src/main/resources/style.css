@@ -1,5 +1,5 @@
 NumberControl .label-value{
-    -fx-cursor: v-resize;
+    -fx-cursor: h-resize;
 }
 
 ValueTextControl .label-value{

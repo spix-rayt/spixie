@@ -11,7 +11,9 @@ import javafx.scene.control.MenuItem
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
-import spixie.Main
+import spixie.Core
+import spixie.visualEditor.pins.ComponentPin
+import spixie.visualEditor.pins.ComponentPinNumber
 import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
@@ -75,29 +77,9 @@ abstract class Component:Region(), Externalizable {
 
         setOnContextMenuRequested { event->
             ContextMenu(
-                    MenuItem("Add atop").apply {
-                        setOnAction {
-                            val point2D = parent.screenToLocal(event.screenX, event.screenY)
-                            Main.arrangementWindow.visualEditor.currentModule.apply {
-                                openComponentsList(point2D) { result ->
-                                    result.magneticRelocate(this@Component.layoutX, this@Component.layoutY)
-                                    val componentsToRelocate = mutableListOf(result)
-                                    var c = findComponentAboveOf(this@Component)
-                                    while (c != null) {
-                                        componentsToRelocate.add(c)
-                                        c = findComponentAboveOf(c)
-                                    }
-                                    componentsToRelocate.forEach {
-                                        it.relativelyMagneticRelocate(0.0, -result.height)
-                                    }
-                                    addComponent(result)
-                                }
-                            }
-                        }
-                    },
                     MenuItem("Delete").apply {
                         setOnAction {
-                            Main.arrangementWindow.visualEditor.modules.forEach {
+                            Core.arrangementWindow.visualEditor.modules.forEach {
                                 it.removeComponent(this@Component)
                             }
                             this@Component.inputPins.forEach { disconnectPinRequest.onNext(it) }
@@ -129,7 +111,7 @@ abstract class Component:Region(), Externalizable {
         return javaClass.simpleName.replace(Regex("[A-Z]"), { matchResult -> " ${matchResult.value}" })
     }
 
-    fun updateVisual(){
+    fun updateUI(){
         content.children.clear()
         content.children.addAll(
                 Label(getReadableName()).apply {
@@ -177,9 +159,23 @@ abstract class Component:Region(), Externalizable {
         conneectionsChanged.onNext(Unit)
     }
 
+    open fun creationInit() {
+
+    }
+
+    open fun configInit() {
+
+    }
+
     protected open fun getHeightInCells(): Int {
         val visibleInputPins = inputPins.filter { it.isVisible }
         return visibleInputPins.size + parameters.size + outputPins.size + 1
+    }
+
+    fun <T> lazyPinFromListOrCreate(index: Int, create: () -> T): Lazy<T> {
+        return lazy {
+            inputPins.getOrNull(index) as? T ?: create()
+        }
     }
 
     var serializationIndex = -1

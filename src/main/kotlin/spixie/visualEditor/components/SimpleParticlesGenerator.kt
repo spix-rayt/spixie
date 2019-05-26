@@ -2,24 +2,27 @@ package spixie.visualEditor.components
 
 import spixie.NumberControl
 import spixie.visualEditor.*
+import spixie.visualEditor.pins.ComponentPinNumber
+import spixie.visualEditor.pins.ComponentPinParticleArray
 
-class SimpleParticlesGenerator: Component(), WithParticlesArrayOutput {
-    private val inCount = ComponentPinNumber(this, null, "Count", NumberControl(1.0, "").limitMin(0.0))
+class SimpleParticlesGenerator: Component() {
+    private val inCount by lazyPinFromListOrCreate(0) { ComponentPinNumber("Count", NumberControl(1.0, "").limitMin(0.0)) }
 
-    private val outParticles = ComponentPinParticleArray(this, {
-        val count = inCount.receiveValue()
+    private val outParticles = ComponentPinParticleArray("Particles").apply {
+        getValue = {
+            val count = inCount.receiveValue()
 
-        ParticleArray(Array(count.toInt()) { Particle() }.toList(), count.toFloat())
-    }, "Particles")
-
-    init {
-        inputPins.add(inCount)
-        outputPins.add(outParticles)
-        updateVisual()
+            ParticleArray(Array(count.toInt()) { Particle() }.toList(), count.toFloat())
+        }
     }
 
-    override fun getParticlesArrayOutput(): ComponentPinParticleArray {
-        return outParticles
+    override fun creationInit() {
+        inputPins.add(inCount)
+    }
+
+    override fun configInit() {
+        outputPins.add(outParticles)
+        updateUI()
     }
 
     companion object {

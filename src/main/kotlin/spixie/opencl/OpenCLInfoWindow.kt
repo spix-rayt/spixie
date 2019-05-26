@@ -10,6 +10,7 @@ class OpenCLInfoWindow(owner: Window): Stage() {
     init {
         val webView = WebView()
         webView.engine.loadContent(JoclVersion.getInstance().getOpenCLHtmlInfo(null).toString())
+        webView.zoom = 0.8
         scene = Scene(webView)
         initOwner(owner)
         showAndWait()

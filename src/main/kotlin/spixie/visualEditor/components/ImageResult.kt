@@ -1,14 +1,18 @@
 package spixie.visualEditor.components
 
 import spixie.visualEditor.Component
-import spixie.visualEditor.ComponentPinImageFloatBuffer
+import spixie.visualEditor.pins.ComponentPinImageFloatBuffer
 import spixie.visualEditor.ImageFloatBuffer
 
 class ImageResult : Component() {
-    private val imageInput = ComponentPinImageFloatBuffer(this, null, "Image")
-    init {
+    private val imageInput by lazyPinFromListOrCreate(0) { ComponentPinImageFloatBuffer("Image") }
+
+    override fun creationInit() {
         inputPins.add(imageInput)
-        updateVisual()
+    }
+
+    override fun configInit() {
+        updateUI()
     }
 
     fun getImage(): ImageFloatBuffer{

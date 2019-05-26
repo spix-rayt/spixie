@@ -1,5 +1,7 @@
 package spixie.visualEditor
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import javafx.geometry.Point2D
 import javafx.scene.Group
@@ -10,17 +12,20 @@ import javafx.scene.paint.Color
 import javafx.scene.shape.CubicCurve
 import javafx.scene.shape.Rectangle
 import javafx.scene.shape.StrokeLineCap
-import spixie.Main
+import spixie.Core
 import spixie.static.MAGIC
 import spixie.static.initCustomPanning
 import spixie.static.mix
 import spixie.static.raw
 import spixie.visualEditor.components.*
+import spixie.visualEditor.pins.ComponentPin
+import spixie.visualEditor.pins.ComponentPinFunc
+import spixie.visualEditor.pins.ComponentPinNumber
+import java.io.Serializable
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 class Module(var name: String) {
     val contentPane = Pane()
@@ -161,7 +166,7 @@ class Module(var name: String) {
     fun updateModuleComponents(){
         components.children.forEach { component->
             if(component is ModuleComponent){
-                component.module = Main.arrangementWindow.visualEditor.modules.find { it.name == component.externalName }
+                component.module = Core.arrangementWindow.visualEditor.modules.find { it.name == component.externalName }
             }
         }
     }
@@ -197,11 +202,6 @@ class Module(var name: String) {
     fun reconnectPins(){
         connects.children.clear()
         contentPane.layout()
-        components.children.forEach { component->
-            if(component is WithParticlesArrayInput){
-                component.getParticlesArrayInput().imaginaryConnections.clear()
-            }
-        }
         components.children.forEach { component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
@@ -209,47 +209,10 @@ class Module(var name: String) {
                         connectPins(pin2, pin1, Color.DARKVIOLET)
                     }
                 }
-                if(component is WithParticlesArrayOutput){
-                    findComponentBelowOf(component).let { belowComponent ->
-                        if(belowComponent is WithParticlesArrayInput) {
-                            val outputPin = component.getParticlesArrayOutput()
-                            val inputPin = belowComponent.getParticlesArrayInput()
-                            connectPins(outputPin, inputPin, Color.DARKVIOLET.deriveColor(0.0, 1.0, 1.0, 0.15))
-                            inputPin.imaginaryConnections.add(outputPin)
-                        }
-                    }
-                }
             }
         }
-        Main.renderManager.requestRender()
+        Core.renderManager.requestRender()
     }
-
-    fun findComponentBelowOf(component: Component): Component? {
-        components.children.forEach { component2 ->
-            if(component2 is Component){
-                if(component.layoutX.roundToInt() == component2.layoutX.roundToInt()){
-                    if((component.layoutY+(component.height-1)).roundToInt() == component2.layoutY.roundToInt()){
-                        return component2
-                    }
-                }
-            }
-        }
-        return null
-    }
-
-    fun findComponentAboveOf(component: Component): Component? {
-        components.children.forEach { component2 ->
-            if(component2 is Component){
-                if(component.layoutX.roundToInt() == component2.layoutX.roundToInt()){
-                    if(component.layoutY.roundToInt() == (component2.layoutY + (component2.height-1)).roundToInt()){
-                        return component2
-                    }
-                }
-            }
-        }
-        return null
-    }
-
 
     private fun connectPins(pin1: ComponentPin, pin2: ComponentPin, color: Color){
         val cubicCurve = CubicCurve()
@@ -272,9 +235,9 @@ class Module(var name: String) {
         cubicCurve.strokeLineCap = StrokeLineCap.ROUND
     }
 
-    fun toSerializable(): Triple<String, List<Component>, List<Pair<Pair<Int, String>, Pair<Int, String>>>> {
-        val components = components.children.filter { it is Component }.map { it as Component }
-        components.forEachIndexed { index, component -> component.serializationIndex = index }
+    fun serialize(): SerializedModule {
+        val componentsList = components.children.filter { it is Component }.map { it as Component }
+        componentsList.forEachIndexed { index, component -> component.serializationIndex = index }
         val inputToOutputConnection = arrayListOf<Pair<ComponentPin, ComponentPin>>()
         this.components.children.forEach { component ->
             if(component is Component){
@@ -290,19 +253,28 @@ class Module(var name: String) {
             val v2 = entry.second.component.serializationIndex to entry.second.name
             v1 to v2
         }
-        return Triple(name, components, connections)
+        val gson = Gson()
+        val inputPins = componentsList.map { component -> component.inputPins.map { gson.toJson(it.serialize()) } }
+        return SerializedModule(name, componentsList, connections, inputPins)
     }
 
-    fun fromSerializable(data: Triple<String, List<Component>, List<Pair<Pair<Int, String>, Pair<Int, String>>>>) {
-        val (moduleName, moduleComponents, moduleConnections) = data
+    fun deserizalize(data: SerializedModule) {
         clearComponents()
-        moduleComponents.forEach { addComponent(it) }
-        val idToComponent = moduleComponents.map { it.serializationIndex to it }.toMap()
-        components.children.forEach { component ->
+        data.components.forEach { addComponent(it) }
+        val idToComponent = data.components.map { it.serializationIndex to it }.toMap()
+        val gson = Gson()
+        components.children.forEachIndexed { index, component ->
+            if(component is Component){
+                component.inputPins.addAll(data.inputPins[index].map { ComponentPin.deserialize(gson.fromJson(it, JsonObject::class.java)) })
+                component.configInit()
+            }
+        }
+
+        components.children.forEachIndexed { index, component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
                     pin1.connections.addAll(
-                            moduleConnections.mapNotNull {
+                            data.connections.mapNotNull {
                                 if(pin1.component.serializationIndex == it.first.first && pin1.name == it.first.second){
                                     it.second
                                 }else{
@@ -324,4 +296,6 @@ class Module(var name: String) {
     override fun toString(): String {
         return name
     }
+
+    class SerializedModule(val name: String, val components: List<Component>, val connections: List<Pair<Pair<Int, String>, Pair<Int, String>>>, val inputPins: List<List<String>>) : Serializable
 }

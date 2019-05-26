@@ -9,10 +9,10 @@ import javafx.scene.control.ScrollPane
 import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
+import spixie.Core
 import spixie.arrangement.ArrangementGraphsContainer
 import spixie.Main
 import spixie.visualEditor.components.*
-import spixie.visualEditor.components.transformers.*
 
 class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, forMain: Boolean, private val result: (component: Component) -> Unit): BorderPane() {
     private val listView = ListView<Any>()
@@ -29,20 +29,11 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             ComponentListItem(Slice::class.java),
             ComponentListItem(ModFilter::class.java),
             ComponentListItem(LineTest::class.java),
-            ComponentListItem(SizeTransformer::class.java),
-            ComponentListItem(EdgeTransformer::class.java),
-            ComponentListItem(ScaleTransformer::class.java),
-            ComponentListItem(RotateTransformer::class.java),
-            ComponentListItem(PositionTransformer::class.java),
-            ComponentListItem(HueTransformer::class.java),
-            ComponentListItem(LuminanceTransformer::class.java),
-            ComponentListItem(ChromaTransformer::class.java),
-            ComponentListItem(TransparencyTransformer::class.java),
             ComponentListItem(Render::class.java),
-            ComponentListItem(FuncConst::class.java),
             ComponentListItem(FuncLinear::class.java),
             ComponentListItem(FuncSin::class.java),
-            ComponentListItem(FuncRandom::class.java)
+            ComponentListItem(FuncRandom::class.java),
+            ComponentListItem(ParticleTransformer::class.java)
     )
 
     init {
@@ -75,7 +66,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             )
 
             listView.items.addAll(
-                    *Main.arrangementWindow.visualEditor.modules
+                    *Core.arrangementWindow.visualEditor.modules
                             .filter { it.name.toLowerCase().contains(filterRegex) }
                             .filter { !it.isMain }
                             .toTypedArray()
@@ -83,7 +74,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
 
             if(forMain){
                 listView.items.addAll(
-                        *Main.arrangementWindow.graphs
+                        *Core.arrangementWindow.graphs
                                 .filter { ("g"+it.name.value).toLowerCase().contains(filterRegex) }
                                 .map { ComponentListGraphItem(it) }
                                 .toTypedArray()
@@ -132,7 +123,10 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
     private fun createSelected(){
         val value = listView.selectionModel.selectedItem
         if (value is ComponentListItem) {
-            result(value.clazz.newInstance() as @kotlin.ParameterName(name = "component") Component)
+            val component = value.clazz.newInstance() as @kotlin.ParameterName(name = "component") Component
+            component.creationInit()
+            component.configInit()
+            result(component)
             containerChildrens.remove(this@ComponentsList)
         }
         if(value is Module){
