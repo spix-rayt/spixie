@@ -167,31 +167,46 @@ abstract class ComponentPin(val name: String): HBox() {
         }
     }
 
-    abstract fun serialize(): JsonObject
+    abstract fun serialize(): SerializedData
 
     companion object {
-        fun deserialize(obj: JsonObject): ComponentPin {
-            val cls = Class.forName(obj.get("class").asString).kotlin
+        fun deserialize(obj: SerializedData): ComponentPin {
+            if(obj.clazz == null) {
+                throw RuntimeException("deserialize error")
+            }
+            val cls = Class.forName(obj.clazz).kotlin
             if(cls == ComponentPinFunc::class) {
-                return cls.primaryConstructor!!.call(obj.get("name").asString) as ComponentPinFunc
+                return cls.primaryConstructor!!.call(obj.name) as ComponentPinFunc
             }
             if(cls == ComponentPinImageFloatBuffer::class) {
-                return cls.primaryConstructor!!.call(obj.get("name").asString) as ComponentPinImageFloatBuffer
+                return cls.primaryConstructor!!.call(obj.name) as ComponentPinImageFloatBuffer
             }
             if(cls == ComponentPinNumber::class) {
-                val value = obj.get("value")
-                val numberName = obj.get("numberName")
-                val scale = obj.get("scale")
-                return if(value != null && numberName != null && scale != null) {
-                    cls.primaryConstructor!!.call(obj.get("name").asString, NumberControl(value.asDouble, numberName.asString, scale.asDouble)) as ComponentPinNumber
+                val value = obj.numberControlValue
+                val numberName = obj.numberControlName
+                val scale = obj.numberControlScale
+                val min = obj.numberControlMin
+                val max = obj.numberControlMax
+                return if(value != null && numberName != null && scale != null && min != null && max != null) {
+                    cls.primaryConstructor!!.call(obj.name, NumberControl(value, numberName, scale).limitMin(min).limitMax(max)) as ComponentPinNumber
                 } else {
-                    cls.primaryConstructor!!.call(obj.get("name").asString, null) as ComponentPinNumber
+                    cls.primaryConstructor!!.call(obj.name, null) as ComponentPinNumber
                 }
             }
             if(cls == ComponentPinParticleArray::class) {
-                return cls.primaryConstructor!!.call(obj.get("name").asString) as ComponentPinParticleArray
+                return cls.primaryConstructor!!.call(obj.name) as ComponentPinParticleArray
             }
             throw RuntimeException("deserialize error")
         }
     }
+
+    class SerializedData(
+            val clazz: String?,
+            val name: String,
+            val numberControlValue: Double?,
+            val numberControlName: String?,
+            val numberControlScale: Double?,
+            val numberControlMin: Double?,
+            val numberControlMax: Double?
+    )
 }

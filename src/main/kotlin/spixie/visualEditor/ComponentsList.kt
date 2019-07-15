@@ -14,8 +14,12 @@ import spixie.arrangement.ArrangementGraphsContainer
 import spixie.Main
 import spixie.visualEditor.components.*
 
-class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, forMain: Boolean, private val result: (component: Component) -> Unit): BorderPane() {
-    private val listView = ListView<Any>()
+class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, private val result: (component: Component) -> Unit): BorderPane() {
+    private val listView = ListView<Any>().apply {
+        setOnMouseClicked {
+            createSelected()
+        }
+    }
 
     private val scrollPane = ScrollPane(listView)
 
@@ -37,12 +41,6 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
     )
 
     init {
-        listView.apply {
-            setOnMouseClicked {
-                createSelected()
-            }
-        }
-
         textField.focusedProperty().addListener { _, _, newValue ->
             if(!newValue){
                 scene?.let { scene ->
@@ -66,20 +64,11 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             )
 
             listView.items.addAll(
-                    *Core.arrangementWindow.visualEditor.modules
-                            .filter { it.name.toLowerCase().contains(filterRegex) }
-                            .filter { !it.isMain }
+                    *Core.arrangementWindow.graphs
+                            .filter { ("g"+it.name.value).toLowerCase().contains(filterRegex) }
+                            .map { ComponentListGraphItem(it) }
                             .toTypedArray()
             )
-
-            if(forMain){
-                listView.items.addAll(
-                        *Core.arrangementWindow.graphs
-                                .filter { ("g"+it.name.value).toLowerCase().contains(filterRegex) }
-                                .map { ComponentListGraphItem(it) }
-                                .toTypedArray()
-                )
-            }
 
             val find = listView.items.find { it == selectedItem }
             if(find != null){
@@ -114,7 +103,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
 
         top = textField
         center = scrollPane
-        minWidth = 600.0
+        minWidth = 300.0
         relocate(x, y)
         containerChildrens.addAll(this)
         textField.requestFocus()
@@ -127,10 +116,6 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             component.creationInit()
             component.configInit()
             result(component)
-            containerChildrens.remove(this@ComponentsList)
-        }
-        if(value is Module){
-            result(ModuleComponent().apply { module = value })
             containerChildrens.remove(this@ComponentsList)
         }
         if(value is ComponentListGraphItem){

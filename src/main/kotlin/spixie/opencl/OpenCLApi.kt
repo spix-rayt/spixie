@@ -1,11 +1,8 @@
 package spixie.opencl
 
 import com.jogamp.opencl.*
-import spixie.Core
-import spixie.Main
 import spixie.static.roundUp
 import java.nio.FloatBuffer
-import java.util.concurrent.TimeUnit
 
 class OpenCLApi {
     private val context:CLContext = CLContext.create(
@@ -180,7 +177,7 @@ class OpenCLApi {
     }
 
     fun readAndRelease(buffer: CLBuffer<FloatBuffer>): FloatArray {
-        Core.opencl.queue.putReadBuffer(buffer, true)
+        queue.putReadBuffer(buffer, true)
         val result = FloatArray(buffer.buffer.capacity())
         buffer.buffer.get(result)
         buffer.release()

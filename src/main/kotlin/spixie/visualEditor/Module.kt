@@ -1,6 +1,7 @@
 package spixie.visualEditor
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import javafx.geometry.Point2D
@@ -27,7 +28,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 
-class Module(var name: String) {
+class Module {
     val contentPane = Pane()
 
     private val components = Group()
@@ -36,61 +37,73 @@ class Module(var name: String) {
 
     private val connects = Group()
 
-    private var selectedComponents = arrayOf<Component>()
+    private val selectionRectangle = Rectangle().apply {
+        fill = Color.TRANSPARENT
+        stroke = Color.BLACK
+    }
+
+    var selectedComponents = arrayOf<Component>()
         set(value) {
             selectedComponents.forEach { it.selected = false }
             field=value
             selectedComponents.forEach { it.selected = true }
         }
 
-    val isMain
-        get() = name == "Main"
-
     init {
         contentPane.initCustomPanning(content, true)
-        content.children.addAll(components, connects)
+        content.children.addAll(components, connects, selectionRectangle)
         contentPane.apply { children.addAll(content) }
 
 
         var selectionRectangleStartPoint = Point2D(0.0, 0.0)
         contentPane.setOnMousePressed { event ->
-            if(event.button == MouseButton.PRIMARY){
+            if(event.button == MouseButton.PRIMARY) {
                 selectionRectangleStartPoint = components.screenToLocal(event.screenX, event.screenY)
+
+                selectionRectangle.x = selectionRectangleStartPoint.x
+                selectionRectangle.y = selectionRectangleStartPoint.y
+                selectionRectangle.width = 0.0
+                selectionRectangle.height = 0.0
+                selectionRectangle.isVisible = true
 
                 val componentsUnderCursor = components.children
                         .map { it as Component }
-                        .filter { it.boundsInParent.intersects(selectionRectangleStartPoint.x, selectionRectangleStartPoint.y, 0.0, 0.0) }.toTypedArray()
+                        .filter { it.boundsInParent.intersects(selectionRectangle.boundsInLocal) }
+                        .toTypedArray()
 
-                if(componentsUnderCursor.isEmpty() || !componentsUnderCursor.all { selectedComponents.contains(it) }){
+                if(componentsUnderCursor.isEmpty() || !componentsUnderCursor.all { selectedComponents.contains(it) }) {
                     selectedComponents = componentsUnderCursor
                 }
             }
         }
 
         contentPane.setOnMouseDragged { event ->
-            if(event.button == MouseButton.PRIMARY){
+            if(event.button == MouseButton.PRIMARY) {
                 val selectionRectangleEndPoint = components.screenToLocal(event.screenX, event.screenY)
+                selectionRectangle.x = min(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x)
+                selectionRectangle.y = min(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y)
+                selectionRectangle.width = max(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x) - min(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x)
+                selectionRectangle.height = max(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y) - min(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y)
                 selectedComponents = components.children
                         .map { it as Component }
-                        .filter {
-                            it.boundsInParent.intersects(
-                                    min(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x),
-                                    min(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y),
-                                    max(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x) - min(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x),
-                                    max(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y) - min(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y)
-                            )
-                        }
+                        .filter { it.boundsInParent.intersects(selectionRectangle.boundsInLocal) }
                         .toTypedArray()
             }
         }
 
         contentPane.setOnMouseClicked { event ->
-            if(event.button == MouseButton.SECONDARY){
+            if(event.button == MouseButton.SECONDARY) {
                 val point2D = components.screenToLocal(event.screenX, event.screenY)
                 openComponentsList(point2D) { result->
                     result.magneticRelocate(point2D.x - result.width / 2, point2D.y)
                     addComponent(result)
                 }
+            }
+        }
+
+        contentPane.setOnMouseReleased { event ->
+            if(event.button == MouseButton.PRIMARY) {
+                selectionRectangle.isVisible = false
             }
         }
 
@@ -105,7 +118,7 @@ class Module(var name: String) {
     }
 
     fun openComponentsList(point2D: Point2D, result: (component: Component) -> Unit) {
-        ComponentsList(point2D.x, point2D.y, content.children, isMain) {
+        ComponentsList(point2D.x, point2D.y, content.children) {
             result(it)
         }
     }
@@ -161,14 +174,6 @@ class Module(var name: String) {
 
     fun findResultComponentNode(): Node {
         return components.children.find { it is ImageResult || it is ParticlesResult } ?: throw Exception("Result component dont exist")
-    }
-
-    fun updateModuleComponents(){
-        components.children.forEach { component->
-            if(component is ModuleComponent){
-                component.module = Core.arrangementWindow.visualEditor.modules.find { it.name == component.externalName }
-            }
-        }
     }
 
     fun calcHashOfConsts(): Long {
@@ -253,9 +258,9 @@ class Module(var name: String) {
             val v2 = entry.second.component.serializationIndex to entry.second.name
             v1 to v2
         }
-        val gson = Gson()
+        val gson = GsonBuilder().serializeSpecialFloatingPointValues().create()
         val inputPins = componentsList.map { component -> component.inputPins.map { gson.toJson(it.serialize()) } }
-        return SerializedModule(name, componentsList, connections, inputPins)
+        return SerializedModule(componentsList, connections, inputPins)
     }
 
     fun deserizalize(data: SerializedModule) {
@@ -265,7 +270,7 @@ class Module(var name: String) {
         val gson = Gson()
         components.children.forEachIndexed { index, component ->
             if(component is Component){
-                component.inputPins.addAll(data.inputPins[index].map { ComponentPin.deserialize(gson.fromJson(it, JsonObject::class.java)) })
+                component.inputPins.addAll(data.inputPins[index].map { ComponentPin.deserialize(gson.fromJson(it, ComponentPin.SerializedData::class.java)) })
                 component.configInit()
             }
         }
@@ -293,9 +298,5 @@ class Module(var name: String) {
         contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+(VE_GRID_CELL_SIZE/2.0+0.5)}px 0px, repeat, #00000022 5%, transparent 5%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+(VE_GRID_CELL_SIZE/2.0+0.5)}px, repeat, #00000022 5%, transparent 5%);"
     }
 
-    override fun toString(): String {
-        return name
-    }
-
-    class SerializedModule(val name: String, val components: List<Component>, val connections: List<Pair<Pair<Int, String>, Pair<Int, String>>>, val inputPins: List<List<String>>) : Serializable
+    class SerializedModule(val components: List<Component>, val connections: List<Pair<Pair<Int, String>, Pair<Int, String>>>, val inputPins: List<List<String>>) : Serializable
 }

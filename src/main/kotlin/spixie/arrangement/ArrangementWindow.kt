@@ -419,8 +419,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
         objectOutputStream.writeDouble(Core.renderManager.bpm.value)
         objectOutputStream.writeDouble(Core.renderManager.offset.value)
 
-        val modules = visualEditor.modules.map { it.serialize() }
-        objectOutputStream.writeObject(modules)
+        objectOutputStream.writeObject(visualEditor.mainModule.serialize())
 
         objectOutputStream.writeObject(graphs)
 
@@ -433,19 +432,14 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
             Core.renderManager.bpm.value = objectInputStream.readDouble()
             Core.renderManager.offset.value = objectInputStream.readDouble()
             visualEditor.modules.clear()
-            val modules = objectInputStream.readObject() as List<Module.SerializedModule>
-            modules.forEach {
-                val module = Module(it.name).apply {
-                    deserizalize(it)
-                    reconnectPins()
-                }
-                visualEditor.modules.add(module)
-            }
-            visualEditor.modules.forEach { it.updateModuleComponents() }
+            val serializedModule = objectInputStream.readObject() as Module.SerializedModule
 
-            visualEditor.modules.find { it.isMain }?.let {
-                visualEditor.loadModule(it)
-            }
+            visualEditor.loadModule(
+                    Module().apply {
+                        deserizalize(serializedModule)
+                        reconnectPins()
+                    }
+            )
 
             graphs.clear()
             graphs.addAll(objectInputStream.readObject() as ArrayList<ArrangementGraphsContainer>)

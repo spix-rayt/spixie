@@ -20,10 +20,7 @@ class ComponentPinFunc(name: String): ComponentPin(name) {
         }
     }
 
-    override fun serialize(): JsonObject {
-        val obj = JsonObject()
-        obj.add("class", JsonPrimitive(this::class.qualifiedName))
-        obj.add("name", JsonPrimitive(name))
-        return obj
+    override fun serialize(): SerializedData {
+        return SerializedData(this::class.qualifiedName, name, null, null, null, null, null)
     }
 }

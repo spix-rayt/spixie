@@ -18,10 +18,7 @@ class ComponentPinImageFloatBuffer(name: String): ComponentPin(name) {
                 .lastOrNull() ?: ImageFloatBuffer(Core.opencl.createZeroBuffer(4), 1, 1)
     }
 
-    override fun serialize(): JsonObject {
-        val obj = JsonObject()
-        obj.add("class", JsonPrimitive(this::class.qualifiedName))
-        obj.add("name", JsonPrimitive(name))
-        return obj
+    override fun serialize(): SerializedData {
+        return SerializedData(this::class.qualifiedName, name, null, null, null, null, null)
     }
 }

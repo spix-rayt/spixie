@@ -9,6 +9,11 @@ import javafx.stage.Stage
 import javafx.stage.Window
 import org.apache.commons.lang3.time.StopWatch
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
@@ -57,6 +62,8 @@ class RenderDialog(owner: Window): Stage() {
                 grid.isDisable = true
                 val selectedFrames = Core.arrangementWindow.getSelectedFrames()
                 val lastFramesRenderTime = mutableListOf<Double>()
+                val dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+                val zoneId = ZoneId.of("UTC")
                 val stopWatch = StopWatch.createStarted()
                 var lastRenderedFrame = 0
                 Core.renderManager.renderToFile(
@@ -70,7 +77,8 @@ class RenderDialog(owner: Window): Stage() {
                                 if(lastFramesRenderTime.size>10) {
                                     lastFramesRenderTime.removeAt(0)
                                     val average = lastFramesRenderTime.average()
-                                    remainingTimeLabel.text = "${SimpleDateFormat("HH:mm:ss").format(Date(((framesCount-currentFrame)*average*1000.0).roundToLong()))} (${(average*1000.0).roundToInt()} ms / frame)"
+                                    val time = LocalDateTime.ofInstant(Instant.ofEpochMilli(((framesCount - currentFrame) * average * 1000.0).roundToLong()), zoneId)
+                                    remainingTimeLabel.text = "${dateTimeFormatter.format(time)} (${(average*1000.0).roundToInt()} ms / frame)"
                                 }
                             }
                             lastRenderedFrame = currentFrame

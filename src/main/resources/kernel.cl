@@ -31,6 +31,9 @@ __kernel void renderParticles(__global float *particles, __global int *tiles, __
         int y = (threadIdx % 64) / 8;
         __global int *particleIds = tiles + tileStart[tileIndex];
         int particlesCount = tileSize[tileIndex];
+        if(tileStart[tileIndex] + particlesCount >= 10000000) {
+            break; //TODO: fix
+        }
 
         float pixelPosX = (((tileX*8+x)/(width-1.0f))-0.5f)*1000.0f*width/height;
         float pixelPosY = (((tileY*8+y)/(height-1.0f))-0.5f)*1000.0f;
@@ -38,7 +41,7 @@ __kernel void renderParticles(__global float *particles, __global int *tiles, __
         float colorR = 0.0f;
         float colorG = 0.0f;
         float colorB = 0.0f;
-        float colorA = 0.0f;
+        float colorA = 1.0f;
 
         for(int i=0;i<particlesCount;i++){
             float particleX = particles[particleIds[i]*8];
@@ -56,10 +59,12 @@ __kernel void renderParticles(__global float *particles, __global int *tiles, __
             float sum = (1.0f - linearstep(particleSize*particleEdge - lowcostAntialiasing, particleSize, dist + lowcostAntialiasing/2)) * particleA;
             sum = clamp(sum, 0.0f, 1.0f);
             float invertSum = 1.0f-sum;
-            colorR = colorR*invertSum + particleR*sum;
-            colorG = colorG*invertSum + particleG*sum;
-            colorB = colorB*invertSum + particleB*sum;
-            colorA = sum + colorA*invertSum;
+            colorR = colorR + (particleR - colorR)*sum;
+            colorG = colorG + (particleG - colorG)*sum;
+            colorB = colorB + (particleB - colorB)*sum;
+
+            colorA = colorA + (particleA - colorA)*sum;
+            //colorA = 1.0f;
         }
 
         if((tileY*8+y) < height && (tileX*8+x) < width) {

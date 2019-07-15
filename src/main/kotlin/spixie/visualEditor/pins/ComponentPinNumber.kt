@@ -41,15 +41,7 @@ class ComponentPinNumber(name: String, val valueControl: NumberControl?): Compon
         }
     }
 
-    override fun serialize(): JsonObject {
-        val obj = JsonObject()
-        obj.add("class", JsonPrimitive(this::class.qualifiedName))
-        obj.add("name", JsonPrimitive(name))
-        if(valueControl != null) {
-            obj.add("value", JsonPrimitive(valueControl.value))
-            obj.add("numberName", JsonPrimitive(valueControl.name))
-            obj.add("scale", JsonPrimitive(valueControl.numberLineScale))
-        }
-        return obj
+    override fun serialize(): SerializedData {
+        return SerializedData(this::class.qualifiedName, name, valueControl?.value, valueControl?.name, valueControl?.numberLineScale, valueControl?.min, valueControl?.max)
     }
 }

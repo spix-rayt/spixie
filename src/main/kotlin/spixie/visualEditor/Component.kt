@@ -79,11 +79,7 @@ abstract class Component:Region(), Externalizable {
             ContextMenu(
                     MenuItem("Delete").apply {
                         setOnAction {
-                            Core.arrangementWindow.visualEditor.modules.forEach {
-                                it.removeComponent(this@Component)
-                            }
-                            this@Component.inputPins.forEach { disconnectPinRequest.onNext(it) }
-                            this@Component.outputPins.forEach { disconnectPinRequest.onNext(it) }
+                            deleteComponent()
                         }
                     }
             ).show(this, event.screenX, event.screenY)
@@ -91,6 +87,12 @@ abstract class Component:Region(), Externalizable {
         }
 
         children.addAll(content)
+    }
+
+    fun deleteComponent() {
+        Core.arrangementWindow.visualEditor.mainModule.removeComponent(this)
+        this@Component.inputPins.forEach { disconnectPinRequest.onNext(it) }
+        this@Component.outputPins.forEach { disconnectPinRequest.onNext(it) }
     }
 
     fun magneticRelocate(x: Double, y:Double){
