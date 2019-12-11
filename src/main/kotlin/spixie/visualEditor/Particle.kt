@@ -32,6 +32,18 @@ class Particle {
         return !hue.isNaN()
     }
 
+    fun moveX(x: Float) {
+        matrix.translateLocal(x, 0.0f, 0.0f)
+    }
+
+    fun moveY(y: Float) {
+        matrix.translateLocal(0.0f, y, 0.0f)
+    }
+
+    fun moveZ(z:Float) {
+        matrix.translateLocal(0.0f, 0.0f, z)
+    }
+
     fun copy(): Particle {
         return Particle().apply {
             this.hue = this@Particle.hue

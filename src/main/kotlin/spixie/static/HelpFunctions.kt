@@ -78,7 +78,7 @@ fun Float.raw():Long{
     return this.toDouble().raw()
 }
 
-fun BufferedImage.toJPEGByteArray():ByteArray {
+fun BufferedImage.toJPEGByteArray(quality: Float):ByteArray {
     val byteArrayOutputStream = ByteArrayOutputStream()
     ImageIO.getImageWritersByFormatName("jpg").next().run {
         output = ImageIO.createImageOutputStream(byteArrayOutputStream)
@@ -87,7 +87,7 @@ fun BufferedImage.toJPEGByteArray():ByteArray {
                 IIOImage(this@toJPEGByteArray, null, null),
                 JPEGImageWriteParam(null).apply {
                     compressionMode = JPEGImageWriteParam.MODE_EXPLICIT
-                    compressionQuality = 0.7f
+                    compressionQuality = quality
                 }
         )
     }

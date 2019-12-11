@@ -90,7 +90,7 @@ class RenderManager {
                             stopWatch.stop()
                             lastRenderInfoSubject.onNext("${image.particlesCount.toString().padStart(8, ' ')} particles ${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
                             images.onNext(SwingFXUtils.toFXImage(bufferedImage, null))
-                            Flowable.fromCallable { bufferedImage.toJPEGByteArray() }
+                            Flowable.fromCallable { bufferedImage.toJPEGByteArray(0.7f) }
                                     .subscribeOn(Schedulers.computation())
                                     .observeOn(renderThread)
                                     .subscribe {
@@ -153,7 +153,7 @@ class RenderManager {
             val errorStream = process.errorStream
 
             try{
-                kotlin.run {
+                run {
                     val bufferedImage1 = BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR)
                     for(frame in 0 until startFrame step fpsskip){
                         ImageIO.write(bufferedImage1, "png", outputStream)
