@@ -1,7 +1,9 @@
 package spixie
 
+import io.reactivex.Scheduler
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import io.reactivex.rxkotlin.Observables
+import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
 import io.reactivex.subjects.PublishSubject
 import javafx.animation.AnimationTimer
@@ -17,7 +19,9 @@ import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCombination
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.StackPane
+import javafx.stage.Screen
 import javafx.stage.Stage
+import javafx.stage.StageStyle
 import javafx.stage.WindowEvent
 import javafx.util.Duration
 import spixie.opencl.OpenCLInfoWindow
@@ -27,31 +31,37 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.text.SimpleDateFormat
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAccessor
 import java.util.*
+import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
-import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 
 class Main : Application() {
-    @Throws(Exception::class)
+    lateinit var firstStage: Stage
+    var secondStage: Stage? = null
+
+    private val imageView = ImageView().apply {
+        style="-fx-background:transparent;"
+        isSmooth = true
+        isPreserveRatio = false
+        isCache = false
+        cacheHint = CacheHint.SPEED
+    }
+
+    private val firstStageRoot = StackPane().apply {
+        children.addAll(imageView)
+        style = "-fx-background-color: #111111;"
+    }
+
+    private val secondStageRoot = StackPane().apply {
+        style = "-fx-background-color: #111111;"
+    }
+
     override fun start(stage: Stage) {
-        val root = StackPane()
-        val imageView = ImageView().apply {
-            style="-fx-background:transparent;"
-            isSmooth = true
-            isPreserveRatio = false
-            isCache = false
-            cacheHint = CacheHint.SPEED
-        }
+        firstStage = stage
         val images = PublishSubject.create<Image>().toSerialized()
         images.observeOn(JavaFxScheduler.platform()).subscribe {
             imageView.image = it
-            if(it.width*2 > root.width){
+            if(it.width*2 > firstStageRoot.width){
                 imageView.scaleX = 1.0
                 imageView.scaleY = 1.0
             }else{
@@ -59,31 +69,20 @@ class Main : Application() {
                 imageView.scaleY = 2.0
             }
         }
-        root.children.addAll(imageView)
-        root.style = "-fx-background-color: #111111;"
 
-        val scene = Scene(root, 100.0, 100.0)
-        scene.stylesheets.add("style.css")
-        scene.focusOwnerProperty().addListener { _, _, newValue ->
-            if(newValue == null){
-                Core.workingWindow.center.requestFocus()
-            }
-        }
+        firstStage.scene = Scene(firstStageRoot, 100.0, 100.0)
+        firstStage.scene.stylesheets.add("style.css")
 
 
 
-        stage.apply {
-            title = "Render"
-            this.scene = scene
+        firstStage.apply {
             isMaximized = true
-            fullScreenExitKeyCombination = KeyCombination.NO_MATCH
+            firstStage.initStyle(StageStyle.UNDECORATED)
             show()
-            isFullScreen = true
         }
 
-        Core.workingWindow.prefWidthProperty().bind(scene.widthProperty())
-        Core.workingWindow.prefHeightProperty().bind(scene.heightProperty())
-        root.children.addAll(Core.workingWindow)
+        setWindowsMode(WindowsMode.SINGLE)
+
         Core.workingWindow.open(Core.arrangementWindow)
         val windowOpacity = BehaviorSubject.createDefault(1.0)
         val windowHide = BehaviorSubject.createDefault(false)
@@ -93,7 +92,7 @@ class Main : Application() {
 
         var playStartTime = 0.0
 
-        root.onKeyPressed = EventHandler<KeyEvent> { event ->
+        firstStageRoot.onKeyPressed = EventHandler<KeyEvent> { event ->
             if(event.isControlDown && !event.isAltDown && !event.isShiftDown){
                 if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
                     windowOpacity.onNext(1.0)
@@ -143,7 +142,7 @@ class Main : Application() {
                     }
                 }
                 if(event.code == KeyCode.F2){
-                    OpenCLInfoWindow(scene.window)
+                    OpenCLInfoWindow(firstStage.scene.window)
                 }
                 if(event.code == KeyCode.F8){
                     if(!File("screenshots/").exists()) File("screenshots/").mkdir()
@@ -152,7 +151,7 @@ class Main : Application() {
             }
         }
 
-        root.onKeyReleased = EventHandler<KeyEvent> { event ->
+        firstStageRoot.onKeyReleased = EventHandler<KeyEvent> { event ->
             if (event.code == KeyCode.TAB) {
                 windowHide.onNext(false)
             }
@@ -161,7 +160,7 @@ class Main : Application() {
             }
         }
 
-        stage.onCloseRequest = EventHandler<WindowEvent> {
+        firstStage.onCloseRequest = EventHandler<WindowEvent> {
             val bytes = Core.arrangementWindow.serialize()
             if(!File("save/").exists()) File("save/").mkdir()
             if(File("save/save.spixie").exists()){
@@ -191,6 +190,63 @@ class Main : Application() {
             Core.audio.load(File("audio.aiff"))
         }*/
     }
+
+    fun setWindowsMode(windowsMode: WindowsMode) {
+        when(windowsMode) {
+            WindowsMode.SINGLE -> {
+                Core.workingWindow.prefWidthProperty().bind(firstStage.scene.widthProperty())
+                Core.workingWindow.prefHeightProperty().bind(firstStage.scene.heightProperty())
+                firstStageRoot.children.addAll(Core.workingWindow)
+
+                firstStage.scene.focusOwnerProperty().addListener { _, _, newValue ->
+                    if(newValue == null){
+                        Core.workingWindow.center.requestFocus()
+                    }
+                }
+
+                secondStage?.close()
+            }
+            WindowsMode.MULTIPLE -> {
+                if(secondStage == null) {
+                    val stage = Stage()
+                    secondStage = stage
+                    firstStageRoot.children.remove(Core.workingWindow)
+
+
+
+
+                    stage.scene = Scene(secondStageRoot, 100.0, 100.0)
+                    stage.scene.stylesheets.add("style.css")
+                    stage.scene.focusOwnerProperty().addListener { _, _, newValue ->
+                        if(newValue == null) {
+                            Core.workingWindow.center.requestFocus()
+                        }
+                    }
+
+                    Core.workingWindow.prefWidthProperty().bind(stage.scene.widthProperty())
+                    Core.workingWindow.prefHeightProperty().bind(stage.scene.heightProperty())
+                    secondStageRoot.children.addAll(Core.workingWindow)
+
+                    val screen = Screen.getScreens().getOrNull(1)
+                    if(screen != null) {
+                        stage.x = screen.visualBounds.minX
+                        stage.y = screen.visualBounds.minY
+                    }
+                    stage.apply {
+                        initOwner(firstStage)
+                        initStyle(StageStyle.UNDECORATED)
+                        isMaximized = true
+                        show()
+                    }
+                }
+            }
+        }
+    }
+}
+
+enum class WindowsMode {
+    SINGLE,
+    MULTIPLE
 }
 
 fun main() {
