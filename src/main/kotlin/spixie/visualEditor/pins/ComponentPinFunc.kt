@@ -3,6 +3,7 @@ package spixie.visualEditor.pins
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import spixie.NoArg
 import spixie.visualEditor.Component
 import java.io.ObjectInput
 import java.io.ObjectOutput
@@ -18,9 +19,5 @@ class ComponentPinFunc(name: String): ComponentPin(name) {
             return connections
                     .mapNotNull { (it as? ComponentPinFunc)?.getValue?.invoke(t) }.sum()
         }
-    }
-
-    override fun serialize(): SerializedData {
-        return SerializedData(this::class.qualifiedName, name, null, null, null, null, null)
     }
 }

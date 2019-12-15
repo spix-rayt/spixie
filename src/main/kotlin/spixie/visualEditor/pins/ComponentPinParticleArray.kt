@@ -14,8 +14,4 @@ class ComponentPinParticleArray(name: String): ComponentPin(name) {
         val resultArray = particleArrays.flatMap { it.array }
         return ParticleArray(resultArray, resultArray.size.toFloat() + particleArrays.sumByDouble { it.decimalSize.toDouble() }.rem(1.0).toFloat())
     }
-
-    override fun serialize(): SerializedData {
-        return SerializedData(this::class.qualifiedName, name, null, null, null, null, null)
-    }
 }

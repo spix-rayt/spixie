@@ -1,5 +1,7 @@
 package spixie.arrangement
 
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import io.reactivex.subjects.BehaviorSubject
 import javafx.application.Platform
 import javafx.scene.Group
@@ -25,6 +27,7 @@ import spixie.static.runInUIAndWait
 import spixie.visualEditor.Module
 import spixie.visualEditor.VisualEditor
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import kotlin.math.roundToInt
@@ -413,36 +416,38 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
     }
 
     fun serialize(): ByteArray {
+        val serializedProject = SerializedProject().apply {
+            bpm = Core.renderManager.bpm.value
+            offset = Core.renderManager.offset.value
+            module = visualEditor.mainModule.serialize()
+            this.graphs = this@ArrangementWindow.graphs
+        }
         val byteArrayOutputStream = ByteArrayOutputStream()
-        val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
+        val output = Output(byteArrayOutputStream)
+        Core.kryo.writeObject(output, serializedProject)
+        output.flush()
+        output.close()
 
-        objectOutputStream.writeDouble(Core.renderManager.bpm.value)
-        objectOutputStream.writeDouble(Core.renderManager.offset.value)
-
-        objectOutputStream.writeObject(visualEditor.mainModule.serialize())
-
-        objectOutputStream.writeObject(graphs)
-
-        objectOutputStream.close()
         return byteArrayOutputStream.toByteArray()
     }
 
-    fun deserializeAndLoad(objectInputStream: ObjectInputStream){
+    fun deserializeAndLoad(inputStream: InputStream){
         try{
-            Core.renderManager.bpm.value = objectInputStream.readDouble()
-            Core.renderManager.offset.value = objectInputStream.readDouble()
+            val serializedProject = Core.kryo.readObject(Input(inputStream), SerializedProject::class.java)
+
+            Core.renderManager.bpm.value = serializedProject.bpm
+            Core.renderManager.offset.value = serializedProject.offset
             visualEditor.modules.clear()
-            val serializedModule = objectInputStream.readObject() as Module.SerializedModule
 
             visualEditor.loadModule(
                     Module().apply {
-                        deserizalize(serializedModule)
+                        deserizalize(serializedProject.module)
                         reconnectPins()
                     }
             )
 
             graphs.clear()
-            graphs.addAll(objectInputStream.readObject() as ArrayList<ArrangementGraphsContainer>)
+            graphs.addAll(serializedProject.graphs)
             updateGraphTree()
             needRedrawAllGraphs = true
             Core.renderManager.clearCache()

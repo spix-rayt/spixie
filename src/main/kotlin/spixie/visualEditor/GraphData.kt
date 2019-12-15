@@ -1,5 +1,6 @@
 package spixie.visualEditor
 
+import spixie.NoArg
 import spixie.static.linearInterpolate
 import java.io.Serializable
 
@@ -113,5 +114,6 @@ class GraphData {
         }
     }
 
-    class Fragment(val start: Int, var data: FloatArray): Serializable
+    @NoArg
+    class Fragment(val start: Int, var data: FloatArray)
 }

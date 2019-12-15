@@ -113,13 +113,11 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         val value = listView.selectionModel.selectedItem
         if (value is ComponentListItem) {
             val component = value.clazz.newInstance() as @kotlin.ParameterName(name = "component") Component
-            component.creationInit()
-            component.configInit()
             result(component)
             containerChildrens.remove(this@ComponentsList)
         }
         if(value is ComponentListGraphItem){
-            result(Graph(value.graph))
+            result(Graph().apply { graph = value.graph })
             containerChildrens.remove(this@ComponentsList)
         }
     }

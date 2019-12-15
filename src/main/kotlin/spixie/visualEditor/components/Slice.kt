@@ -9,9 +9,9 @@ import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.ParticleArray
 
 class Slice: Component() {
-    private val inParticles by lazyPinFromListOrCreate(0) { ComponentPinParticleArray("Particles") }
-    private val inStart by lazyPinFromListOrCreate(1) { ComponentPinNumber("Start", NumberControl(0.0, "").limitMin(0.0).limitMax(100.0)) }
-    private val inEnd by lazyPinFromListOrCreate(2) { ComponentPinNumber("End", NumberControl(100.0, "").limitMin(0.0).limitMax(100.0)) }
+    private val inParticles = ComponentPinParticleArray("Particles")
+    private val inStart = ComponentPinNumber("Start", NumberControl(0.0, "").limitMin(0.0).limitMax(100.0))
+    private val inEnd = ComponentPinNumber("End", NumberControl(100.0, "").limitMin(0.0).limitMax(100.0))
 
     private val outParticles = ComponentPinParticleArray("Particles").apply {
         getValue = {
@@ -27,18 +27,11 @@ class Slice: Component() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.add(inParticles)
         inputPins.add(inStart)
         inputPins.add(inEnd)
-    }
-
-    override fun configInit() {
         outputPins.add(outParticles)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

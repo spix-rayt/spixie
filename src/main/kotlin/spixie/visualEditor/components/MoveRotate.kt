@@ -6,19 +6,19 @@ import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 
 class MoveRotate: Component() {
-    private val inParticles by lazyPinFromListOrCreate(0) { ComponentPinParticleArray("Particles") }
+    private val inParticles = ComponentPinParticleArray("Particles")
 
-    private val inX by lazyPinFromListOrCreate(1) { ComponentPinNumber("X", NumberControl(0.0, "")) }
+    private val inX = ComponentPinNumber("X", NumberControl(0.0, ""))
 
-    private val inY by lazyPinFromListOrCreate(2) { ComponentPinNumber("Y", NumberControl(0.0, "")) }
+    private val inY = ComponentPinNumber("Y", NumberControl(0.0, ""))
 
-    private val inZ by lazyPinFromListOrCreate(3) { ComponentPinNumber("Z", NumberControl(0.0, "")) }
+    private val inZ = ComponentPinNumber("Z", NumberControl(0.0, ""))
 
-    private val inRotateX by lazyPinFromListOrCreate(4) { ComponentPinNumber("RotateX", NumberControl(0.0, "")) }
+    private val inRotateX = ComponentPinNumber("RotateX", NumberControl(0.0, ""))
 
-    private val inRotateY by lazyPinFromListOrCreate(5) { ComponentPinNumber("RotateY", NumberControl(0.0, "")) }
+    private val inRotateY = ComponentPinNumber("RotateY", NumberControl(0.0, ""))
 
-    private val inRotateZ by lazyPinFromListOrCreate(6) { ComponentPinNumber("RotateZ", NumberControl(0.0, "")) }
+    private val inRotateZ = ComponentPinNumber("RotateZ", NumberControl(0.0, ""))
 
     private val outParticles = ComponentPinParticleArray("Particles").apply {
         getValue = {
@@ -47,7 +47,7 @@ class MoveRotate: Component() {
         inZ.valueControl?.value = value
     }
 
-    override fun creationInit() {
+    init {
         inputPins.add(inParticles)
         inputPins.add(inX)
         inputPins.add(inY)
@@ -55,14 +55,7 @@ class MoveRotate: Component() {
         inputPins.add(inRotateX)
         inputPins.add(inRotateY)
         inputPins.add(inRotateZ)
-    }
-
-    override fun configInit() {
         outputPins.add(outParticles)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

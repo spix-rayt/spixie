@@ -5,11 +5,11 @@ import spixie.visualEditor.pins.ComponentPinFunc
 import spixie.visualEditor.pins.ComponentPinNumber
 
 class FuncLinear : Func() {
-    private val inputFunc by lazyPinFromListOrCreate(0) { ComponentPinFunc("Func") }
+    private val inputFunc = ComponentPinFunc("Func")
 
-    private val startValue by lazyPinFromListOrCreate(1) { ComponentPinNumber("Start", NumberControl(0.0, "")) }
+    private val startValue = ComponentPinNumber("Start", NumberControl(0.0, ""))
 
-    private val endValue by lazyPinFromListOrCreate(2) { ComponentPinNumber("End", NumberControl(0.0, "")) }
+    private val endValue = ComponentPinNumber("End", NumberControl(0.0, ""))
 
     private val outFunc = ComponentPinFunc("Func").apply {
         getValue = { t ->
@@ -20,16 +20,9 @@ class FuncLinear : Func() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.addAll(arrayListOf(inputFunc, startValue, endValue))
-    }
-
-    override fun configInit() {
         outputPins.add(outFunc)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

@@ -1,26 +1,28 @@
 package spixie.visualEditor.components
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import javafx.collections.FXCollections
 import javafx.scene.control.ChoiceBox
 import javafx.scene.control.Label
 import spixie.Core
 import spixie.arrangement.ArrangementGraphsContainer
 import spixie.visualEditor.Component
+import spixie.visualEditor.pins.ComponentPin
 import spixie.visualEditor.pins.ComponentPinNumber
-import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
 
-class Graph(): Component(), Externalizable {
-    private lateinit var graph: ArrangementGraphsContainer
-
-    constructor(graph: ArrangementGraphsContainer): this(){
-        this.graph = graph
-        label.text = graph.name.value
-        graph.name.changes.subscribe { newName->
-            label.text = newName
+class Graph: Component() {
+    var graph = ArrangementGraphsContainer()
+        set(value) {
+            field = value
+            label.text = field.name.value
+            field.name.changes.subscribe { newName->
+                label.text = newName
+            }
         }
-    }
 
     enum class Mode {
         Value, Sum
@@ -31,7 +33,7 @@ class Graph(): Component(), Externalizable {
 
     init {
         parameters.add(parameterMode)
-        outputPins.add(ComponentPinNumber("Value", null).apply {
+        val outputPin = ComponentPinNumber("Value", null).apply {
             getValue = {
                 when (parameterMode.value!!) {
                     Mode.Value -> {
@@ -42,7 +44,8 @@ class Graph(): Component(), Externalizable {
                     }
                 }
             }
-        })
+        }
+        outputPins.add(outputPin)
         updateUI()
         content.children.addAll(label)
         parameterMode.selectionModel.select(0)
@@ -51,31 +54,19 @@ class Graph(): Component(), Externalizable {
         }
     }
 
-    override fun creationInit() {
-        //TODO
+    fun serialize(kryo: Kryo, output: Output) {
+        output.writeDouble(layoutX)
+        output.writeDouble(layoutY)
+        kryo.writeObject(output, graph)
+        output.writeString(parameterMode.value.name)
     }
 
-    override fun configInit() {
-
-    }
-
-    override fun writeExternal(o: ObjectOutput) {
-        super.writeExternal(o)
-        o.writeObject(graph)
-        o.writeUTF(parameterMode.value.name)
-    }
-
-    override fun readExternal(o: ObjectInput) {
-        super.readExternal(o)
-        graph = o.readObject() as ArrangementGraphsContainer
-        label.text = graph.name.value
-        graph.name.changes.subscribe { newName->
-            label.text = newName
-        }
-        parameterMode.selectionModel.select(Mode.valueOf(o.readUTF()))
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
+    fun deserialize(kryo: Kryo, input: Input) {
+        val x = input.readDouble()
+        val y = input.readDouble()
+        magneticRelocate(x, y)
+        graph = kryo.readObject(input, ArrangementGraphsContainer::class.java)
+        parameterMode.selectionModel.select(Mode.valueOf(input.readString()))
+        updateUI()
     }
 }

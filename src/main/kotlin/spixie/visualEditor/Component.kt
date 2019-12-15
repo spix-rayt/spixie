@@ -20,7 +20,7 @@ import java.io.ObjectOutput
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-abstract class Component:Region(), Externalizable {
+abstract class Component:Region() {
     val parameters = arrayListOf<Node>()
 
     val inputPins = arrayListOf<ComponentPin>()
@@ -30,7 +30,6 @@ abstract class Component:Region(), Externalizable {
     val content = Group()
 
     private var dragDelta = Point2D(0.0, 0.0)
-
 
     val conneectionsChanged = PublishSubject.create<Unit>()
 
@@ -161,49 +160,16 @@ abstract class Component:Region(), Externalizable {
         conneectionsChanged.onNext(Unit)
     }
 
-    open fun creationInit() {
-
+    fun findInputPinByName(pinName: String): ComponentPin? {
+        return inputPins.find { it.name == pinName }
     }
 
-    open fun configInit() {
-
+    fun findOutputPinByName(pinName: String): ComponentPin? {
+        return outputPins.find { it.name == pinName }
     }
 
     protected open fun getHeightInCells(): Int {
         val visibleInputPins = inputPins.filter { it.isVisible }
         return visibleInputPins.size + parameters.size + outputPins.size + 1
-    }
-
-    fun <T> lazyPinFromListOrCreate(index: Int, create: () -> T): Lazy<T> {
-        return lazy {
-            inputPins.getOrNull(index) as? T ?: create()
-        }
-    }
-
-    var serializationIndex = -1
-
-    override fun writeExternal(o: ObjectOutput) {
-        o.writeDouble(layoutX)
-        o.writeDouble(layoutY)
-        o.writeObject(inputPins.map { (it as? ComponentPinNumber)?.valueControl?.value} )
-        o.writeInt(serializationIndex)
-    }
-
-    override fun readExternal(o: ObjectInput) {
-        magneticRelocate(o.readDouble(), o.readDouble())
-        val inputPinsValues = o.readObject() as List<Double?>
-        inputPinsValues.zip(inputPins).forEach {
-            it.first?.let { v ->
-                val second = it.second
-                if(second is ComponentPinNumber){
-                    second.valueControl?.value = v
-                }
-            }
-        }
-        serializationIndex = o.readInt()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

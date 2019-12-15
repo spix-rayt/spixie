@@ -40,8 +40,4 @@ class ComponentPinNumber(name: String, val valueControl: NumberControl?): Compon
             children.setAll(label, circle)
         }
     }
-
-    override fun serialize(): SerializedData {
-        return SerializedData(this::class.qualifiedName, name, valueControl?.value, valueControl?.name, valueControl?.numberLineScale, valueControl?.min, valueControl?.max)
-    }
 }

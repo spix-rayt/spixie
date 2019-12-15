@@ -6,15 +6,15 @@ import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 
 class Color: Component() {
-    private val inParticles by lazyPinFromListOrCreate(0) { ComponentPinParticleArray("Particles") }
+    private val inParticles = ComponentPinParticleArray("Particles")
 
-    private val inHue by lazyPinFromListOrCreate(1) { ComponentPinNumber("Hue", NumberControl(2.0, "", -300.0)) }
+    private val inHue = ComponentPinNumber("Hue", NumberControl(2.0, "", -300.0))
 
-    private val inChroma by lazyPinFromListOrCreate(2) { ComponentPinNumber("Chroma", NumberControl(1.0, "", -300.0).limitMin(0.0).limitMax(1.0)) }
+    private val inChroma = ComponentPinNumber("Chroma", NumberControl(1.0, "", -300.0).limitMin(0.0).limitMax(1.0))
 
-    private val inLuminance by lazyPinFromListOrCreate(3) { ComponentPinNumber("Luminance", NumberControl(1.0, "", -300.0).limitMin(0.0)) }
+    private val inLuminance = ComponentPinNumber("Luminance", NumberControl(1.0, "", -300.0).limitMin(0.0))
 
-    private val inTransparency by lazyPinFromListOrCreate(4) { ComponentPinNumber("Transparency", NumberControl(1.0, "", -300.0).limitMin(0.0).limitMax(1.0)) }
+    private val inTransparency = ComponentPinNumber("Transparency", NumberControl(1.0, "", -300.0).limitMin(0.0).limitMax(1.0))
 
     private val outParticles = ComponentPinParticleArray("Particles").apply {
         getValue = {
@@ -34,16 +34,9 @@ class Color: Component() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.addAll(arrayListOf(inParticles, inHue, inChroma, inLuminance, inTransparency))
-    }
-
-    override fun configInit() {
         outputPins.add(outParticles)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

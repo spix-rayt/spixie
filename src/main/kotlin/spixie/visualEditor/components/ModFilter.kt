@@ -8,9 +8,9 @@ import spixie.visualEditor.ParticleArray
 import kotlin.math.roundToInt
 
 class ModFilter: Component() {
-    private val inParticles by lazyPinFromListOrCreate(0) { ComponentPinParticleArray("Particles") }
+    private val inParticles = ComponentPinParticleArray("Particles")
 
-    private val inSkip by lazyPinFromListOrCreate(1) { ComponentPinNumber("Skip", NumberControl(0.0, "").limitMin(0.0)) }
+    private val inSkip = ComponentPinNumber("Skip", NumberControl(0.0, "").limitMin(0.0))
 
     private val outParticles = ComponentPinParticleArray("Particles").apply {
         getValue = {
@@ -22,17 +22,10 @@ class ModFilter: Component() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.add(inParticles)
         inputPins.add(inSkip)
-    }
-
-    override fun configInit() {
         outputPins.add(outParticles)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

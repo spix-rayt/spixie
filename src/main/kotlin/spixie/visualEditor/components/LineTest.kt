@@ -7,8 +7,8 @@ import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
 
 class LineTest: Component() {
-    private val inParticlesA by lazyPinFromListOrCreate(0) { ComponentPinParticleArray("ParticlesA") }
-    private val inParticlesB by lazyPinFromListOrCreate(1) { ComponentPinParticleArray("ParticlesB") }
+    private val inParticlesA = ComponentPinParticleArray("ParticlesA")
+    private val inParticlesB = ComponentPinParticleArray("ParticlesB")
 
 
     private val outParticles = ComponentPinParticleArray("Particles").apply {
@@ -28,17 +28,10 @@ class LineTest: Component() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.add(inParticlesA)
         inputPins.add(inParticlesB)
-    }
-
-    override fun configInit() {
         outputPins.add(outParticles)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

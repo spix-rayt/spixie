@@ -47,22 +47,13 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
         }
 
         mainModule.apply {
-            val resultComponent = ImageResult().apply {
-                creationInit()
-                configInit()
-            }
+            val resultComponent = ImageResult()
             addComponent(resultComponent)
-            val renderComponent = Render().apply {
-                creationInit()
-                configInit()
-            }
+            val renderComponent = Render()
             addComponent(renderComponent)
             resultComponent.inputPins[0].connectWith(renderComponent.outputPins[0])
 
-            val moveComponent = MoveRotate().apply {
-                creationInit()
-                configInit()
-            }
+            val moveComponent = MoveRotate()
             addComponent(moveComponent)
             moveComponent.changeZ(1000.0)
             renderComponent.inputPins[0].connectWith(moveComponent.outputPins[0])

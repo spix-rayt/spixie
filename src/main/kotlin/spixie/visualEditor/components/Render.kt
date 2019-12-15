@@ -9,7 +9,7 @@ import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.ImageFloatBuffer
 
 class Render: Component() {
-    private val inParticles by lazyPinFromListOrCreate(0) { ComponentPinParticleArray("Particles") }
+    private val inParticles = ComponentPinParticleArray("Particles")
 
     private val outImage = ComponentPinImageFloatBuffer("Image").apply {
         getValue = {
@@ -45,16 +45,9 @@ class Render: Component() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.add(inParticles)
-    }
-
-    override fun configInit() {
         outputPins.add(outImage)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

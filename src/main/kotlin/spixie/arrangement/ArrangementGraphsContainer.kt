@@ -6,7 +6,7 @@ import java.io.ObjectInput
 import java.io.ObjectOutput
 import kotlin.math.roundToInt
 
-class ArrangementGraphsContainer: Externalizable {
+class ArrangementGraphsContainer {
     val name = TextControl("", "")
 
     val list = arrayListOf(ArrangementGraph())
@@ -27,20 +27,5 @@ class ArrangementGraphsContainer: Externalizable {
                 acc2 + v * (arrangementGraph.rangeMaxControl.value - arrangementGraph.rangeMinControl.value) + arrangementGraph.rangeMinControl.value
             }
         }/100.0
-    }
-
-    override fun readExternal(o: ObjectInput) {
-        name.value = o.readUTF()
-        list.clear()
-        list.addAll(o.readObject() as ArrayList<ArrangementGraph>)
-    }
-
-    override fun writeExternal(o: ObjectOutput) {
-        o.writeUTF(name.value)
-        o.writeObject(list)
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

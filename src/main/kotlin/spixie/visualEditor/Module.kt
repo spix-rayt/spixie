@@ -1,8 +1,5 @@
 package spixie.visualEditor
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import javafx.geometry.Point2D
 import javafx.scene.Group
@@ -14,15 +11,14 @@ import javafx.scene.shape.CubicCurve
 import javafx.scene.shape.Rectangle
 import javafx.scene.shape.StrokeLineCap
 import spixie.Core
+import spixie.NoArg
 import spixie.static.MAGIC
 import spixie.static.initCustomPanning
 import spixie.static.mix
 import spixie.static.raw
 import spixie.visualEditor.components.*
 import spixie.visualEditor.pins.ComponentPin
-import spixie.visualEditor.pins.ComponentPinFunc
 import spixie.visualEditor.pins.ComponentPinNumber
-import java.io.Serializable
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
 import kotlin.math.max
@@ -219,10 +215,10 @@ class Module {
         Core.renderManager.requestRender()
     }
 
-    private fun connectPins(pin1: ComponentPin, pin2: ComponentPin, color: Color){
+    private fun connectPins(outputPin: ComponentPin, inputPin: ComponentPin, color: Color){
         val cubicCurve = CubicCurve()
-        val aBounds = pin1.component.localToParent(pin1.component.content.localToParent(pin1.localToParent(pin1.circle.boundsInParent)))
-        val bBounds = pin2.component.localToParent(pin2.component.content.localToParent(pin2.localToParent(pin2.circle.boundsInParent)))
+        val aBounds = outputPin.component.localToParent(outputPin.component.content.localToParent(outputPin.localToParent(outputPin.circle.boundsInParent)))
+        val bBounds = inputPin.component.localToParent(inputPin.component.content.localToParent(inputPin.localToParent(inputPin.circle.boundsInParent)))
         cubicCurve.startX = (aBounds.minX + aBounds.maxX) / 2
         cubicCurve.startY = (aBounds.minY + aBounds.maxY) / 2
         cubicCurve.endX = (bBounds.minX + bBounds.maxX) / 2
@@ -242,54 +238,45 @@ class Module {
 
     fun serialize(): SerializedModule {
         val componentsList = components.children.filter { it is Component }.map { it as Component }
-        componentsList.forEachIndexed { index, component -> component.serializationIndex = index }
-        val inputToOutputConnection = arrayListOf<Pair<ComponentPin, ComponentPin>>()
-        this.components.children.forEach { component ->
+        val pinConnections = arrayListOf<PinConnection>()
+        components.children.forEach { component ->
             if(component is Component){
                 component.inputPins.forEach { pin1 ->
                     pin1.connections.forEach { pin2->
-                        inputToOutputConnection.add(pin1 to pin2)
+                        pinConnections.add(PinConnection(PinAddress(pin1.component, pin1.name), PinAddress(pin2.component, pin2.name)))
                     }
                 }
             }
         }
-        val connections = inputToOutputConnection.map { entry ->
-            val v1 = entry.first.component.serializationIndex to entry.first.name
-            val v2 = entry.second.component.serializationIndex to entry.second.name
-            v1 to v2
+
+        val values = componentsList.flatMap { component ->
+            component.inputPins
+                    .mapNotNull { it as? ComponentPinNumber }
+                    .map { NumberPinInternalValue(PinAddress(component, it.name), it.valueControl?.value ?: 0.0) }
         }
-        val gson = GsonBuilder().serializeSpecialFloatingPointValues().create()
-        val inputPins = componentsList.map { component -> component.inputPins.map { gson.toJson(it.serialize()) } }
-        return SerializedModule(componentsList, connections, inputPins)
+        return SerializedModule(componentsList, pinConnections, values)
     }
 
     fun deserizalize(data: SerializedModule) {
         clearComponents()
         data.components.forEach { addComponent(it) }
-        val idToComponent = data.components.map { it.serializationIndex to it }.toMap()
-        val gson = Gson()
-        components.children.forEachIndexed { index, component ->
-            if(component is Component){
-                component.inputPins.addAll(data.inputPins[index].map { ComponentPin.deserialize(gson.fromJson(it, ComponentPin.SerializedData::class.java)) })
-                component.configInit()
+        data.pinConnections.forEach { pinConnection ->
+            val inputPin = pinConnection.inputPin.component.findInputPinByName(pinConnection.inputPin.pinName)
+            val outputPin = pinConnection.outputPin.component.findOutputPinByName(pinConnection.outputPin.pinName)
+            if(inputPin != null && outputPin != null) {
+                inputPin.connectWith(outputPin)
+            }
+            if(inputPin == null) {
+                println("${pinConnection.inputPin.component::class.java} ${pinConnection.inputPin.pinName} not found")
+            }
+            if(outputPin == null) {
+                println("${pinConnection.outputPin.component::class.java} ${pinConnection.outputPin.pinName} not found")
             }
         }
-
-        components.children.forEachIndexed { index, component ->
-            if(component is Component){
-                component.inputPins.forEach { pin1 ->
-                    pin1.connections.addAll(
-                            data.connections.mapNotNull {
-                                if(pin1.component.serializationIndex == it.first.first && pin1.name == it.first.second){
-                                    it.second
-                                }else{
-                                    null
-                                }
-                            }.mapNotNull { pin2Serialized->
-                                idToComponent[pin2Serialized.first]?.outputPins?.find { it.name == pin2Serialized.second }
-                            }
-                    )
-                }
+        data.values.forEach { value ->
+            val inputPin = value.pinAddress.component.findInputPinByName(value.pinAddress.pinName)
+            if(inputPin != null && inputPin is ComponentPinNumber) {
+                inputPin.valueControl?.value = value.value
             }
         }
     }
@@ -298,5 +285,15 @@ class Module {
         contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+(VE_GRID_CELL_SIZE/2.0+0.5)}px 0px, repeat, #00000022 5%, transparent 5%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+(VE_GRID_CELL_SIZE/2.0+0.5)}px, repeat, #00000022 5%, transparent 5%);"
     }
 
-    class SerializedModule(val components: List<Component>, val connections: List<Pair<Pair<Int, String>, Pair<Int, String>>>, val inputPins: List<List<String>>) : Serializable
+    @NoArg
+    class NumberPinInternalValue(val pinAddress: PinAddress, val value: Double)
+
+    @NoArg
+    class PinConnection(val inputPin: PinAddress, val outputPin: PinAddress)
+
+    @NoArg
+    class PinAddress(val component: Component, val pinName: String)
+
+    @NoArg
+    class SerializedModule(val components: List<Component>, val pinConnections: List<PinConnection>, val values: List<NumberPinInternalValue>)
 }

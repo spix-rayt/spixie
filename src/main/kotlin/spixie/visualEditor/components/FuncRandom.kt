@@ -8,17 +8,17 @@ import spixie.visualEditor.pins.ComponentPinFunc
 import spixie.visualEditor.pins.ComponentPinNumber
 
 class FuncRandom : Func() {
-    private val inputFunc by lazyPinFromListOrCreate(0) { ComponentPinFunc("Func") }
+    private val inputFunc = ComponentPinFunc("Func")
 
-    private val startValue by lazyPinFromListOrCreate(1) { ComponentPinNumber("Start", NumberControl(0.0, "")) }
+    private val startValue = ComponentPinNumber("Start", NumberControl(0.0, ""))
 
-    private val endValue by lazyPinFromListOrCreate(2) { ComponentPinNumber("End", NumberControl(0.0, "")) }
+    private val endValue = ComponentPinNumber("End", NumberControl(0.0, ""))
 
-    private val offsetValue by lazyPinFromListOrCreate(3) { ComponentPinNumber("Offset", NumberControl(0.0, "")) }
+    private val offsetValue = ComponentPinNumber("Offset", NumberControl(0.0, ""))
 
-    private val stretchValue by lazyPinFromListOrCreate(4) { ComponentPinNumber("Stretch", NumberControl(0.0, "")) }
+    private val stretchValue = ComponentPinNumber("Stretch", NumberControl(0.0, ""))
 
-    private val seedValue by lazyPinFromListOrCreate(5) { ComponentPinNumber("Seed", NumberControl(0.0, "")) }
+    private val seedValue = ComponentPinNumber("Seed", NumberControl(0.0, ""))
 
     private val outFunc = ComponentPinFunc("Func").apply {
         getValue = { t ->
@@ -42,16 +42,9 @@ class FuncRandom : Func() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.addAll(arrayListOf(inputFunc, startValue, endValue, offsetValue, stretchValue, seedValue))
-    }
-
-    override fun configInit() {
         outputPins.add(outFunc)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

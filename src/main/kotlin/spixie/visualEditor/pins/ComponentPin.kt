@@ -12,6 +12,7 @@ import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.scene.shape.Circle
 import spixie.Core
+import spixie.NoArg
 import spixie.NumberControl
 import spixie.static.DragAndDropType
 import spixie.visualEditor.Component
@@ -25,6 +26,7 @@ import java.lang.RuntimeException
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.primaryConstructor
 
+@NoArg
 abstract class ComponentPin(val name: String): HBox() {
     private val backgroundCircle = Circle(VE_GRID_CELL_SIZE /2, VE_GRID_CELL_SIZE /2, 2.0, Color.BLACK)
 
@@ -34,6 +36,8 @@ abstract class ComponentPin(val name: String): HBox() {
         get() {
             return this.parent.parent as Component
         }
+
+    var typeString = ""
 
     val circle = StackPane(backgroundCircle, selectionCircle).apply {
         minWidth = VE_GRID_CELL_SIZE
@@ -45,7 +49,7 @@ abstract class ComponentPin(val name: String): HBox() {
 
     open val connections = mutableSetOf<ComponentPin>()
 
-    protected val label = Label(name)
+    protected val label = Label(name.split("~")[0])
 
     val contextMenu = ContextMenu().apply {
         val unconnectAllItem = MenuItem("Unconnect all").apply {
@@ -166,47 +170,4 @@ abstract class ComponentPin(val name: String): HBox() {
             children.setAll(label, circle)
         }
     }
-
-    abstract fun serialize(): SerializedData
-
-    companion object {
-        fun deserialize(obj: SerializedData): ComponentPin {
-            if(obj.clazz == null) {
-                throw RuntimeException("deserialize error")
-            }
-            val cls = Class.forName(obj.clazz).kotlin
-            if(cls == ComponentPinFunc::class) {
-                return cls.primaryConstructor!!.call(obj.name) as ComponentPinFunc
-            }
-            if(cls == ComponentPinImageFloatBuffer::class) {
-                return cls.primaryConstructor!!.call(obj.name) as ComponentPinImageFloatBuffer
-            }
-            if(cls == ComponentPinNumber::class) {
-                val value = obj.numberControlValue
-                val numberName = obj.numberControlName
-                val scale = obj.numberControlScale
-                val min = obj.numberControlMin
-                val max = obj.numberControlMax
-                return if(value != null && numberName != null && scale != null && min != null && max != null) {
-                    cls.primaryConstructor!!.call(obj.name, NumberControl(value, numberName, scale).limitMin(min).limitMax(max)) as ComponentPinNumber
-                } else {
-                    cls.primaryConstructor!!.call(obj.name, null) as ComponentPinNumber
-                }
-            }
-            if(cls == ComponentPinParticleArray::class) {
-                return cls.primaryConstructor!!.call(obj.name) as ComponentPinParticleArray
-            }
-            throw RuntimeException("deserialize error")
-        }
-    }
-
-    class SerializedData(
-            val clazz: String?,
-            val name: String,
-            val numberControlValue: Double?,
-            val numberControlName: String?,
-            val numberControlScale: Double?,
-            val numberControlMin: Double?,
-            val numberControlMax: Double?
-    )
 }

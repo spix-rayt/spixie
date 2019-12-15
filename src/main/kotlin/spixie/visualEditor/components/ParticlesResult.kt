@@ -5,21 +5,14 @@ import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.ParticleArray
 
 class ParticlesResult : Component() {
-    private val inputParticles by lazyPinFromListOrCreate(0) { ComponentPinParticleArray("Result") }
+    private val inputParticles = ComponentPinParticleArray("Result")
 
-    override fun creationInit() {
+    init {
         inputPins.add(inputParticles)
-    }
-
-    override fun configInit() {
         updateUI()
     }
 
     fun getParticles(): ParticleArray{
         return inputParticles.receiveValue()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

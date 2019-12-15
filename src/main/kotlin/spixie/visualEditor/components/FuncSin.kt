@@ -6,15 +6,15 @@ import spixie.visualEditor.pins.ComponentPinNumber
 import kotlin.math.sin
 
 class FuncSin : Func() {
-    private val inputFunc by lazyPinFromListOrCreate(0) { ComponentPinFunc("Func") }
+    private val inputFunc = ComponentPinFunc("Func")
 
-    private val startValue by lazyPinFromListOrCreate(1) { ComponentPinNumber("Start", NumberControl(0.0, "")) }
+    private val startValue = ComponentPinNumber("Start", NumberControl(0.0, ""))
 
-    private val endValue by lazyPinFromListOrCreate(2) { ComponentPinNumber("End", NumberControl(0.0, "")) }
+    private val endValue = ComponentPinNumber("End", NumberControl(0.0, ""))
 
-    private val shiftValue by lazyPinFromListOrCreate(3) { ComponentPinNumber("Shift", NumberControl(0.0, "")) }
+    private val shiftValue = ComponentPinNumber("Shift", NumberControl(0.0, ""))
 
-    private val frequencyValue by lazyPinFromListOrCreate(4) { ComponentPinNumber("Period", NumberControl(0.0, "")) }
+    private val frequencyValue = ComponentPinNumber("Period", NumberControl(0.0, ""))
 
     private val outFunc = ComponentPinFunc("Func").apply {
         getValue = { t ->
@@ -27,16 +27,9 @@ class FuncSin : Func() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.addAll(arrayListOf(inputFunc, startValue, endValue, shiftValue, frequencyValue))
-    }
-
-    override fun configInit() {
         outputPins.add(outFunc)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

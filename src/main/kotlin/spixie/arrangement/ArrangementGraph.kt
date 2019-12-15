@@ -9,9 +9,10 @@ import java.io.Externalizable
 import java.io.ObjectInput
 import java.io.ObjectOutput
 
-class ArrangementGraph: Externalizable {
+class ArrangementGraph {
     val data = GraphData()
 
+    @Transient
     val canvas = Canvas(1.0, 100.0)
 
     val rangeMinControl = NumberControl(0.0, "Min")
@@ -25,22 +26,5 @@ class ArrangementGraph: Externalizable {
         rangeMaxControl.changes.subscribe {
             Core.renderManager.requestRender()
         }
-    }
-
-    override fun readExternal(o: ObjectInput) {
-        data.values.clear()
-        data.values.addAll(o.readObject() as ArrayList<GraphData.Fragment>)
-        rangeMinControl.value = o.readDouble()
-        rangeMaxControl.value = o.readDouble()
-    }
-
-    override fun writeExternal(o: ObjectOutput) {
-        o.writeObject(data.values)
-        o.writeDouble(rangeMinControl.value)
-        o.writeDouble(rangeMaxControl.value)
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

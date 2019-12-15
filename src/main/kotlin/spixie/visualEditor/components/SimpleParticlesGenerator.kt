@@ -6,7 +6,7 @@ import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 
 class SimpleParticlesGenerator: Component() {
-    private val inCount by lazyPinFromListOrCreate(0) { ComponentPinNumber("Count", NumberControl(1.0, "").limitMin(0.0).limitMax(100000.0)) }
+    private val inCount = ComponentPinNumber("Count", NumberControl(1.0, "").limitMin(0.0).limitMax(100000.0))
 
     private val outParticles = ComponentPinParticleArray("Particles").apply {
         getValue = {
@@ -16,16 +16,9 @@ class SimpleParticlesGenerator: Component() {
         }
     }
 
-    override fun creationInit() {
+    init {
         inputPins.add(inCount)
-    }
-
-    override fun configInit() {
         outputPins.add(outParticles)
         updateUI()
-    }
-
-    companion object {
-        const val serialVersionUID = 0L
     }
 }

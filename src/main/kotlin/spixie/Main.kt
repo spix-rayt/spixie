@@ -172,7 +172,7 @@ class Main : Application() {
 
         File("save/save.spixie").let {
             if(it.exists()){
-                Core.arrangementWindow.deserializeAndLoad(ObjectInputStream(it.inputStream()))
+                Core.arrangementWindow.deserializeAndLoad(it.inputStream())
             }
         }
 
