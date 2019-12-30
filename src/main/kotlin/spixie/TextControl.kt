@@ -2,6 +2,7 @@ package spixie
 
 import io.reactivex.subjects.PublishSubject
 import javafx.event.EventHandler
+import javafx.event.EventType
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
@@ -36,35 +37,31 @@ class TextControl(initial: String, val name: String) : HBox() {
 
         labelValue.styleClass.add("label-value")
 
-        labelValue.onMouseReleased = EventHandler<MouseEvent> { mouseEvent ->
-            if (mouseEvent.button == MouseButton.PRIMARY) {
-                mouseEvent.consume()
-                children.remove(labelValue)
-                children.addAll(textFieldValue)
-                textFieldValue.text = value
-                textFieldValue.requestFocus()
-                textFieldValue.selectAll()
-            }
+        labelValue.setOnContextMenuRequested { event ->
+            event.consume()
+            children.remove(labelValue)
+            children.addAll(textFieldValue)
+            textFieldValue.text = value
+            textFieldValue.requestFocus()
+            textFieldValue.selectAll()
         }
 
-        textFieldValue.focusedProperty().addListener { _, _, t1 ->
-            if (!t1) {
-                try {
-                    value = textFieldValue.text
-                } catch (e: NumberFormatException) {
-                }
+        textFieldValue.focusedProperty().addListener { _, _, focused ->
+            if (!focused) {
+                value = textFieldValue.text
 
                 children.remove(textFieldValue)
                 children.addAll(labelValue)
             }
         }
 
-        textFieldValue.onKeyPressed = EventHandler<KeyEvent> { keyEvent ->
-            if(keyEvent.code == KeyCode.ESCAPE || keyEvent.code == KeyCode.ENTER){
+        textFieldValue.addEventHandler(KeyEvent.KEY_PRESSED) { event ->
+            if(event.code == KeyCode.ESCAPE || event.code == KeyCode.ENTER){
                 children.remove(textFieldValue)
-                keyEvent.consume()
+                event.consume()
             }
         }
+
         children.addAll(labelName, labelValue)
         value = initial
     }

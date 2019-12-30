@@ -8,6 +8,7 @@ import javafx.scene.control.ListView
 import javafx.scene.control.ScrollPane
 import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
 import spixie.Core
 import spixie.arrangement.ArrangementGraphsContainer
@@ -79,7 +80,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
         }
 
         textField.apply {
-            setOnKeyPressed { event ->
+            addEventHandler(KeyEvent.KEY_PRESSED) { event ->
                 if (event.code == KeyCode.ESCAPE) {
                     containerChildrens.remove(this@ComponentsList)
                     event.consume()

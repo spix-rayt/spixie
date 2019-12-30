@@ -74,17 +74,6 @@ abstract class Component:Region() {
             }
         }
 
-        setOnContextMenuRequested { event->
-            ContextMenu(
-                    MenuItem("Delete").apply {
-                        setOnAction {
-                            deleteComponent()
-                        }
-                    }
-            ).show(this, event.screenX, event.screenY)
-            event.consume()
-        }
-
         children.addAll(content)
     }
 

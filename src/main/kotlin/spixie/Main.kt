@@ -1,9 +1,7 @@
 package spixie
 
-import io.reactivex.Scheduler
 import io.reactivex.rxjavafx.schedulers.JavaFxScheduler
 import io.reactivex.rxkotlin.Observables
-import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
 import io.reactivex.subjects.PublishSubject
 import javafx.animation.AnimationTimer
@@ -12,11 +10,11 @@ import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.event.EventHandler
 import javafx.scene.CacheHint
+import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyCombination
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.StackPane
 import javafx.stage.Screen
@@ -26,13 +24,11 @@ import javafx.stage.WindowEvent
 import javafx.util.Duration
 import spixie.opencl.OpenCLInfoWindow
 import java.io.File
-import java.io.ObjectInputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
 class Main : Application() {
@@ -81,13 +77,13 @@ class Main : Application() {
             show()
         }
 
-        setWindowsMode(WindowsMode.SINGLE)
+        setWindowsMode(WindowsMode.MULTIPLE)
 
-        Core.workingWindow.open(Core.arrangementWindow)
+        Core.workWindow.open(Core.arrangementWindow)
         val windowOpacity = BehaviorSubject.createDefault(1.0)
         val windowHide = BehaviorSubject.createDefault(false)
         Observables.combineLatest(windowOpacity, windowHide) { opacity, hide ->
-            Core.workingWindow.opacity = if(hide) 0.0 else opacity
+            Core.workWindow.opacity = if(hide) 0.0 else opacity
         }.subscribe()
 
         var playStartTime = 0.0
@@ -180,7 +176,7 @@ class Main : Application() {
         object : AnimationTimer() {
             override fun handle(now: Long) {
                 Core.renderManager.perFrame()
-                if(Core.workingWindow.opacity != 0.0){
+                if(Core.workWindow.opacity != 0.0){
                     Core.arrangementWindow.perFrame()
                 }
             }
@@ -194,13 +190,13 @@ class Main : Application() {
     fun setWindowsMode(windowsMode: WindowsMode) {
         when(windowsMode) {
             WindowsMode.SINGLE -> {
-                Core.workingWindow.prefWidthProperty().bind(firstStage.scene.widthProperty())
-                Core.workingWindow.prefHeightProperty().bind(firstStage.scene.heightProperty())
-                firstStageRoot.children.addAll(Core.workingWindow)
+                Core.workWindow.prefWidthProperty().bind(firstStage.scene.widthProperty())
+                Core.workWindow.prefHeightProperty().bind(firstStage.scene.heightProperty())
+                firstStageRoot.children.addAll(Core.workWindow)
 
                 firstStage.scene.focusOwnerProperty().addListener { _, _, newValue ->
                     if(newValue == null){
-                        Core.workingWindow.center.requestFocus()
+                        Core.workWindow.center.requestFocus()
                     }
                 }
 
@@ -210,22 +206,19 @@ class Main : Application() {
                 if(secondStage == null) {
                     val stage = Stage()
                     secondStage = stage
-                    firstStageRoot.children.remove(Core.workingWindow)
-
-
-
+                    firstStageRoot.children.remove(Core.workWindow)
 
                     stage.scene = Scene(secondStageRoot, 100.0, 100.0)
                     stage.scene.stylesheets.add("style.css")
                     stage.scene.focusOwnerProperty().addListener { _, _, newValue ->
                         if(newValue == null) {
-                            Core.workingWindow.center.requestFocus()
+                            Core.workWindow.center.requestFocus()
                         }
                     }
 
-                    Core.workingWindow.prefWidthProperty().bind(stage.scene.widthProperty())
-                    Core.workingWindow.prefHeightProperty().bind(stage.scene.heightProperty())
-                    secondStageRoot.children.addAll(Core.workingWindow)
+                    Core.workWindow.prefWidthProperty().bind(stage.scene.widthProperty())
+                    Core.workWindow.prefHeightProperty().bind(stage.scene.heightProperty())
+                    secondStageRoot.children.addAll(Core.workWindow)
 
                     val screen = Screen.getScreens().getOrNull(1)
                     if(screen != null) {
@@ -251,5 +244,6 @@ enum class WindowsMode {
 
 fun main() {
     Locale.setDefault(Locale.ENGLISH)
+    println(System.getProperty("java.version"))
     Application.launch(Main::class.java)
 }

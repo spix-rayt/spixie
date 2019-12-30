@@ -8,6 +8,7 @@ import javafx.scene.Group
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.MenuItem
 import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
@@ -21,18 +22,16 @@ import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.lang3.math.Fraction
 import spixie.Core
-import spixie.WorkingWindow
+import spixie.WorkWindow
 import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
 import spixie.visualEditor.Module
 import spixie.visualEditor.VisualEditor
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import kotlin.math.roundToInt
 
-class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
+class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
     private val contentPane = Pane()
 
     private val content = Group()
@@ -351,7 +350,7 @@ class ArrangementWindow: BorderPane(), WorkingWindow.OpenableContent {
                     timePointerCentering = true
                 }
                 if(event.code == KeyCode.V){
-                    Core.workingWindow.open(visualEditor)
+                    Core.workWindow.open(visualEditor)
                 }
                 if(event.code == KeyCode.Q){
                     selectionBlock.buildGraph()

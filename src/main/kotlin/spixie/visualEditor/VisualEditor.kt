@@ -4,7 +4,7 @@ import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.stage.Screen
-import spixie.WorkingWindow
+import spixie.WorkWindow
 import spixie.visualEditor.components.ImageResult
 import spixie.visualEditor.components.MoveRotate
 import spixie.visualEditor.components.Render
@@ -13,7 +13,7 @@ const val VE_GRID_CELL_SIZE = 20.0
 const val VE_PIN_WIDTH = VE_GRID_CELL_SIZE * 5
 const val VE_KEK = VE_GRID_CELL_SIZE*4
 
-class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
+class VisualEditor: BorderPane(), WorkWindow.OpenableContent {
     var mainModule = Module()
         private set
 
@@ -33,7 +33,7 @@ class VisualEditor: BorderPane(), WorkingWindow.OpenableContent {
             }
         }
 
-        setOnKeyReleased { event ->
+        setOnKeyPressed { event ->
             if(event.code == KeyCode.HOME){
                 homeLayout()
                 event.consume()

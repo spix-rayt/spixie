@@ -1,22 +1,23 @@
 package spixie
 
+import com.google.common.primitives.Doubles
 import io.reactivex.subjects.PublishSubject
 import javafx.event.EventHandler
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Cursor
+import javafx.scene.Node
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import javafx.scene.effect.DropShadow
-import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyEvent
-import javafx.scene.input.MouseButton
-import javafx.scene.input.MouseEvent
+import javafx.scene.input.*
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Font
+import javafx.scene.text.Text
+import org.apache.commons.lang3.math.NumberUtils
 import java.awt.Robot
 import kotlin.math.floor
 import kotlin.math.log
@@ -135,58 +136,54 @@ class NumberControl(initial: Double, val name: String, initialScale: Double = 0.
 
         labelValue.styleClass.add("label-value")
 
-        labelValue.onMousePressed = EventHandler<MouseEvent> { mouseEvent ->
-            if (mouseEvent.button == MouseButton.PRIMARY) {
-                mousePressedScreenX = mouseEvent.screenX
-                mousePressedScreenY = mouseEvent.screenY
-                mouseEvent.consume()
+        labelValue.setOnMousePressed { event ->
+            if (event.button == MouseButton.PRIMARY) {
+                mousePressedScreenX = event.screenX
+                mousePressedScreenY = event.screenY
+                event.consume()
                 (this.scene.root as Pane).children.add(numberLineWindowContainer)
             }
-            if(mouseEvent.button == MouseButton.SECONDARY) {
-                mouseEvent.consume()
+            if(event.button == MouseButton.SECONDARY) {
+                event.consume()
             }
         }
 
-        labelValue.onContextMenuRequested = EventHandler { mouseEvent->
-            mouseEvent.consume()
-        }
-
-        labelValue.onMouseDragged = EventHandler<MouseEvent> { mouseEvent ->
-            if (mouseEvent.button == MouseButton.PRIMARY) {
-                mouseEvent.consume()
-                if(mouseEvent.screenX != mousePressedScreenX || mouseEvent.screenY != mousePressedScreenY) {
+        labelValue.setOnMouseDragged { event ->
+            if (event.button == MouseButton.PRIMARY) {
+                event.consume()
+                if(event.screenX != mousePressedScreenX || event.screenY != mousePressedScreenY) {
                     Robot().mouseMove(mousePressedScreenX.toInt(), mousePressedScreenY.toInt())
                 }
-                numberLineScale += mousePressedScreenY - mouseEvent.screenY
-                val delta = mouseEvent.screenX - mousePressedScreenX
+                numberLineScale += mousePressedScreenY - event.screenY
+                val delta = event.screenX - mousePressedScreenX
 
                 value = value+(delta*valueMultiplier)
                 labelValue.cursor = Cursor.NONE
             }
         }
 
-        labelValue.onMouseReleased = EventHandler<MouseEvent> { mouseEvent ->
-            if (mouseEvent.button == MouseButton.PRIMARY) {
+        labelValue.setOnMouseReleased { event ->
+            if (event.button == MouseButton.PRIMARY) {
                 (this.scene.root as Pane).children.remove(numberLineWindowContainer)
                 labelValue.cursor = Cursor.H_RESIZE
             }
-            if(mouseEvent.button == MouseButton.SECONDARY) {
-                if(numberLineWindowContainer.parent == null) {
-                    mouseEvent.consume()
-                    children.remove(labelValue)
-                    children.addAll(textFieldValue)
-                    textFieldValue.text = String.format("%f", value)
-                    textFieldValue.requestFocus()
-                    textFieldValue.selectAll()
-                }
+        }
+
+        labelValue.setOnContextMenuRequested { event ->
+            if(numberLineWindowContainer.parent == null) {
+                event.consume()
+                children.remove(labelValue)
+                children.addAll(textFieldValue)
+                textFieldValue.text = String.format("%f", value)
+                textFieldValue.requestFocus()
+                textFieldValue.selectAll()
             }
         }
 
-        textFieldValue.focusedProperty().addListener { _, _, t1 ->
-            if (!t1) {
-                try {
-                    value = java.lang.Double.parseDouble(textFieldValue.text)
-                } catch (e: NumberFormatException) {
+        textFieldValue.focusedProperty().addListener { _, _, focused ->
+            if (!focused) {
+                textFieldValue.text.toDoubleOrNull()?.let {
+                    value = it
                 }
 
                 children.remove(textFieldValue)
@@ -194,12 +191,13 @@ class NumberControl(initial: Double, val name: String, initialScale: Double = 0.
             }
         }
 
-        textFieldValue.onKeyPressed = EventHandler<KeyEvent> { keyEvent ->
-            if(keyEvent.code == KeyCode.ESCAPE || keyEvent.code == KeyCode.ENTER){
+        textFieldValue.addEventHandler(KeyEvent.KEY_PRESSED) { event ->
+            if(event.code == KeyCode.ESCAPE || event.code == KeyCode.ENTER){
                 children.remove(textFieldValue)
-                keyEvent.consume()
+                event.consume()
             }
         }
+
         children.addAll(labelName, labelValue)
         value = initial
 

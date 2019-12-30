@@ -13,9 +13,10 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
+import java.lang.Exception
 import java.util.*
 
-class WorkingWindow : BorderPane() {
+class WorkWindow : BorderPane() {
     init {
         val menuBar = ToolBar()
         val importAudioButton = Button("Import audio").apply {
@@ -26,7 +27,7 @@ class WorkingWindow : BorderPane() {
                             FileChooser.ExtensionFilter("mp3", "*.mp3"),
                             FileChooser.ExtensionFilter("All files", "*.*")
                     )
-                    showOpenDialog(this@WorkingWindow.scene.window)?.let { file->
+                    showOpenDialog(this@WorkWindow.scene.window)?.let { file->
                         Core.audio.load(file)
                     }
                     center.requestFocus()
@@ -61,10 +62,10 @@ class WorkingWindow : BorderPane() {
         }
         menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Core.renderManager.bpm, Core.renderManager.offset, Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) }, lastRenderInfo)
 
-        menuBar.addEventHandler(KeyEvent.ANY){ event ->
-            center.fireEvent(event.copyFor(center, center))
-            event.consume()
-        }
+//        menuBar.addEventHandler(KeyEvent.ANY){ event ->
+//            center.fireEvent(event.copyFor(center, center))
+//            event.consume()
+//        }
 
         top = menuBar
 

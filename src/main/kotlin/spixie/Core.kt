@@ -20,7 +20,7 @@ import kotlin.collections.ArrayList
 
 object Core {
     val renderManager by lazy { RenderManager() }
-    val workingWindow by lazy { WorkingWindow() }
+    val workWindow by lazy { WorkWindow() }
     val arrangementWindow by lazy { ArrangementWindow() }
     val audio by lazy { Audio() }
     val opencl by lazy { OpenCLApi() }
