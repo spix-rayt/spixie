@@ -282,3 +282,80 @@ __kernel void zeroBuffer(__global float *buffer, int size){
     if(workId >= size) return;
     buffer[workId] = 0.0f;
 }
+
+float f2dot2( float2 v ) {
+    return dot(v,v);
+}
+float f3dot2( float3 v ) {
+    return dot(v,v);
+}
+float ndot( float2 a, float2 b ) {
+    return a.x*b.x - a.y*b.y;
+}
+
+float sdSphere(float3 p, float s) {
+    return length(p) - s;
+}
+
+float sdBox( float3 p, float3 b ){
+  float3 q = fabs(p) - b;
+  return length(max(q, 0.0f)) + min(max(q.x,max(q.y,q.z)),0.0f);
+}
+
+float3 getRay(float2 uv, float3 camPos, float3 lookAt) {
+    float3 f = normalize(lookAt - camPos);
+    float3 r = cross((float3)(0.0,1.0,0.0),f);
+    float3 u = cross(f,r);
+    float zoom = 1.0f;
+    float3 c=camPos+f*zoom;
+    float3 i=c+uv.x*r+uv.y*u;
+    float3 dir=i-camPos;
+    return normalize(dir);
+}
+
+float distToScene(float3 p) {
+    return sdBox(p, (float3)(5.0, 5.0, 5.0));
+}
+
+__kernel void raymarching(int width, int height, __global float *outImage) {
+    int id = get_global_id(0);
+    float2 uv = (float2)((float)(id % width) / (float)width, (float)(id / width) / (float)height);
+    uv -= (float2)(0.5f);
+    uv.x *= (float)width / (float)height;
+
+    float r = 1.0f;
+    float g = 0.0f;
+    float b = 0.0f;
+
+    float3 camPos = (float3)(0.0f, 0.0f, -10.0f);
+    float3 lookAt = (float3)(0.0f, 0.0f, 0.0f);
+
+    float3 ray = getRay(uv, camPos, lookAt);
+
+    float3 point = camPos;
+    float dist = distToScene(point);
+    int i = 0;
+    while(i < 1000) {
+        point += ray * dist;
+        float dist = distToScene(point);
+        if(dist < 0.001f) {
+            r = 0.6f;
+            g = 0.6f;
+            b = 0.6f;
+            break;
+        }
+        if(dist > 10000.0f) {
+            r = 0.0f;
+            g = 0.0f;
+            b = 0.0f;
+            break;
+        }
+        i++;
+    }
+
+
+    outImage[id*4] = r;
+    outImage[id*4+1] = g;
+    outImage[id*4+2] = b;
+    outImage[id*4+3] = 1.0f;
+}

@@ -183,4 +183,18 @@ class OpenCLApi {
         buffer.release()
         return result
     }
+
+    fun rayMarchingRender(width: Int, height: Int): CLBuffer<FloatBuffer> {
+        val outputImage = context.createFloatBuffer(width * height * 4, CLMemory.Mem.READ_WRITE)
+
+        run {
+            val kernel = program.createCLKernel("raymarching")
+            kernel.putArg(width)
+            kernel.putArg(height)
+            kernel.putArg(outputImage)
+
+            queue.put1DRangeKernel(kernel, 0L, (width * height).toLong(), 256L)
+        }
+        return outputImage
+    }
 }
