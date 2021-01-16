@@ -12,7 +12,6 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
 import spixie.Core
 import spixie.arrangement.ArrangementGraphsContainer
-import spixie.Main
 import spixie.visualEditor.components.*
 
 class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, private val result: (component: Component) -> Unit): BorderPane() {

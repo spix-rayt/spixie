@@ -1,14 +1,10 @@
 package spixie.arrangement
 
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
 import io.reactivex.subjects.BehaviorSubject
-import javafx.application.Platform
 import javafx.scene.Group
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.MenuItem
 import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
@@ -25,10 +21,7 @@ import spixie.Core
 import spixie.WorkWindow
 import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
-import spixie.visualEditor.Module
 import spixie.visualEditor.VisualEditor
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import kotlin.math.roundToInt
 
 class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
@@ -412,48 +405,6 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
 
     fun calcTimeOfX(x: Double): Double {
         return x*64/100.0/zoom.value!!.toDouble()
-    }
-
-    fun serialize(): ByteArray {
-        val serializedProject = SerializedProject().apply {
-            bpm = Core.renderManager.bpm.value
-            offset = Core.renderManager.offset.value
-            module = visualEditor.mainModule.serialize()
-            this.graphs = this@ArrangementWindow.graphs
-        }
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        val output = Output(byteArrayOutputStream)
-        Core.kryo.writeObject(output, serializedProject)
-        output.flush()
-        output.close()
-
-        return byteArrayOutputStream.toByteArray()
-    }
-
-    fun deserializeAndLoad(inputStream: InputStream){
-        try{
-            val serializedProject = Core.kryo.readObject(Input(inputStream), SerializedProject::class.java)
-
-            Core.renderManager.bpm.value = serializedProject.bpm
-            Core.renderManager.offset.value = serializedProject.offset
-            visualEditor.modules.clear()
-
-            visualEditor.loadModule(
-                    Module().apply {
-                        deserizalize(serializedProject.module)
-                        reconnectPins()
-                    }
-            )
-
-            graphs.clear()
-            graphs.addAll(serializedProject.graphs)
-            updateGraphTree()
-            needRedrawAllGraphs = true
-            Core.renderManager.clearCache()
-        }catch (e:Exception){
-            e.printStackTrace()
-            Platform.exit()
-        }
     }
 
     fun getSelectedFrames(): Pair<Int, Int>{

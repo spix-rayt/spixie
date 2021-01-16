@@ -1,14 +1,10 @@
 package spixie
 
 import io.reactivex.subjects.PublishSubject
-import javafx.event.EventHandler
-import javafx.event.EventType
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
-import javafx.scene.input.MouseButton
-import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
 
 class TextControl(initial: String, val name: String) : HBox() {

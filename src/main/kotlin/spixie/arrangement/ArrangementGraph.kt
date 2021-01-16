@@ -1,13 +1,11 @@
 package spixie.arrangement
 
 import javafx.scene.canvas.Canvas
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import spixie.Core
-import spixie.Main
 import spixie.NumberControl
 import spixie.visualEditor.GraphData
-import java.io.Externalizable
-import java.io.ObjectInput
-import java.io.ObjectOutput
 
 class ArrangementGraph {
     val data = GraphData()
@@ -21,10 +19,14 @@ class ArrangementGraph {
 
     init {
         rangeMinControl.changes.subscribe {
-            Core.renderManager.requestRender()
+            GlobalScope.launch {
+                Core.renderManager.requestRender()
+            }
         }
         rangeMaxControl.changes.subscribe {
-            Core.renderManager.requestRender()
+            GlobalScope.launch {
+                Core.renderManager.requestRender()
+            }
         }
     }
 }

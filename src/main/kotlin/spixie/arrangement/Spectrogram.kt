@@ -8,7 +8,6 @@ import javafx.embed.swing.SwingFXUtils
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
 import spixie.Core
-import spixie.Main
 import java.awt.image.BufferedImage
 import kotlin.math.roundToInt
 

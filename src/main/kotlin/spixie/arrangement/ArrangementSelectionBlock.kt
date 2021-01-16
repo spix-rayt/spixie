@@ -4,7 +4,6 @@ import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.layout.Region
 import org.apache.commons.lang3.math.Fraction
 import spixie.Core
-import spixie.Main
 import spixie.static.F_100
 import spixie.visualEditor.GraphData
 

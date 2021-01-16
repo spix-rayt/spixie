@@ -10,26 +10,23 @@ import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
 import javafx.event.EventHandler
 import javafx.scene.CacheHint
-import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyEvent
 import javafx.scene.layout.StackPane
 import javafx.stage.Screen
 import javafx.stage.Stage
 import javafx.stage.StageStyle
-import javafx.stage.WindowEvent
 import javafx.util.Duration
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import spixie.opencl.OpenCLInfoWindow
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.imageio.ImageIO
+import kotlin.math.roundToLong
 
 class Main : Application() {
     lateinit var firstStage: Stage
@@ -38,7 +35,7 @@ class Main : Application() {
     private val imageView = ImageView().apply {
         style="-fx-background:transparent;"
         isSmooth = true
-        isPreserveRatio = false
+        isPreserveRatio = true
         isCache = false
         cacheHint = CacheHint.SPEED
     }
@@ -57,12 +54,12 @@ class Main : Application() {
         val images = PublishSubject.create<Image>().toSerialized()
         images.observeOn(JavaFxScheduler.platform()).subscribe {
             imageView.image = it
-            if(it.width*2 > firstStageRoot.width){
-                imageView.scaleX = 1.0
-                imageView.scaleY = 1.0
+            if(it.width.toInt() * 2 >= firstStageRoot.width.toInt()){
+                imageView.fitWidth = firstStageRoot.width
+                imageView.fitHeight = firstStageRoot.height
             }else{
-                imageView.scaleX = 2.0
-                imageView.scaleY = 2.0
+                imageView.fitWidth = it.width * 2.0
+                imageView.fitHeight = it.height * 2.0
             }
         }
 
@@ -77,10 +74,10 @@ class Main : Application() {
             show()
         }
 
-        setWindowsMode(WindowsMode.MULTIPLE)
+        setWindowsMode(WindowsMode.SINGLE)
 
         Core.workWindow.open(Core.arrangementWindow)
-        val windowOpacity = BehaviorSubject.createDefault(1.0)
+        val windowOpacity = BehaviorSubject.createDefault(0.0)
         val windowHide = BehaviorSubject.createDefault(false)
         Observables.combineLatest(windowOpacity, windowHide) { opacity, hide ->
             Core.workWindow.opacity = if(hide) 0.0 else opacity
@@ -88,7 +85,7 @@ class Main : Application() {
 
         var playStartTime = 0.0
 
-        firstStageRoot.onKeyPressed = EventHandler<KeyEvent> { event ->
+        firstStageRoot.onKeyPressed = EventHandler { event ->
             if(event.isControlDown && !event.isAltDown && !event.isShiftDown){
                 if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
                     windowOpacity.onNext(1.0)
@@ -125,7 +122,9 @@ class Main : Application() {
                     if(!Core.renderManager.autoRenderNextFrame){
                         Core.renderManager.autoRenderNextFrame = true
                         Core.renderManager.time.frame = Core.renderManager.time.frame/3*3
-                        Core.renderManager.requestRender()
+                        GlobalScope.launch {
+                            Core.renderManager.requestRender()
+                        }
                     }
                 }
                 if(event.code == KeyCode.SPACE){
@@ -134,7 +133,7 @@ class Main : Application() {
                         Platform.runLater { Core.renderManager.time.time = playStartTime }
                     }else{
                         playStartTime = Core.renderManager.time.time
-                        Core.audio.play(Duration.seconds(Math.round((playStartTime-Core.renderManager.offset.value)*3600/Core.renderManager.bpm.value)/60.0))
+                        Core.audio.play(Duration.seconds(((playStartTime - Core.renderManager.offset.value) * 3600 / Core.renderManager.bpm.value).roundToLong() / 60.0))
                     }
                 }
                 if(event.code == KeyCode.F2){
@@ -147,7 +146,7 @@ class Main : Application() {
             }
         }
 
-        firstStageRoot.onKeyReleased = EventHandler<KeyEvent> { event ->
+        firstStageRoot.onKeyReleased = EventHandler { event ->
             if (event.code == KeyCode.TAB) {
                 windowHide.onNext(false)
             }
@@ -156,21 +155,21 @@ class Main : Application() {
             }
         }
 
-        firstStage.onCloseRequest = EventHandler<WindowEvent> {
-            val bytes = Core.arrangementWindow.serialize()
-            if(!File("save/").exists()) File("save/").mkdir()
-            if(File("save/save.spixie").exists()){
-                Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
-            }
-            Files.write(Paths.get("save/save.spixie"), bytes)
-            Platform.exit()
-        }
-
-        File("save/save.spixie").let {
-            if(it.exists()){
-                Core.arrangementWindow.deserializeAndLoad(it.inputStream())
-            }
-        }
+//        firstStage.onCloseRequest = EventHandler<WindowEvent> {
+//            val bytes = Core.arrangementWindow.serialize()
+//            if(!File("save/").exists()) File("save/").mkdir()
+//            if(File("save/save.spixie").exists()){
+//                Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
+//            }
+//            Files.write(Paths.get("save/save.spixie"), bytes)
+//            Platform.exit()
+//        }
+//
+//        File("save/save.spixie").let {
+//            if(it.exists()){
+//                Core.arrangementWindow.deserializeAndLoad(it.inputStream())
+//            }
+//        }
 
         Core.renderManager.renderStart(images)
         object : AnimationTimer() {
@@ -244,6 +243,5 @@ enum class WindowsMode {
 
 fun main() {
     Locale.setDefault(Locale.ENGLISH)
-    println(System.getProperty("java.version"))
     Application.launch(Main::class.java)
 }

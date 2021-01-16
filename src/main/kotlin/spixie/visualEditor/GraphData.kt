@@ -2,7 +2,6 @@ package spixie.visualEditor
 
 import spixie.NoArg
 import spixie.static.linearInterpolate
-import java.io.Serializable
 
 class GraphData {
     val values = arrayListOf<Fragment>()

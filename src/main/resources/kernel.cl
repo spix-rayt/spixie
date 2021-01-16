@@ -1,177 +1,13 @@
-float linearstep(float edge0, float edge1, float x){
-    return clamp((x-edge0)/(edge1-edge0), 0.0f, 1.0f);
+float linearstep(float start, float end, float value){
+    return clamp((value - start) / (end - start), 0.0f, 1.0f);
 }
 
-__kernel void renderParticles(__global float *particles, __global int *tiles, __global int *tileStart, __global int *tileSize, int width, int height, int globalParticlesCount, __global int *atomicTileIndex, __global float *outImage) {
-    __local int tileIndexArray[8];
-    int threadIdx = get_local_id(0);
-    int tileIndex = -1;
-
-    float tileXStart = -500.0f*width/height;
-    float tileXStep = ((8.0f/(width-1.0f))-0.5f)*1000.0f*width/height - tileXStart;
-    float tileYStart = -500.0f;
-    float tileYStep = ((8.0f/(height-1.0f))-0.5f)*1000.0f - tileYStart;
-
-    float lowcostAntialiasing = native_sqrt(tileXStep*tileXStep+tileYStep*tileYStep)/8.0f; // :D
-
-    for(;;) {
-        if(threadIdx%64==0) {
-            tileIndexArray[threadIdx/64] = atomic_add(&atomicTileIndex[0], 1);
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        //while(tileIndexArray[threadIdx/64] == tileIndex);
-        tileIndex = tileIndexArray[threadIdx/64];
-        if(tileIndex>=((width+7)/8) * ((height+7)/8)){
-            break;
-        }
-
-        int tileX = tileIndex % ((width+7)/8);
-        int tileY = tileIndex / ((width+7)/8);
-        int x = (threadIdx % 64) % 8;
-        int y = (threadIdx % 64) / 8;
-        __global int *particleIds = tiles + tileStart[tileIndex];
-        int particlesCount = tileSize[tileIndex];
-        if(tileStart[tileIndex] + particlesCount >= 10000000) {
-            break; //TODO: fix
-        }
-
-        float pixelPosX = (((tileX*8+x)/(width-1.0f))-0.5f)*1000.0f*width/height;
-        float pixelPosY = (((tileY*8+y)/(height-1.0f))-0.5f)*1000.0f;
-
-        float colorR = 0.0f;
-        float colorG = 0.0f;
-        float colorB = 0.0f;
-        float colorA = 1.0f;
-
-        for(int i=0;i<particlesCount;i++){
-            float particleX = particles[particleIds[i]*8];
-            float particleY = particles[particleIds[i]*8+1];
-            float particleSize = particles[particleIds[i]*8+2];
-            float particleR = particles[particleIds[i]*8+3];
-            float particleG = particles[particleIds[i]*8+4];
-            float particleB = particles[particleIds[i]*8+5];
-            float particleA = particles[particleIds[i]*8+6];
-            float particleEdge = particles[particleIds[i]*8+7];
-
-            float xoff=pixelPosX-particleX;
-            float yoff=pixelPosY-particleY;
-            float dist = native_sqrt(xoff*xoff+yoff*yoff);
-            float sum = (1.0f - linearstep(particleSize*particleEdge - lowcostAntialiasing, particleSize, dist + lowcostAntialiasing/2)) * particleA;
-            sum = clamp(sum, 0.0f, 1.0f);
-            float invertSum = 1.0f-sum;
-            colorR = colorR + (particleR - colorR)*sum;
-            colorG = colorG + (particleG - colorG)*sum;
-            colorB = colorB + (particleB - colorB)*sum;
-
-            colorA = colorA + (particleA - colorA)*sum;
-            //colorA = 1.0f;
-        }
-
-        if((tileY*8+y) < height && (tileX*8+x) < width) {
-            outImage[((tileY*8+y)*width + (tileX*8+x))*4] = colorR;
-            outImage[((tileY*8+y)*width + (tileX*8+x))*4+1] = colorG;
-            outImage[((tileY*8+y)*width + (tileX*8+x))*4+2] = colorB;
-            outImage[((tileY*8+y)*width + (tileX*8+x))*4+3] = colorA;
-        }
-    }
+float map(float start, float end, float value) {
+    return start + (end - start) * value;
 }
 
-__kernel void clearTileSize(__global int *tileSize, int width, int height) {
-    int tilesCount = ((width+7)/8) * ((height+7)/8);
-    for(int tileIndex=0; tileIndex<tilesCount; tileIndex++) {
-        tileSize[tileIndex] = 0;
-    }
-}
-
-#define FILL_TILE_SIZE_PARTICLE_BATCH_SIZE 512
-#define FILL_TILE_SIZE_BLOCK_THREAD_SIZE 512
-
-__kernel void fillTileSize(__global float *particles, __global int *particleBox, __global int *tileSize, int width, int height, int particlesCount, __global int *atomicParticleIndex) {
-    __local int sharedParticles[FILL_TILE_SIZE_PARTICLE_BATCH_SIZE];
-    __local int particlesStart;
-    int tilesCount = ((width+7)/8) * ((height+7)/8);
-    int threadIdx = get_local_id(0);
-
-    float tileXStart = -500.0f*width/height;
-    float tileXStep = ((8.0f/(width-1.0f))-0.5f)*1000.0f*width/height - tileXStart;
-    float tileYStart = -500.0f;
-    float tileYStep = ((8.0f/(height-1.0f))-0.5f)*1000.0f - tileYStart;
-
-    for(;;) {
-        if(threadIdx == 0){
-            particlesStart = atomic_add(&atomicParticleIndex[0], FILL_TILE_SIZE_PARTICLE_BATCH_SIZE);
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(particlesStart >= particlesCount) {
-            break;
-        }
-        for(int particleIndex = threadIdx; particleIndex < FILL_TILE_SIZE_PARTICLE_BATCH_SIZE && (particlesStart + particleIndex) < particlesCount; particleIndex+=FILL_TILE_SIZE_BLOCK_THREAD_SIZE) {
-            float px = particles[(particlesStart+particleIndex)*8];
-            float py = particles[(particlesStart+particleIndex)*8+1];
-            float ps = particles[(particlesStart+particleIndex)*8+2];
-
-            int tileLeft = ((px-ps)-tileXStart)/tileXStep;
-            int tileRight = ((px+ps)-tileXStart)/tileXStep;
-            int tileTop = ((py-ps)-tileYStart)/tileYStep;
-            int tileBottom = ((py+ps)-tileYStart)/tileYStep;
-            tileLeft = max(0, min(0xFF, tileLeft));
-            tileRight = max(0, min(0xFF, tileRight));
-            tileTop = max(0, min(0xFF, tileTop));
-            tileBottom = max(0, min(0xFF, tileBottom));
-            int pbox = (tileLeft<<24) | (tileRight<<16) | (tileTop<<8) | tileBottom;
-            sharedParticles[particleIndex] = pbox;
-            particleBox[particlesStart+particleIndex] = pbox;
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        for(int tileIndex = threadIdx; tileIndex<tilesCount; tileIndex+=FILL_TILE_SIZE_BLOCK_THREAD_SIZE) {
-            int result = 0;
-            int tileX = tileIndex % ((width+7)/8);
-            int tileY = tileIndex / ((width+7)/8);
-            for(int particleIndex = 0; particleIndex < FILL_TILE_SIZE_PARTICLE_BATCH_SIZE && (particlesStart + particleIndex) < particlesCount; particleIndex+=1) {
-                int pbox = sharedParticles[particleIndex];
-                result += (tileX>=((pbox>>24) & 0x000000FF) && tileX<=((pbox>>16) & 0x000000FF) && tileY>=((pbox>>8) & 0x000000FF) && tileY <= (pbox & 0x000000FF));
-            }
-            atomic_add(&tileSize[tileIndex], result);
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-}
-
-__kernel void fillTileStart(__global int *tileStart, __global int *tileSize, int width, int height) {
-    int tilesCount = ((width+7)/8) * ((height+7)/8);
-    int accum = 0;
-    for(int tileIndex=0; tileIndex<tilesCount; tileIndex++) {
-        tileStart[tileIndex] = accum;
-        accum+=tileSize[tileIndex];
-    }
-}
-
-__kernel void fillTiles(__global int *particleBox, __global int *tiles, __global int *tileStart, int width, int height, int particlesCount, __global int *atomicTileIndex) {
-    int tilesCount = ((width+7)/8) * ((height+7)/8);
-
-    float tileXStart = -500.0f*width/height;
-    float tileXStep = ((8.0f/(width-1.0f))-0.5f)*1000.0f*width/height - tileXStart;
-    float tileYStart = -500.0f;
-    float tileYStep = ((8.0f/(height-1.0f))-0.5f)*1000.0f - tileYStart;
-
-    for(;;) {
-        int tileIndex = atomic_add(&atomicTileIndex[0], 1);
-        if(tileIndex >= tilesCount) {
-            break;
-        }
-
-        int tileX = tileIndex % ((width+7)/8);
-        int tileY = tileIndex / ((width+7)/8);
-        int tileStartCurrent = tileStart[tileIndex];
-
-        for(int particleIndex = 0; particleIndex < particlesCount && tileStartCurrent<10000000; particleIndex++) {
-            int pbox = particleBox[particleIndex];
-            if(tileX>=((pbox>>24) & 0x000000FF) && tileX<=((pbox>>16) & 0x000000FF) && tileY>=((pbox>>8) & 0x000000FF) && tileY <= (pbox & 0x000000FF)){
-                tiles[tileStartCurrent] = particleIndex;
-                tileStartCurrent++;
-            }
-        }
-    }
+float mod(float a, float b) {
+    return fmod(fmod(a, b) + b, b);
 }
 
 float hue2rgb(float p, float q, float t){
@@ -283,6 +119,8 @@ __kernel void zeroBuffer(__global float *buffer, int size){
     buffer[workId] = 0.0f;
 }
 
+__constant float EPSILON = 0.0001f;
+
 float f2dot2( float2 v ) {
     return dot(v,v);
 }
@@ -293,69 +131,152 @@ float ndot( float2 a, float2 b ) {
     return a.x*b.x - a.y*b.y;
 }
 
-float sdSphere(float3 p, float s) {
-    return length(p) - s;
+float sdSphere(float3 p, float3 pos, float radius) {
+    return length(p - pos) - radius;
 }
 
-float sdBox( float3 p, float3 b ){
-  float3 q = fabs(p) - b;
-  return length(max(q, 0.0f)) + min(max(q.x,max(q.y,q.z)),0.0f);
+float sdBox( float3 p, float3 b ) {
+    p += (float3)(2.1f, -0.8f, 0.3f);
+    float3 q = fabs(p) - b;
+    return length(max(q, 0.0f)) + min(max(q.x,max(q.y,q.z)),0.0f);
 }
 
-float3 getRay(float2 uv, float3 camPos, float3 lookAt) {
-    float3 f = normalize(lookAt - camPos);
-    float3 r = cross((float3)(0.0,1.0,0.0),f);
-    float3 u = cross(f,r);
-    float zoom = 1.0f;
-    float3 c=camPos+f*zoom;
-    float3 i=c+uv.x*r+uv.y*u;
-    float3 dir=i-camPos;
-    return normalize(dir);
+float opSmoothUnion( float d1, float d2, float k ) {
+    float h = clamp(0.5f + 0.5f * ( d2 - d1 ) / k, 0.0f, 1.0f);
+    return mix(d2, d1, h) - k * h * (1.0f - h);
 }
 
-float distToScene(float3 p) {
-    return sdBox(p, (float3)(5.0, 5.0, 5.0));
+float distToScene(float3 p, __global float *objects, int objectsCount) {
+    float result = 10000000.0f;
+    //float z = 8.0f;
+    //for(int q = 0; q < 10; q+=1) {
+    //    float r = q * 3.0f;
+    //    int iterations = 30 + q * 12;
+    //    for(int i = 0; i < iterations; i++) {
+    //        float primitive = sdSphere(p, (float3)(cos(2.0f * M_PI / iterations * i) * r, sin(2.0f * M_PI / iterations * i) * r, z), 0.2f);
+    //        result = min(result, primitive);
+    //    }
+    //}
+
+    result = sdSphere(p, (float3)(0.0f, 0.0f, 25.0f), 12.0f);
+
+    //float3 pp = (float3)(mod(p.x, 5.0f), mod(p.y, 5.0f), mod(p.z, 5.0f));
+    //result = sdSphere(pp, (float3)(0.63f, 0.86f, 0.7f), 0.2f);
+
+    return result;
 }
 
-__kernel void raymarching(int width, int height, __global float *outImage) {
+__kernel void raymarching(__global float *objects, int objectsCount, int width, int height, int equirectangular, int vr, float screenWidth, float screenHeight, float screenDistance, __global float *outImage) {
     int id = get_global_id(0);
-    float2 uv = (float2)((float)(id % width) / (float)width, (float)(id / width) / (float)height);
-    uv -= (float2)(0.5f);
-    uv.x *= (float)width / (float)height;
-
-    float r = 1.0f;
-    float g = 0.0f;
-    float b = 0.0f;
-
-    float3 camPos = (float3)(0.0f, 0.0f, -10.0f);
-    float3 lookAt = (float3)(0.0f, 0.0f, 0.0f);
-
-    float3 ray = getRay(uv, camPos, lookAt);
-
-    float3 point = camPos;
-    float dist = distToScene(point);
-    int i = 0;
-    while(i < 1000) {
-        point += ray * dist;
-        float dist = distToScene(point);
-        if(dist < 0.001f) {
-            r = 0.6f;
-            g = 0.6f;
-            b = 0.6f;
-            break;
-        }
-        if(dist > 10000.0f) {
-            r = 0.0f;
-            g = 0.0f;
-            b = 0.0f;
-            break;
-        }
-        i++;
+    float2 uv;
+    int left = (id % width) < width / 2;
+    if(vr) {
+        uv = (float2)((float)((id % width) % (width / 2)) / (float)(width / 2), (float)(id / width) / (float)height);
+    } else {
+        uv = (float2)((float)(id % width) / (float)width, (float)(id / width) / (float)height);
     }
 
+    if(id < width * height) {
+        float r = 1.0f;
+        float g = 0.0f;
+        float b = 0.0f;
 
-    outImage[id*4] = r;
-    outImage[id*4+1] = g;
-    outImage[id*4+2] = b;
-    outImage[id*4+3] = 1.0f;
+        float3 rayOrigin = (float3)(0.2f, 0.0f, 0.0f);
+        if(vr) {
+            if(left) {
+                rayOrigin.x -= 0.063f / 2.0f;
+            } else {
+                rayOrigin.x += 0.063f / 2.0f;
+            }
+        }
+        float3 rayDirection;
+
+        if(equirectangular != 0) {
+            float hfov = 180.0f;
+            float vfov = 180.0f;
+            float phi = map(-radians(hfov / 2.0f), radians(hfov / 2.0f), uv.x);
+            float theta = map(M_PI / 2.0f - radians(vfov / 2.0f), M_PI / 2.0f + radians(vfov / 2.0f), uv.y);
+            rayDirection = normalize((float3)(
+                sin(phi) * sin(theta),
+                cos(theta),
+                cos(phi) * sin(theta)
+            ));
+        } else {
+            rayDirection = normalize((float3)(
+                map(-screenWidth, screenWidth, uv.x),
+                map(-screenHeight, screenHeight, uv.y),
+                screenDistance
+            ));
+        }
+
+
+
+        float3 light = (float3)(-15.0f, 4.0f, -10.0f);
+
+        float3 p = rayOrigin;
+        float totalDist = 0.0f;
+        int i = 0;
+        while(i < 100000) {
+            //p.x = mod(p.x, 2.0f);
+            //p.y = mod(p.y, 2.0f);
+            //p.z = mod(p.z, 2.0f);
+            float dist = distToScene(p, objects, objectsCount) * 0.05f;
+            if(dist < EPSILON) {
+                float3 cDiffuse = (float3)(0.4f, 0.4f, 0.4f);
+                float3 cSpecular = (float3)(0.8f);
+
+                float3 normal = normalize(
+                    (float3)(
+                        distToScene((float3)(p.x + EPSILON, p.y, p.z), objects, objectsCount) - distToScene((float3)(p.x - EPSILON, p.y, p.z), objects, objectsCount),
+                        distToScene((float3)(p.x, p.y + EPSILON, p.z), objects, objectsCount) - distToScene((float3)(p.x, p.y - EPSILON, p.z), objects, objectsCount),
+                        distToScene((float3)(p.x, p.y, p.z + EPSILON), objects, objectsCount) - distToScene((float3)(p.x, p.y, p.z - EPSILON), objects, objectsCount)
+                    )
+                );
+
+                float3 N = normalize( normal );
+                float3 L = normalize( light - p );
+                float3 V = normalize( p - rayOrigin );
+                float3 H = normalize( L + V );
+
+                float phong = max( dot( L, N ), 0.0f );
+
+                float kMaterialShininess = 20.0f;
+                float kNormalization = ( kMaterialShininess + 8.0f ) / ( M_PI * 8.0f );
+                float blinn = pow( max( dot( N, H ), 0.0f ), kMaterialShininess ) * kNormalization;
+
+                float3 diffuse = phong * cDiffuse;
+
+                float3 specular = blinn * cSpecular;
+
+                float3 color = (float3)(diffuse + specular + cDiffuse * 0.03f);
+
+                r = color.x * 0.3f;
+                g = color.y * 0.5f;
+                b = color.z * 1.0f;
+
+                r *= 1.0f - smoothstep(180.0f, 200.0f, totalDist);
+                g *= 1.0f - smoothstep(180.0f, 200.0f, totalDist);
+                b *= 1.0f - smoothstep(180.0f, 200.0f, totalDist);
+
+                break;
+            }
+
+            totalDist += dist;
+            if(totalDist > 200.0f) {
+                r = 0.0f;
+                g = 0.0f;
+                b = 0.0f;
+                break;
+            }
+
+            p = rayOrigin + rayDirection * totalDist;
+            i++;
+        }
+
+
+        outImage[id * 4    ] = r;
+        outImage[id * 4 + 1] = g;
+        outImage[id * 4 + 2] = b;
+        outImage[id * 4 + 3] = 1.0f;
+    }
 }

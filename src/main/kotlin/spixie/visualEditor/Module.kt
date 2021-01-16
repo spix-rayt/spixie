@@ -10,13 +10,15 @@ import javafx.scene.paint.Color
 import javafx.scene.shape.CubicCurve
 import javafx.scene.shape.Rectangle
 import javafx.scene.shape.StrokeLineCap
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import spixie.Core
-import spixie.NoArg
 import spixie.static.MAGIC
 import spixie.static.initCustomPanning
 import spixie.static.mix
 import spixie.static.raw
-import spixie.visualEditor.components.*
+import spixie.visualEditor.components.ImageResult
+import spixie.visualEditor.components.ParticlesResult
 import spixie.visualEditor.pins.ComponentPin
 import spixie.visualEditor.pins.ComponentPinNumber
 import java.util.concurrent.TimeUnit
@@ -172,34 +174,6 @@ class Module {
         return components.children.find { it is ImageResult || it is ParticlesResult } ?: throw Exception("Result component dont exist")
     }
 
-    fun calcHashOfConsts(): Long {
-        var result = MAGIC.toLong()
-        val discovered = hashSetOf<Component>()
-        val componentsList = arrayListOf<Component>(findResultComponent())
-        while (componentsList.isNotEmpty()){
-            val first = componentsList.removeAt(0)
-            discovered.add(first)
-            result = result mix first.hashCode().toLong()
-            first.inputPins.forEach {
-                val connections = it.connections
-                if(connections.isEmpty()){
-                    connections.forEach {
-                        if(!discovered.contains(it.component)){
-                            componentsList.add(it.component)
-                        }
-                    }
-                }else{
-                    if(it is ComponentPinNumber){
-                        it.valueControl?.let { valueControl ->
-                            result = result mix valueControl.value.raw()
-                        }
-                    }
-                }
-            }
-        }
-        return result
-    }
-
     fun reconnectPins(){
         connects.children.clear()
         contentPane.layout()
@@ -212,7 +186,9 @@ class Module {
                 }
             }
         }
-        Core.renderManager.requestRender()
+        GlobalScope.launch {
+            Core.renderManager.requestRender()
+        }
     }
 
     private fun connectPins(outputPin: ComponentPin, inputPin: ComponentPin, color: Color){
@@ -236,64 +212,7 @@ class Module {
         cubicCurve.strokeLineCap = StrokeLineCap.ROUND
     }
 
-    fun serialize(): SerializedModule {
-        val componentsList = components.children.filter { it is Component }.map { it as Component }
-        val pinConnections = arrayListOf<PinConnection>()
-        components.children.forEach { component ->
-            if(component is Component){
-                component.inputPins.forEach { pin1 ->
-                    pin1.connections.forEach { pin2->
-                        pinConnections.add(PinConnection(PinAddress(pin1.component, pin1.name), PinAddress(pin2.component, pin2.name)))
-                    }
-                }
-            }
-        }
-
-        val values = componentsList.flatMap { component ->
-            component.inputPins
-                    .mapNotNull { it as? ComponentPinNumber }
-                    .map { NumberPinInternalValue(PinAddress(component, it.name), it.valueControl?.value ?: 0.0) }
-        }
-        return SerializedModule(componentsList, pinConnections, values)
-    }
-
-    fun deserizalize(data: SerializedModule) {
-        clearComponents()
-        data.components.forEach { addComponent(it) }
-        data.pinConnections.forEach { pinConnection ->
-            val inputPin = pinConnection.inputPin.component.findInputPinByName(pinConnection.inputPin.pinName)
-            val outputPin = pinConnection.outputPin.component.findOutputPinByName(pinConnection.outputPin.pinName)
-            if(inputPin != null && outputPin != null) {
-                inputPin.connectWith(outputPin)
-            }
-            if(inputPin == null) {
-                println("${pinConnection.inputPin.component::class.java} ${pinConnection.inputPin.pinName} not found")
-            }
-            if(outputPin == null) {
-                println("${pinConnection.outputPin.component::class.java} ${pinConnection.outputPin.pinName} not found")
-            }
-        }
-        data.values.forEach { value ->
-            val inputPin = value.pinAddress.component.findInputPinByName(value.pinAddress.pinName)
-            if(inputPin != null && inputPin is ComponentPinNumber) {
-                inputPin.valueControl?.value = value.value
-            }
-        }
-    }
-
     private fun updateBackgroundGrid(){
         contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+(VE_GRID_CELL_SIZE/2.0+0.5)}px 0px, repeat, #00000022 5%, transparent 5%),linear-gradient(from 0px ${content.layoutY+0.5}px to 0px ${content.layoutY+(VE_GRID_CELL_SIZE/2.0+0.5)}px, repeat, #00000022 5%, transparent 5%);"
     }
-
-    @NoArg
-    class NumberPinInternalValue(val pinAddress: PinAddress, val value: Double)
-
-    @NoArg
-    class PinConnection(val inputPin: PinAddress, val outputPin: PinAddress)
-
-    @NoArg
-    class PinAddress(val component: Component, val pinName: String)
-
-    @NoArg
-    class SerializedModule(val components: List<Component>, val pinConnections: List<PinConnection>, val values: List<NumberPinInternalValue>)
 }

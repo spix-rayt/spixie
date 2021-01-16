@@ -4,9 +4,9 @@ import spixie.Core
 import spixie.opencl.RenderBufferBuilder
 import spixie.static.convertHueChromaLuminanceToRGB
 import spixie.visualEditor.Component
+import spixie.visualEditor.ImageFloatBuffer
 import spixie.visualEditor.pins.ComponentPinImageFloatBuffer
 import spixie.visualEditor.pins.ComponentPinParticleArray
-import spixie.visualEditor.ImageFloatBuffer
 
 class Render: Component() {
     private val inParticles = ComponentPinParticleArray("Particles")
@@ -39,9 +39,10 @@ class Render: Component() {
                     )
                 }
             }
-            val image = Core.opencl.render(renderBufferBuilder.complete(), w, h)
 
-            ImageFloatBuffer(image, w, h, particlesCount = particles.array.size)
+            throw NotImplementedError("")
+
+//            ImageFloatBuffer(image, w, h, particlesCount = particles.array.size)
         }
     }
 

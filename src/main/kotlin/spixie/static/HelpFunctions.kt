@@ -10,7 +10,6 @@ import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Pane
 import org.apache.commons.lang3.math.Fraction
 import spixie.Core
-import spixie.Main
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -265,4 +264,10 @@ val F_100: Fraction = Fraction.getFraction(100.0)
 
 object DragAndDropType {
     val PIN = DataFormat("PIN")
+}
+
+//https://en.wikipedia.org/wiki/Field_of_view_in_video_games
+// Hfov -> Vfov
+fun Double.toVFov(width: Int, height: Int): Double {
+    return Math.toDegrees(2.0 * Math.atan(Math.tan(Math.toRadians(this) / 2.0) * height.toDouble() / width.toDouble()))
 }

@@ -6,7 +6,6 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import spixie.Core
-import spixie.Main
 import spixie.NumberControl
 import spixie.static.linearInterpolate
 import spixie.static.rand

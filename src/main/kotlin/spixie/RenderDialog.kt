@@ -8,13 +8,10 @@ import javafx.stage.Modality
 import javafx.stage.Stage
 import javafx.stage.Window
 import org.apache.commons.lang3.time.StopWatch
-import java.text.SimpleDateFormat
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong

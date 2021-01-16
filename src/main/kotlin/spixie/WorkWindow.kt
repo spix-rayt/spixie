@@ -7,13 +7,11 @@ import javafx.scene.control.Label
 import javafx.scene.control.Slider
 import javafx.scene.control.ToolBar
 import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
-import java.lang.Exception
 import java.util.*
 
 class WorkWindow : BorderPane() {

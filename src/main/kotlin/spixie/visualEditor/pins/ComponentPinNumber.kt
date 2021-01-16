@@ -3,6 +3,8 @@ package spixie.visualEditor.pins
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import javafx.geometry.Pos
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import spixie.Core
 import spixie.NumberControl
 import spixie.visualEditor.Component
@@ -26,7 +28,11 @@ class ComponentPinNumber(name: String, val valueControl: NumberControl?): Compon
     }
 
     init {
-        valueControl?.changes?.subscribe { Core.renderManager.requestRender() }
+        valueControl?.changes?.subscribe {
+            GlobalScope.launch {
+                Core.renderManager.requestRender()
+            }
+        }
     }
 
     override fun updateUI(){

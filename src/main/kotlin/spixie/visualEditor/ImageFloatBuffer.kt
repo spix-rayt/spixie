@@ -2,7 +2,6 @@ package spixie.visualEditor
 
 import com.jogamp.opencl.CLBuffer
 import spixie.Core
-import spixie.Main
 import spixie.static.toBufferedImage
 import java.awt.image.BufferedImage
 import java.nio.FloatBuffer
