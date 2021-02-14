@@ -69,16 +69,16 @@ fun linearstep(start: Double, end: Double, value: Double): Double {
     return ((value - start) / (end - start)).coerceIn(0.0, 1.0)
 }
 
-val sdfObjects = arrayListOf<SDFObject>(
-    Sphere(Vector3d(14.0 * 0, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
-    Sphere(Vector3d(14.0 * 1, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
-    Sphere(Vector3d(14.0 * 2, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
-    Sphere(Vector3d(14.0 * 3, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
-    Sphere(Vector3d(14.0 * 4, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
-    Sphere(Vector3d(14.0 * 5, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
-    Sphere(Vector3d(14.0 * 6, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
-    Sphere(Vector3d(14.0 * 7, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0))
-)
+val sdfObjects = run {
+    val pos = Vector3d(0.0, 10.0, -60.0)
+    val add = Vector3d(0.7, -0.7, 17.0)
+    val result = arrayListOf<SDFObject>()
+    for(i in 0..100) {
+        result.add(Sphere(Vector3d(pos), 4.0, Vector3d(1.0, 1.0, 1.0)))
+        pos.add(add)
+    }
+    result
+}
 
 val lights = arrayListOf<Light>(
 //    Light(Vector3d(-7.0       ,  11.0 , -18.0), Vector3d(0.0, 1.0, 0.0)),
@@ -89,8 +89,25 @@ val lights = arrayListOf<Light>(
     //Light(Vector3d(15.0, 10.0, -20.0), Vector3d(0.0, 0.0, 0.4))
 )
 
+val focalLength = 140.0
+val aperture = 2.0
+
+fun randomSphereVector(): Vector3d {
+    val randX = Random.nextDouble()
+    val randY = Random.nextDouble()
+    val cosTheta = sqrt(1.0 - randX)
+    val sinTheta = sqrt(randX)
+    val phi = 2.0 * Math.PI * randY
+    val resultVector = Vector3d(
+        cos(phi) * sinTheta,
+        sin(phi) * sinTheta,
+        cosTheta
+    )
+    return resultVector
+}
+
 fun calcColor(pixelX: Int, pixelY: Int): Color {
-    val spp = 20
+    val spp = 200
 
     var r = 0.0
     var g = 0.0
@@ -110,7 +127,11 @@ fun calcColor(pixelX: Int, pixelY: Int): Color {
             3.0
         ).normalize()
 
-        val sampleColor = sampleRay(cameraPos, cameraRayDirection, 0.0, null)
+        val focalPoint = Vector3d(cameraPos).add(Vector3d(cameraRayDirection).mul(focalLength))
+        val shiftedCameraPos = Vector3d(cameraPos).add(randomSphereVector().mul(aperture))
+        val newRayDirection = Vector3d(focalPoint).sub(shiftedCameraPos).normalize()
+
+        val sampleColor = sampleRay(shiftedCameraPos, newRayDirection, 0.0, null)
         r += sampleColor.x
         g += sampleColor.y
         b += sampleColor.z
@@ -150,7 +171,8 @@ fun sampleRay(rayOrigin: Vector3d, rayDirection: Vector3d, startTotalDist: Doubl
                 val resultColor = Vector3d(0.0)
                 lights.forEach { l ->
                     val reflectRay = Vector3d(l.pos).sub(p).normalize()
-                    val sampleResult = sampleRay(p, reflectRay, 0.0, l)
+                    //val sampleResult = sampleRay(p, reflectRay, 0.0, l)
+                    val sampleResult = Vector3d(l.emmitance)
 
                     val albedoColor = closestObject.albedoColor()
                     val cosT = reflectRay.dot(normal).coerceIn(0.0, 1.0)
