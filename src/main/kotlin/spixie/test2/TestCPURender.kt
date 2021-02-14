@@ -1,4 +1,4 @@
-package spixie
+package spixie.test2
 
 import org.joml.Vector3d
 import java.awt.Color
@@ -8,20 +8,17 @@ import javax.imageio.ImageIO
 import kotlin.math.*
 import kotlin.random.Random
 
-const val scaleDown = 6
-const val WIDTH = 1280 / scaleDown
-const val HEIGHT = 1024 / scaleDown
+const val scaleDown = 2
+const val WIDTH = 1920 / scaleDown
+const val HEIGHT = 1080 / scaleDown
 const val NORMAL_CALC_OFFSET = 0.000001
 const val RENDER_DIST = 6000.0
-const val RENDER_DEPTH = 2
 const val RAY_MARCHING_DELTA = 0.0001
 
 abstract class SDFObject {
     abstract fun sdf(p: Vector3d): Double
 
     abstract fun albedoColor(): Vector3d
-
-    abstract fun emmitanceColor(): Vector3d
 
     fun normal(p: Vector3d): Vector3d {
         return Vector3d(
@@ -32,17 +29,13 @@ abstract class SDFObject {
     }
 }
 
-class Sphere(val pos: Vector3d, val radius: Double, val color: Vector3d, val emmitance: Vector3d) : SDFObject() {
+class Sphere(val pos: Vector3d, val radius: Double, val color: Vector3d) : SDFObject() {
     override fun sdf(p: Vector3d): Double {
         return p.distance(pos) - radius
     }
 
     override fun albedoColor(): Vector3d {
         return color
-    }
-
-    override fun emmitanceColor(): Vector3d {
-        return emmitance
     }
 }
 
@@ -60,11 +53,9 @@ class FoldedSpace(val offset: Vector3d, val size: Vector3d, val sdfObject: SDFOb
     override fun albedoColor(): Vector3d {
         return sdfObject.albedoColor()
     }
-
-    override fun emmitanceColor(): Vector3d {
-        return sdfObject.emmitanceColor()
-    }
 }
+
+class Light(val pos: Vector3d, val emmitance: Vector3d)
 
 fun Double.customRemainder(x: Double): Double {
     return ((this % x) + x) % x
@@ -79,26 +70,33 @@ fun linearstep(start: Double, end: Double, value: Double): Double {
 }
 
 val sdfObjects = arrayListOf<SDFObject>(
-    FoldedSpace(Vector3d(0.0, 0.0, 0.0), Vector3d(9.0, 9.0, 9.0), Sphere(Vector3d(4.5, 4.5, 4.5), 0.8, Vector3d(0.0, 0.0, 0.0), Vector3d(1.0, 0.3, 1.0))),
-    FoldedSpace(Vector3d(4.5, 4.5, 4.5), Vector3d(9.0, 9.0, 9.0), Sphere(Vector3d(4.5, 4.5, 4.5), 0.8, Vector3d(1.0, 1.0, 1.0), Vector3d(0.0, 0.0, 0.0)))
+    Sphere(Vector3d(14.0 * 0, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
+    Sphere(Vector3d(14.0 * 1, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
+    Sphere(Vector3d(14.0 * 2, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
+    Sphere(Vector3d(14.0 * 3, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
+    Sphere(Vector3d(14.0 * 4, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
+    Sphere(Vector3d(14.0 * 5, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
+    Sphere(Vector3d(14.0 * 6, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0)),
+    Sphere(Vector3d(14.0 * 7, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0))
 )
 
-//val sdfObjects = arrayListOf<SDFObject>(
-//    Sphere(Vector3d(-7.0, 0.0, 0.0), 12.0, Vector3d(1.0, 1.0, 1.0), Vector3d(0.0, 0.0, 0.0)),
-//    Sphere(Vector3d(-7.0       ,  11.0 , -11.0), 7.0 - 1.3 * 0.0, Vector3d(0.0, 0.0, 0.0), Vector3d(0.0, 1.0, 0.0)),
-//    Sphere(Vector3d(-7.0 - 11.0,  0.0  , -11.0), 7.0 - 1.3 * 1.0, Vector3d(0.0, 0.0, 0.0), Vector3d(1.0, 0.3, 1.0)),
-//    Sphere(Vector3d(-7.0       ,  -11.0, -11.0), 7.0 - 1.3 * 2.0, Vector3d(0.0, 0.0, 0.0), Vector3d(0.0, 0.0, 1.0)),
-//    Sphere(Vector3d(-7.0 + 11.0,  0.0  , -11.0), 7.0 - 1.3 * 3.0, Vector3d(0.0, 0.0, 0.0), Vector3d(1.0, 0.0, 0.0)),
-//)
+val lights = arrayListOf<Light>(
+//    Light(Vector3d(-7.0       ,  11.0 , -18.0), Vector3d(0.0, 1.0, 0.0)),
+//    Light(Vector3d(-7.0 - 11.0,  0.0  , -18.0), Vector3d(1.0, 0.3, 1.0)),
+//    Light(Vector3d(-7.0       ,  -11.0, -18.0), Vector3d(0.0, 0.0, 1.0)),
+//    Light(Vector3d(-7.0 + 11.0,  0.0  , -18.0), Vector3d(1.0, 0.0, 0.0)),
+    //Light(Vector3d(-30.0, 0.0, -20.0), Vector3d(0.4, 0.4, 0.0)),
+    //Light(Vector3d(15.0, 10.0, -20.0), Vector3d(0.0, 0.0, 0.4))
+)
 
 fun calcColor(pixelX: Int, pixelY: Int): Color {
-    val spp = 100
+    val spp = 20
 
     var r = 0.0
     var g = 0.0
     var b = 0.0
 
-    val cameraPos = Vector3d(-7.0, 0.0, -100.0)
+    val cameraPos = Vector3d(20.0, 0.0, -100.0)
     val screenWidth = WIDTH.toDouble() / HEIGHT.toDouble()
     val screenHeight = 1.0
     val pixelWidth = screenWidth * 2.0 / (WIDTH - 1).toDouble()
@@ -112,7 +110,7 @@ fun calcColor(pixelX: Int, pixelY: Int): Color {
             3.0
         ).normalize()
 
-        val sampleColor = sampleRay(cameraPos, cameraRayDirection, 1, 0.0)
+        val sampleColor = sampleRay(cameraPos, cameraRayDirection, 0.0, null)
         r += sampleColor.x
         g += sampleColor.y
         b += sampleColor.z
@@ -125,28 +123,8 @@ fun calcColor(pixelX: Int, pixelY: Int): Color {
     )
 }
 
-fun Vector3d.randomHemisphere(): Vector3d {
-    val randX = Random.nextDouble()
-    val randY = Random.nextDouble()
-    val cosTheta = sqrt(1.0 - randX)
-    val sinTheta = sqrt(randX)
-    val phi = 2.0 * Math.PI * randY
-    val resultVector = Vector3d(
-        cos(phi) * sinTheta,
-        sin(phi) * sinTheta,
-        cosTheta
-    )
-    if(resultVector.dot(this) < 0.0) {
-        resultVector.negate()
-    }
-    return resultVector
-}
-
-fun sampleRay(rayOrigin: Vector3d, rayDirection: Vector3d, depth: Int, startTotalDist: Double): Vector3d {
-    if(depth > RENDER_DEPTH) {
-        return Vector3d(0.0, 0.0, 0.0)
-    }
-
+fun sampleRay(rayOrigin: Vector3d, rayDirection: Vector3d, startTotalDist: Double, light: Light?): Vector3d {
+    val distToLight = light?.pos?.distance(rayOrigin)
     var totalDist = startTotalDist
     var p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
 
@@ -165,32 +143,45 @@ fun sampleRay(rayOrigin: Vector3d, rayDirection: Vector3d, depth: Int, startTota
             kek
         }
 
-        if(dist <= RAY_MARCHING_DELTA && closestObject != null) {
-            val normal = closestObject.normal(p)
-            p.add(Vector3d(normal).mul(RAY_MARCHING_DELTA - dist))
-            val randomReflectRay = normal.randomHemisphere()
-            val sampleResult = sampleRay(p, randomReflectRay, depth + 1, 0.0)
+        if(light == null) {
+            if(dist <= RAY_MARCHING_DELTA && closestObject != null) {
+                val normal = closestObject.normal(p)
+                p.add(Vector3d(normal).mul(RAY_MARCHING_DELTA * 1.1 - dist))
+                val resultColor = Vector3d(0.0)
+                lights.forEach { l ->
+                    val reflectRay = Vector3d(l.pos).sub(p).normalize()
+                    val sampleResult = sampleRay(p, reflectRay, 0.0, l)
 
-            val albedoColor = closestObject.albedoColor()
-            val emmitanceColor = closestObject.emmitanceColor()
-            val cosT = randomReflectRay.dot(normal)
+                    val albedoColor = closestObject.albedoColor()
+                    val cosT = reflectRay.dot(normal).coerceIn(0.0, 1.0)
+                    resultColor.add(sampleResult.mul(albedoColor).mul(cosT))
+                }
 
-            val resultColor = sampleResult.mul(albedoColor).mul(cosT).add(emmitanceColor)
-
-            if(depth == 1) {
                 val fogCoefficient = 1.0 - linearstep(RENDER_DIST * 0.5, RENDER_DIST, totalDist)
                 resultColor.mul(fogCoefficient)
-            }
 
-            return resultColor
+                return resultColor
+            } else {
+                totalDist += dist
+                if(totalDist > RENDER_DIST) {
+                    return Vector3d(0.0)
+                }
+                p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
+
+                i += 1
+            }
         } else {
-            totalDist += dist
-            if(totalDist > RENDER_DIST) {
-                return Vector3d(0.0, 0.0, 0.0)
-            }
-            p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
+            if(dist <= RAY_MARCHING_DELTA && closestObject != null) {
+                return Vector3d(0.0)
+            } else {
+                totalDist += dist
+                if(totalDist > distToLight!!) {
+                    return Vector3d(light.emmitance)
+                }
+                p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
 
-            i += 1
+                i += 1
+            }
         }
     }
     return Vector3d(0.0, 0.0, 0.0)
@@ -199,12 +190,24 @@ fun sampleRay(rayOrigin: Vector3d, rayDirection: Vector3d, depth: Int, startTota
 fun main() {
     val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
 
+    for(i in 0..6) {
+        val randomColor = javafx.scene.paint.Color.hsb(Random.nextDouble() * 360, 1.0, 0.2)
+        lights.add(Light(Vector3d(Random.nextDouble() * 40.0 - 20.0, Random.nextDouble() * 40.0 - 20.0, Random.nextDouble() * -40.0), Vector3d(randomColor.red, randomColor.green, randomColor.blue)))
+    }
+
     for(x in 0 until WIDTH) {
         for(y in 0 until HEIGHT) {
             image.setRGB(x, y, calcColor(x, y).rgb)
         }
         println("${(x.toDouble() / (WIDTH - 1).toDouble() * 1000.0).roundToInt() / 10.0}%")
     }
+
+//    for(x in 500 until 510) {
+//        for(y in 300 until 310) {
+//            println("$x $y")
+//            image.setRGB(x, y, calcColor(x, y).rgb)
+//        }
+//    }
 
     ImageIO.write(image, "png", File("test.png"))
 }
