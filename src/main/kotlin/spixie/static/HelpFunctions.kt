@@ -147,43 +147,43 @@ fun hue2rgb(p: Double,q: Double,t: Double): Double{
 }
 
 fun convertHueChromaLuminanceToRGB(h:Double, c:Double, l:Double, clampDesaturate: Boolean): Triple<Double, Double, Double> {
-    if(clampDesaturate){
+    if(clampDesaturate) {
         var rangeA = 0.0
         var rangeB = 10.0
         var r = 0.0
         var g = 0.0
         var b = 0.0
-        for(i in 0..20){
-            val m = (rangeA+rangeB)/2.0
-            val q = if(m<0.5) m*(1+c) else m+c-m*c
+        for(i in 0..20) {
+            val m = (rangeA + rangeB) / 2.0
+            val q = if(m < 0.5) m * (1 + c) else m + c - m * c
 
-            val p = 2*m-q
+            val p = 2 * m - q
 
             r = Math.pow(hue2rgb(p,q,h+1.0/3.0), 2.2)
             g = Math.pow(hue2rgb(p,q,h), 2.2)
             b = Math.pow(hue2rgb(p,q,h-1.0/3.0), 2.2)
-            if(calcLuminance(r,g,b)>l){
+            if(calcLuminance(r,g,b)>l) {
                 rangeB = m
-            }else{
+            } else {
                 rangeA = m
             }
         }
         return Triple(r,g,b)
-    }else{
-        val q = 1+c
-        val p = 2-q
-        val rn = hue2rgb(p, q, h + 1.0/3.0)
+    } else {
+        val q = 1 + c
+        val p = 2 - q
+        val rn = hue2rgb(p, q, h + 1.0 / 3.0)
         val gn = hue2rgb(p, q, h)
-        val bn = hue2rgb(p, q, h - 1.0/3.0)
+        val bn = hue2rgb(p, q, h - 1.0 / 3.0)
 
         //Maxima
         //assume(l>0);
         //solve([l=0.2126*(r*k)^2.2+0.7152*(g*k)^2.2+0.0722*(b*k)^2.2], [k]);
         val k = Math.pow(5000.0, 5.0/11.0)*Math.pow(l, 5.0/11.0)/Math.pow(1063.0*Math.pow(rn,11.0/5.0) + 3576.0*Math.pow(gn,11.0/5.0) + 361.0*Math.pow(bn,11.0/5.0),5.0/11.0)
 
-        val r = rn*k
-        val g = gn*k
-        val b = bn*k
+        val r = rn * k
+        val g = gn * k
+        val b = bn * k
         return Triple(Math.pow(r, 2.2), Math.pow(g, 2.2), Math.pow(b, 2.2))
     }
 }

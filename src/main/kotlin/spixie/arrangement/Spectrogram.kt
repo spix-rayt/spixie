@@ -43,7 +43,7 @@ class Spectrogram(val content: Group): Canvas(1.0, 300.0) {
                             if (time >= 0 && time < spectra.size && spectra.size > 2) {
                                 //val t = ((1.0 - (y.toDouble() / bufferedImage.height)).pow(1.7) * 0.99 + 0.01).coerceIn(0.0, 1.0) * (spectra[0].size - 2)
                                 val t = (Math.pow(2.0, (60+((299-y)/299.0*74.0)) / 12.0) / (44100 / 8192.0)).roundToInt()
-                                val v = spectra[time].slice(t..prevT).max() ?: 0.0
+                                val v = spectra[time].slice(t..prevT).maxOrNull() ?: 0.0
                                 val vv = ((1.0 - v).coerceIn(0.0, 1.0)*20).toInt()/20.0
                                 pixelArray[offset    ] = (vv*(255-16) + 16).toInt()
                                 pixelArray[offset + 1] = (vv*(255-27) + 27).toInt()

@@ -111,8 +111,8 @@ class Audio {
                 }
 
 
-                val max = spectraResult.map { it.max() ?: 0.0 }.max() ?: 0.0
-                val min = (spectraResult.map { it.min() ?: 0.0 }.min() ?: 0.0).coerceAtLeast(0.00000000001)
+                val max = spectraResult.map { it.maxOrNull() ?: 0.0 }.maxOrNull() ?: 0.0
+                val min = (spectraResult.map { it.minOrNull() ?: 0.0 }.minOrNull() ?: 0.0).coerceAtLeast(0.00000000001)
                 val diff = Math.log10(max / min)
 
                 spectra = spectraResult.map {

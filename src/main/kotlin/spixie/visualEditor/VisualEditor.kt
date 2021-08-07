@@ -11,7 +11,7 @@ import spixie.visualEditor.components.Render
 
 const val VE_GRID_CELL_SIZE = 20.0
 const val VE_PIN_WIDTH = VE_GRID_CELL_SIZE * 5
-const val VE_KEK = VE_GRID_CELL_SIZE*4
+const val VE_KEK = VE_GRID_CELL_SIZE * 4
 
 class VisualEditor: BorderPane(), WorkWindow.OpenableContent {
     var mainModule = Module()

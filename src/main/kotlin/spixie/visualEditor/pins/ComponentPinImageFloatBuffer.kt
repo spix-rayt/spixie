@@ -1,13 +1,7 @@
 package spixie.visualEditor.pins
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import spixie.Core
-import spixie.NoArg
-import spixie.visualEditor.Component
 import spixie.visualEditor.ImageFloatBuffer
-import java.io.ObjectInput
-import java.io.ObjectOutput
 
 class ComponentPinImageFloatBuffer(name: String): ComponentPin(name) {
     var getValue: (() -> ImageFloatBuffer)? = null

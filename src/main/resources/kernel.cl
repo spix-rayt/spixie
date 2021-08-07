@@ -119,54 +119,7 @@ __kernel void zeroBuffer(__global float *buffer, int size){
     buffer[workId] = 0.0f;
 }
 
-__constant float EPSILON = 0.0001f;
-
-float f2dot2( float2 v ) {
-    return dot(v,v);
-}
-float f3dot2( float3 v ) {
-    return dot(v,v);
-}
-float ndot( float2 a, float2 b ) {
-    return a.x*b.x - a.y*b.y;
-}
-
-float sdSphere(float3 p, float3 pos, float radius) {
-    return length(p - pos) - radius;
-}
-
-float sdBox( float3 p, float3 b ) {
-    p += (float3)(2.1f, -0.8f, 0.3f);
-    float3 q = fabs(p) - b;
-    return length(max(q, 0.0f)) + min(max(q.x,max(q.y,q.z)),0.0f);
-}
-
-float opSmoothUnion( float d1, float d2, float k ) {
-    float h = clamp(0.5f + 0.5f * ( d2 - d1 ) / k, 0.0f, 1.0f);
-    return mix(d2, d1, h) - k * h * (1.0f - h);
-}
-
-float distToScene(float3 p, __global float *objects, int objectsCount) {
-    float result = 10000000.0f;
-    //float z = 8.0f;
-    //for(int q = 0; q < 10; q+=1) {
-    //    float r = q * 3.0f;
-    //    int iterations = 30 + q * 12;
-    //    for(int i = 0; i < iterations; i++) {
-    //        float primitive = sdSphere(p, (float3)(cos(2.0f * M_PI / iterations * i) * r, sin(2.0f * M_PI / iterations * i) * r, z), 0.2f);
-    //        result = min(result, primitive);
-    //    }
-    //}
-
-    result = sdSphere(p, (float3)(0.0f, 0.0f, 25.0f), 12.0f);
-
-    //float3 pp = (float3)(mod(p.x, 5.0f), mod(p.y, 5.0f), mod(p.z, 5.0f));
-    //result = sdSphere(pp, (float3)(0.63f, 0.86f, 0.7f), 0.2f);
-
-    return result;
-}
-
-__kernel void raymarching(__global float *objects, int objectsCount, int width, int height, int equirectangular, int vr, float screenWidth, float screenHeight, float screenDistance, __global float *outImage) {
+__kernel void render(__global float *objects, int objectsCount, int width, int height, int equirectangular, int vr, float screenWidth, float screenHeight, float screenDistance, __global float *outImage) {
     int id = get_global_id(0);
     float2 uv;
     int left = (id % width) < width / 2;
@@ -177,11 +130,11 @@ __kernel void raymarching(__global float *objects, int objectsCount, int width, 
     }
 
     if(id < width * height) {
-        float r = 1.0f;
+        float r = 0.0f;
         float g = 0.0f;
         float b = 0.0f;
 
-        float3 rayOrigin = (float3)(0.2f, 0.0f, 0.0f);
+        float3 rayOrigin = (float3)(0.0f, 0.0f, 0.0f);
         if(vr) {
             if(left) {
                 rayOrigin.x -= 0.063f / 2.0f;
@@ -209,70 +162,21 @@ __kernel void raymarching(__global float *objects, int objectsCount, int width, 
             ));
         }
 
+        for(int i = 0; i < objectsCount; i++) {
+            float3 pos = (float3)(objects[i * 7 + 0], objects[i * 7 + 1], objects[i * 7 + 2]);
+            float psize = objects[i * 7 + 3];
+            float3 color = (float3)(objects[i * 7 + 4], objects[i * 7 + 5], objects[i * 7 + 6]);
 
-
-        float3 light = (float3)(-15.0f, 4.0f, -10.0f);
-
-        float3 p = rayOrigin;
-        float totalDist = 0.0f;
-        int i = 0;
-        while(i < 100000) {
-            //p.x = mod(p.x, 2.0f);
-            //p.y = mod(p.y, 2.0f);
-            //p.z = mod(p.z, 2.0f);
-            float dist = distToScene(p, objects, objectsCount) * 0.05f;
-            if(dist < EPSILON) {
-                float3 cDiffuse = (float3)(0.4f, 0.4f, 0.4f);
-                float3 cSpecular = (float3)(0.8f);
-
-                float3 normal = normalize(
-                    (float3)(
-                        distToScene((float3)(p.x + EPSILON, p.y, p.z), objects, objectsCount) - distToScene((float3)(p.x - EPSILON, p.y, p.z), objects, objectsCount),
-                        distToScene((float3)(p.x, p.y + EPSILON, p.z), objects, objectsCount) - distToScene((float3)(p.x, p.y - EPSILON, p.z), objects, objectsCount),
-                        distToScene((float3)(p.x, p.y, p.z + EPSILON), objects, objectsCount) - distToScene((float3)(p.x, p.y, p.z - EPSILON), objects, objectsCount)
-                    )
-                );
-
-                float3 N = normalize( normal );
-                float3 L = normalize( light - p );
-                float3 V = normalize( p - rayOrigin );
-                float3 H = normalize( L + V );
-
-                float phong = max( dot( L, N ), 0.0f );
-
-                float kMaterialShininess = 20.0f;
-                float kNormalization = ( kMaterialShininess + 8.0f ) / ( M_PI * 8.0f );
-                float blinn = pow( max( dot( N, H ), 0.0f ), kMaterialShininess ) * kNormalization;
-
-                float3 diffuse = phong * cDiffuse;
-
-                float3 specular = blinn * cSpecular;
-
-                float3 color = (float3)(diffuse + specular + cDiffuse * 0.03f);
-
-                r = color.x * 0.3f;
-                g = color.y * 0.5f;
-                b = color.z * 1.0f;
-
-                r *= 1.0f - smoothstep(180.0f, 200.0f, totalDist);
-                g *= 1.0f - smoothstep(180.0f, 200.0f, totalDist);
-                b *= 1.0f - smoothstep(180.0f, 200.0f, totalDist);
-
-                break;
+            float dt = dot(rayDirection, pos);
+            float3 projection = rayOrigin + (rayDirection * dt);
+            float dist = length(projection - pos);
+            if(dist <= psize) {
+                r = color.x;
+                g = color.y;
+                b = color.z;
+                i = objectsCount;
             }
-
-            totalDist += dist;
-            if(totalDist > 200.0f) {
-                r = 0.0f;
-                g = 0.0f;
-                b = 0.0f;
-                break;
-            }
-
-            p = rayOrigin + rayDirection * totalDist;
-            i++;
         }
-
 
         outImage[id * 4    ] = r;
         outImage[id * 4 + 1] = g;

@@ -54,10 +54,10 @@ class Main : Application() {
         val images = PublishSubject.create<Image>().toSerialized()
         images.observeOn(JavaFxScheduler.platform()).subscribe {
             imageView.image = it
-            if(it.width.toInt() * 2 >= firstStageRoot.width.toInt()){
+            if(it.width.toInt() * 2 >= firstStageRoot.width.toInt()) {
                 imageView.fitWidth = firstStageRoot.width
                 imageView.fitHeight = firstStageRoot.height
-            }else{
+            } else {
                 imageView.fitWidth = it.width * 2.0
                 imageView.fitHeight = it.height * 2.0
             }

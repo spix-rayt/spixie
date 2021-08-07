@@ -10,8 +10,8 @@ import javafx.scene.image.Image
 import kotlinx.coroutines.*
 import org.apache.commons.collections4.map.ReferenceMap
 import org.apache.commons.lang3.time.StopWatch
-import spixie.raymarching.RayMarchingRenderer
-import spixie.raymarching.geometryobject.Sphere
+import spixie.raymarching.Splat
+import spixie.raymarching.SplatRenderer
 import spixie.static.*
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import kotlin.concurrent.thread
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 @ObsoleteCoroutinesApi
 class RenderManager {
@@ -88,16 +89,23 @@ class RenderManager {
                         val frame = Math.round(time.time * 3600.0 / bpm.value).toInt()
                         if (!Core.audio.isPlaying()) {
                             val stopWatch = StopWatch.createStarted()
-                            //val image = Core.arrangementWindow.visualEditor.render(t, scaleDown)
-                            val objects = arrayListOf(
-                                    Sphere().apply {
-                                        x = 0.0f
-                                        y = 0.0f
-                                        z = -10.0f
-                                        radius = 1.0f
-                                    }
-                            )
-                            val image = RayMarchingRenderer.render(objects, scaleDown)
+                            val image = Core.arrangementWindow.visualEditor.render(time.time, scaleDown)
+//                            val splats = arrayListOf<Splat>()
+
+//                            for (i in 0..20000) {
+//                                splats.add(
+//                                    Splat().apply {
+//                                        x = Random.nextDouble(-30.0, 30.0)
+//                                        y = Random.nextDouble(-30.0, 30.0)
+//                                        z = Random.nextDouble(-100.0, -10.0)
+//                                        size = 0.2
+//                                        r = Random.nextDouble(0.0, 0.4)
+//                                        g = Random.nextDouble(0.0, 0.7)
+//                                        b = Random.nextDouble(0.0, 0.4)
+//                                    }
+//                                )
+//                            }
+//                            val image = SplatRenderer.render(splats, scaleDown)
                             val bufferedImage = image.toBufferedImageAndRelease()
                             stopWatch.stop()
                             lastRenderInfoSubject.onNext("${image.particlesCount.toString().padStart(8, ' ')} particles ${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")

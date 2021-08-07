@@ -1,21 +1,35 @@
 package spixie.test2
 
 import org.joml.Vector3d
+import spixie.static.calcLuminance
+import spixie.static.convertHueChromaLuminanceToRGB
+import spixie.static.convertRGBToHueChroma
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
 import javax.imageio.ImageIO
+import kotlin.concurrent.thread
 import kotlin.math.*
 import kotlin.random.Random
+import kotlin.system.measureNanoTime
 
-const val scaleDown = 2
-const val WIDTH = 1920 / scaleDown
-const val HEIGHT = 1080 / scaleDown
+const val scaleDown = 12
+const val WIDTH = 7680 / scaleDown
+const val HEIGHT = 4320 / scaleDown
 const val NORMAL_CALC_OFFSET = 0.000001
-const val RENDER_DIST = 6000.0
-const val RAY_MARCHING_DELTA = 0.0001
+const val RENDER_DIST = 1000.0
+const val RAY_MARCHING_SPP = 20
+const val RAY_MARCHING_DELTA = 0.1
 
-abstract class SDFObject {
+const val DEBUG = false
+const val CALC_LIGHT_VISIBILITY = true
+const val CALC_LIGHT_VISIBILITY_STEP = 0.1
+
+abstract class SDFObject(val name: String) {
+    var light: Light? = null
+    var absorptionCoefficient = 1.0
+
     abstract fun sdf(p: Vector3d): Double
 
     abstract fun albedoColor(): Vector3d
@@ -29,7 +43,7 @@ abstract class SDFObject {
     }
 }
 
-class Sphere(val pos: Vector3d, val radius: Double, val color: Vector3d) : SDFObject() {
+class Sphere(val pos: Vector3d, val radius: Double, val color: Vector3d, name: String) : SDFObject(name) {
     override fun sdf(p: Vector3d): Double {
         return p.distance(pos) - radius
     }
@@ -39,7 +53,7 @@ class Sphere(val pos: Vector3d, val radius: Double, val color: Vector3d) : SDFOb
     }
 }
 
-class FoldedSpace(val offset: Vector3d, val size: Vector3d, val sdfObject: SDFObject): SDFObject() {
+class FoldedSpace(val offset: Vector3d, val size: Vector3d, val sdfObject: SDFObject): SDFObject("") {
     override fun sdf(p: Vector3d): Double {
         return sdfObject.sdf(
             Vector3d(
@@ -69,51 +83,46 @@ fun linearstep(start: Double, end: Double, value: Double): Double {
     return ((value - start) / (end - start)).coerceIn(0.0, 1.0)
 }
 
-val sdfObjects = run {
-    val pos = Vector3d(0.0, 10.0, -60.0)
-    val add = Vector3d(0.7, -0.7, 17.0)
-    val result = arrayListOf<SDFObject>()
-    for(i in 0..100) {
-        result.add(Sphere(Vector3d(pos), 4.0, Vector3d(1.0, 1.0, 1.0)))
-        pos.add(add)
-    }
-    result
+val sdfObjects = arrayListOf<SDFObject>()
+
+//val lights = run {
+//    val result = arrayListOf<Light>()
+////    result.add(Light(Vector3d(-40.0, 0.0, 20.0), Vector3d(150.0, 0.0, 0.0)))
+//    result.add(Light(Vector3d(10.0, 0.0, 20.0), Vector3d(0.0, 150.0, 0.0)))
+////    result.add(Light(Vector3d(0.0, 30.0, 0.0), Vector3d(0.0, 0.0, 150.0)))
+////    result.add(Light(Vector3d(-20.0, 2.0, -5.0), Vector3d(13.0, 13.0, 0.0)))
+//    result
+//}
+
+val lights = arrayListOf<Light>()
+
+fun calcRandomColor(): Vector3d {
+    val randomColor = javafx.scene.paint.Color.hsb(Random.nextDouble() * 360, 1.0, 0.2)
+    return Vector3d(randomColor.red, randomColor.green, randomColor.blue)
 }
 
-val lights = arrayListOf<Light>(
-//    Light(Vector3d(-7.0       ,  11.0 , -18.0), Vector3d(0.0, 1.0, 0.0)),
-//    Light(Vector3d(-7.0 - 11.0,  0.0  , -18.0), Vector3d(1.0, 0.3, 1.0)),
-//    Light(Vector3d(-7.0       ,  -11.0, -18.0), Vector3d(0.0, 0.0, 1.0)),
-//    Light(Vector3d(-7.0 + 11.0,  0.0  , -18.0), Vector3d(1.0, 0.0, 0.0)),
-    //Light(Vector3d(-30.0, 0.0, -20.0), Vector3d(0.4, 0.4, 0.0)),
-    //Light(Vector3d(15.0, 10.0, -20.0), Vector3d(0.0, 0.0, 0.4))
-)
-
 val focalLength = 140.0
-val aperture = 2.0
+val aperture = 0.0
 
-fun randomSphereVector(): Vector3d {
-    val randX = Random.nextDouble()
-    val randY = Random.nextDouble()
-    val cosTheta = sqrt(1.0 - randX)
-    val sinTheta = sqrt(randX)
-    val phi = 2.0 * Math.PI * randY
-    val resultVector = Vector3d(
-        cos(phi) * sinTheta,
-        sin(phi) * sinTheta,
-        cosTheta
-    )
-    return resultVector
+fun randomCircleVector(): Vector3d {
+    val angle = Random.nextDouble() * Math.PI * 2
+    val randX = cos(angle)
+    val randY = sin(angle)
+    return Vector3d(randX, randY, 0.0)
 }
 
 fun calcColor(pixelX: Int, pixelY: Int): Color {
-    val spp = 200
+    val spp = if(DEBUG) {
+        1
+    } else {
+        RAY_MARCHING_SPP
+    }
 
     var r = 0.0
     var g = 0.0
     var b = 0.0
 
-    val cameraPos = Vector3d(20.0, 0.0, -100.0)
+    val cameraPos = Vector3d(0.0, 0.0, -100.0)
     val screenWidth = WIDTH.toDouble() / HEIGHT.toDouble()
     val screenHeight = 1.0
     val pixelWidth = screenWidth * 2.0 / (WIDTH - 1).toDouble()
@@ -128,108 +137,232 @@ fun calcColor(pixelX: Int, pixelY: Int): Color {
         ).normalize()
 
         val focalPoint = Vector3d(cameraPos).add(Vector3d(cameraRayDirection).mul(focalLength))
-        val shiftedCameraPos = Vector3d(cameraPos).add(randomSphereVector().mul(aperture))
+        val shiftedCameraPos = Vector3d(cameraPos).add(randomCircleVector().mul(aperture))
         val newRayDirection = Vector3d(focalPoint).sub(shiftedCameraPos).normalize()
-
-        val sampleColor = sampleRay(shiftedCameraPos, newRayDirection, 0.0, null)
+        val sampleColor = sampleRay(shiftedCameraPos, newRayDirection, 0.0)
         r += sampleColor.x
         g += sampleColor.y
         b += sampleColor.z
     }
 
+    val resultR = (r / spp.toDouble()).pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f) * 255.0f
+    val resultG = (g / spp.toDouble()).pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f) * 255.0f
+    val resultB = (b / spp.toDouble()).pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f) * 255.0f
+
     return Color(
-        (r / spp.toDouble()).pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f),
-        (g / spp.toDouble()).pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f),
-        (b / spp.toDouble()).pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f)
+        resultR.randomRoundToInt().coerceIn(0, 255),
+        resultG.randomRoundToInt().coerceIn(0, 255),
+        resultB.randomRoundToInt().coerceIn(0, 255)
     )
 }
 
-fun sampleRay(rayOrigin: Vector3d, rayDirection: Vector3d, startTotalDist: Double, light: Light?): Vector3d {
-    val distToLight = light?.pos?.distance(rayOrigin)
+fun Float.randomRoundToInt(): Int {
+    val maxOffset = 1.0f
+    val halfMaxOffset = maxOffset / 2.0f
+    val randomOffset = Random.nextFloat() * maxOffset - halfMaxOffset
+    return (this + randomOffset).roundToInt()
+}
+
+fun sampleRay(rayOrigin: Vector3d, rayDirection: Vector3d, startTotalDist: Double): Vector3d {
+    dbg { "===Sample Ray===" }
     var totalDist = startTotalDist
     var p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
+    val sdfObjectsClone = sdfObjects.toList()
+    var lightAbsorbed = 1.0
+    val resultColor = Vector3d(0.0)
 
     var i = 0
-    while (i < 100000) {
+    while (true) {
+        if(i >= 100000) {
+            println(">$i")
+            break
+        }
+        dbg { "POINT (${p.x} ${p.y} ${p.z})" }
         var dist = Double.MAX_VALUE
-        val closestObject = run {
-            var kek: SDFObject? = null
-            sdfObjects.forEach { obj ->
+        sdfObjectsClone.forEach { obj ->
+            val d = obj.sdf(p)
+            if(d < RAY_MARCHING_DELTA) {
+                val previousLightAbsorbed = lightAbsorbed
+                dbg { "ABSORB ${obj.name}" }
+                lightAbsorbed *= exp(-obj.absorptionCoefficient * RAY_MARCHING_DELTA)
+                val absorptionFromMarch = previousLightAbsorbed - lightAbsorbed
+
+                lights.forEach { light ->
+                    val lightVisibility = calcLightVisibility(p, light)
+                    resultColor.add(Vector3d(light.emmitance).mul(lightVisibility).mul(absorptionFromMarch).mul(obj.albedoColor()))
+                }
+            }
+            if(d < dist) {
+                dist = d
+            }
+        }
+
+        if(dist < RAY_MARCHING_DELTA) {
+            dist = RAY_MARCHING_DELTA
+        }
+
+        dbg { "Light Absorbed $lightAbsorbed" }
+        if(lightAbsorbed < 0.0001) {
+            break
+        }
+
+        totalDist += dist
+        if(totalDist > RENDER_DIST) {
+            break
+        }
+        p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
+
+        i += 1
+    }
+
+//    val fogCoefficient = 1.0 - linearstep(RENDER_DIST * 0.5, RENDER_DIST, totalDist)
+//    resultColor.mul(fogCoefficient)
+
+    return resultColor
+}
+
+fun calcLightVisibility(rayOrigin: Vector3d, light: Light): Double {
+    if(CALC_LIGHT_VISIBILITY) {
+        val rayDirection = Vector3d(light.pos).sub(rayOrigin).normalize()
+        val sdfObjectsClone = sdfObjects.toList()
+        var lightVisibility = 1.0
+        var totalDist = 0.0
+        var p = Vector3d(rayOrigin)
+        val maxDist = light.pos.distance(rayOrigin)
+        while (true) {
+            var dist = Double.MAX_VALUE
+            sdfObjectsClone.forEach { obj ->
                 val d = obj.sdf(p)
+                if(d < CALC_LIGHT_VISIBILITY_STEP) {
+                    lightVisibility *= exp(-obj.absorptionCoefficient * CALC_LIGHT_VISIBILITY_STEP)
+                }
                 if(d < dist) {
                     dist = d
-                    kek = obj
                 }
             }
-            kek
+            if(dist < CALC_LIGHT_VISIBILITY_STEP) {
+                dist = CALC_LIGHT_VISIBILITY_STEP
+            }
+            if(lightVisibility < 0.0001) {
+                return 0.0
+            }
+            totalDist += dist
+            if(totalDist > maxDist) {
+                break
+            }
+            p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
         }
-
-        if(light == null) {
-            if(dist <= RAY_MARCHING_DELTA && closestObject != null) {
-                val normal = closestObject.normal(p)
-                p.add(Vector3d(normal).mul(RAY_MARCHING_DELTA * 1.1 - dist))
-                val resultColor = Vector3d(0.0)
-                lights.forEach { l ->
-                    val reflectRay = Vector3d(l.pos).sub(p).normalize()
-                    //val sampleResult = sampleRay(p, reflectRay, 0.0, l)
-                    val sampleResult = Vector3d(l.emmitance)
-
-                    val albedoColor = closestObject.albedoColor()
-                    val cosT = reflectRay.dot(normal).coerceIn(0.0, 1.0)
-                    resultColor.add(sampleResult.mul(albedoColor).mul(cosT))
-                }
-
-                val fogCoefficient = 1.0 - linearstep(RENDER_DIST * 0.5, RENDER_DIST, totalDist)
-                resultColor.mul(fogCoefficient)
-
-                return resultColor
-            } else {
-                totalDist += dist
-                if(totalDist > RENDER_DIST) {
-                    return Vector3d(0.0)
-                }
-                p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
-
-                i += 1
-            }
+        if(totalDist > 0.0) {
+            return lightVisibility / totalDist / totalDist
         } else {
-            if(dist <= RAY_MARCHING_DELTA && closestObject != null) {
-                return Vector3d(0.0)
-            } else {
-                totalDist += dist
-                if(totalDist > distToLight!!) {
-                    return Vector3d(light.emmitance)
-                }
-                p = Vector3d(rayOrigin).add(Vector3d(rayDirection).mul(totalDist))
+            return lightVisibility
+        }
+    } else {
+        return 1.0
+    }
+}
 
-                i += 1
+fun dbg(block: () -> String) {
+    if(DEBUG) {
+        println(block())
+    }
+}
+
+fun renderImage(fileName: String) {
+    val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+
+    val renderXs = if(DEBUG) {
+        152..152
+    } else {
+        0 until WIDTH
+    }
+
+    val renderYs = if(DEBUG) {
+        132..132
+    } else {
+        0 until HEIGHT
+    }
+
+    val renderTime = measureNanoTime {
+        val linkedQueue = ConcurrentLinkedQueue(renderXs.toList())
+        val threads = (0 until 4).map {
+            thread {
+                while (true) {
+                    val x = linkedQueue.poll() ?: break
+                    println("${(x.toDouble() / (WIDTH - 1).toDouble() * 1000.0).roundToInt() / 10.0}%")
+                    for(y in renderYs) {
+                        image.setRGB(x, y, calcColor(x, y).rgb)
+                    }
+                }
             }
+        }
+        threads.forEach {
+            it.join()
         }
     }
-    return Vector3d(0.0, 0.0, 0.0)
+
+    println("Render time: ${renderTime / 1000000} ms")
+
+    ImageIO.write(image, "png", File("$fileName.png"))
+}
+
+fun changeImage() {
+    val inputImage = ImageIO.read(File("pony.jpeg"))
+    val outputImage = BufferedImage(inputImage.width, inputImage.height, BufferedImage.TYPE_INT_ARGB)
+    for (x in 0 until inputImage.width) {
+        for(y in 0 until inputImage.height) {
+            val color = Color(inputImage.getRGB(x, y))
+            val r = (color.red / 255.0).pow(2.2)
+            val g = (color.green / 255.0).pow(2.2)
+            val b = (color.blue / 255.0).pow(2.2)
+
+
+            val (h, c) = convertRGBToHueChroma(r, g, b)
+            val l = calcLuminance(r, g, b).coerceIn(0.0, 1.0)
+            //val l = ((x + 1) / inputImage.width.toDouble()).pow(2.2)
+            val (rr,gg,bb) = convertHueChromaLuminanceToRGB(h, 1.0, l, true)
+            val outputColor = Color(
+                rr.pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f),
+                gg.pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f),
+                bb.pow(1.0 / 2.2).toFloat().coerceIn(0.0f, 1.0f)
+            )
+            outputImage.setRGB(x, y, outputColor.rgb)
+        }
+
+        println("${x + 1}/${inputImage.width}")
+    }
+
+    ImageIO.write(outputImage, "png", File("eqlight.png"))
 }
 
 fun main() {
-    val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+    //println(calcLightVisibility(Vector3d(100.0, 0.0, 60.0), lights[0]))
 
-    for(i in 0..6) {
-        val randomColor = javafx.scene.paint.Color.hsb(Random.nextDouble() * 360, 1.0, 0.2)
-        lights.add(Light(Vector3d(Random.nextDouble() * 40.0 - 20.0, Random.nextDouble() * 40.0 - 20.0, Random.nextDouble() * -40.0), Vector3d(randomColor.red, randomColor.green, randomColor.blue)))
-    }
+//    sdfObjects.add(Sphere(Vector3d(0.0, 0.0, 60.0), 13.0, Vector3d(0.0, 1.0, 0.0), "green").also {
+//        it.absorptionCoefficient = 0.01
+//    })
+//    sdfObjects.add(Sphere(Vector3d(-26.0, 0.0, 60.0), 6.0, Vector3d(0.0, 0.0, 1.0), "blue").also {
+//        it.absorptionCoefficient = 1.0
+//    })
 
-    for(x in 0 until WIDTH) {
-        for(y in 0 until HEIGHT) {
-            image.setRGB(x, y, calcColor(x, y).rgb)
-        }
-        println("${(x.toDouble() / (WIDTH - 1).toDouble() * 1000.0).roundToInt() / 10.0}%")
-    }
+//    sdfObjects.add(Sphere(Vector3d(0.0, 0.0, 0.0), 10.0, Vector3d(1.0, 1.0, 1.0), "").also { it.absorptionCoefficient = 0.5 })
+//    sdfObjects.add(Sphere(Vector3d(8.0, 0.0, 0.0), 5.0, Vector3d(1.0, 1.0, 1.0), "").also { it.absorptionCoefficient = 0.5 })
+//    sdfObjects.add(Sphere(Vector3d(-20.0, 2.0, -5.0), 14.0, Vector3d(1.0, 1.0, 1.0), "").also { it.absorptionCoefficient = 0.7 })
 
-//    for(x in 500 until 510) {
-//        for(y in 300 until 310) {
-//            println("$x $y")
-//            image.setRGB(x, y, calcColor(x, y).rgb)
-//        }
+    sdfObjects.add(Sphere(Vector3d(0.0, 0.0, 0.0), 10.0, Vector3d(1.0, 1.0, 1.0), "").also { it.absorptionCoefficient = 3.0 })
+
+
+//    var f = 0
+//    for(x in -40..40) {
+//        lights.clear()
+//        lights.add(Light(Vector3d(x.toDouble(), 0.0, 20.0), Vector3d(0.0, 150.0, 0.0)))
+//        renderImage("0_f${f.toString().padStart(3, '0')}")
+//        f++
 //    }
 
-    ImageIO.write(image, "png", File("test.png"))
+    lights.clear()
+    lights.add(Light(Vector3d(30.0, 0.0, -30.0), Vector3d(0.0, 150.0, 0.0)))
+    renderImage("test")
+
+//    changeImage()
 }

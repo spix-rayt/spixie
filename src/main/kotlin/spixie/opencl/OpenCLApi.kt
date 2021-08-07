@@ -3,20 +3,21 @@ package spixie.opencl
 import com.jogamp.opencl.*
 import spixie.static.roundUp
 import java.nio.FloatBuffer
+import java.util.*
 
 class OpenCLApi {
     private val context:CLContext = CLContext.create(
-            CLPlatform.listCLPlatforms().maxBy {
+            CLPlatform.listCLPlatforms().maxByOrNull {
                 when{
-                    it.name.toLowerCase().contains("intel") -> 0
+                    it.name.lowercase(Locale.getDefault()).contains("intel") -> 0
                     else -> 42 // Prefer not intel GPU
                 }
             }
     )
 
-    private val device:CLDevice
+    private val device: CLDevice
 
-    private val program:CLProgram
+    private val program: CLProgram
 
     private val queue: CLCommandQueue
 
@@ -81,15 +82,19 @@ class OpenCLApi {
         return result
     }
 
-    fun rayMarchingRender(floatArray: FloatArray, objectsCount: Int, width: Int, height: Int, equirectangular: Int, vr: Int, screenWidth: Float, screenHeight: Float, screenDistance: Float): CLBuffer<FloatBuffer> {
+    fun renderSplats(floatArray: FloatArray, objectsCount: Int, width: Int, height: Int, equirectangular: Int, vr: Int, screenWidth: Float, screenHeight: Float, screenDistance: Float): CLBuffer<FloatBuffer> {
         val outputImage = context.createFloatBuffer(width * height * 4, CLMemory.Mem.READ_WRITE)
 
-        val inputFloatArray = context.createFloatBuffer(floatArray.size, CLMemory.Mem.READ_ONLY)
+        val inputFloatArray = if(objectsCount == 0) {
+            context.createFloatBuffer(1, CLMemory.Mem.READ_ONLY)
+        } else {
+            context.createFloatBuffer(floatArray.size, CLMemory.Mem.READ_ONLY)
+        }
         inputFloatArray.buffer.put(floatArray)
         inputFloatArray.buffer.rewind()
 
         run {
-            val kernel = program.createCLKernel("raymarching")
+            val kernel = program.createCLKernel("render")
             kernel.putArg(inputFloatArray)
             kernel.putArg(objectsCount)
             kernel.putArg(width)
@@ -101,6 +106,7 @@ class OpenCLApi {
             kernel.putArg(screenDistance)
             kernel.putArg(outputImage)
 
+            queue.putWriteBuffer(inputFloatArray, false)
             queue.put1DRangeKernel(kernel, 0L, (width * height).roundUp(256).toLong(), 256L)
         }
         return outputImage
