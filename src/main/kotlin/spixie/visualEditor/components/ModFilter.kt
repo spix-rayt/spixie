@@ -1,13 +1,13 @@
 package spixie.visualEditor.components
 
 import spixie.NumberControl
-import spixie.visualEditor.Component
+import spixie.visualEditor.EditorComponent
 import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.ParticleArray
 import kotlin.math.roundToInt
 
-class ModFilter: Component() {
+class ModFilter: EditorComponent() {
     private val inParticles = ComponentPinParticleArray("Particles")
 
     private val inSkip = ComponentPinNumber("Skip", NumberControl(0.0, "").limitMin(0.0))

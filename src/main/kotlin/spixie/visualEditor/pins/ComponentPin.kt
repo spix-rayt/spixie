@@ -1,6 +1,5 @@
 package spixie.visualEditor.pins
 
-import com.google.gson.JsonObject
 import javafx.geometry.Pos
 import javafx.scene.control.ContextMenu
 import javafx.scene.control.Label
@@ -11,30 +10,20 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.scene.shape.Circle
-import spixie.Core
-import spixie.NoArg
-import spixie.NumberControl
+import spixie.dragAndDropObject
 import spixie.static.DragAndDropType
-import spixie.visualEditor.Component
+import spixie.visualEditor.EditorComponent
 import spixie.visualEditor.VE_GRID_CELL_SIZE
 import spixie.visualEditor.VE_PIN_WIDTH
-import java.io.Externalizable
-import java.io.ObjectInput
-import java.io.ObjectOutput
-import java.lang.Exception
-import java.lang.RuntimeException
-import kotlin.reflect.full.createInstance
-import kotlin.reflect.full.primaryConstructor
 
-@NoArg
 abstract class ComponentPin(val name: String): HBox() {
     private val backgroundCircle = Circle(VE_GRID_CELL_SIZE /2, VE_GRID_CELL_SIZE /2, 2.0, Color.BLACK)
 
     private val selectionCircle = Circle(VE_GRID_CELL_SIZE /2, VE_GRID_CELL_SIZE /2, 1.0, Color.WHITE)
 
-    val component: Component
+    val editorComponent: EditorComponent
         get() {
-            return this.parent.parent as Component
+            return this.parent.parent as EditorComponent
         }
 
     var typeString = ""
@@ -61,7 +50,7 @@ abstract class ComponentPin(val name: String): HBox() {
     }
 
     fun unconnectAll() {
-        component.disconnectPinRequest.onNext(this)
+        editorComponent.disconnectPinRequest.onNext(this)
     }
 
     init {
@@ -99,7 +88,7 @@ abstract class ComponentPin(val name: String): HBox() {
                 if(event.button == MouseButton.PRIMARY){
                     val startDragAndDrop = startDragAndDrop(TransferMode.LINK)
                     startDragAndDrop.setContent(mapOf(DragAndDropType.PIN to ""))
-                    Core.dragAndDropObject = this@ComponentPin
+                    dragAndDropObject = this@ComponentPin
 
                     event.consume()
                 }
@@ -107,8 +96,8 @@ abstract class ComponentPin(val name: String): HBox() {
 
             setOnDragOver { event ->
                 if(event.gestureSource != this && event.dragboard.hasContent(DragAndDropType.PIN)){
-                    (Core.dragAndDropObject as? ComponentPin)?.let { dragged ->
-                        if(dragged.component != this@ComponentPin.component && dragged::class == this@ComponentPin::class){
+                    (dragAndDropObject as? ComponentPin)?.let { dragged ->
+                        if(dragged.editorComponent != this@ComponentPin.editorComponent && dragged::class == this@ComponentPin::class){
                             if(dragged.isInputPin() && this@ComponentPin.isOutputPin() || dragged.isOutputPin() && this@ComponentPin.isInputPin()){
                                 event.acceptTransferModes(TransferMode.LINK)
                                 selectionCircle.fill = Color.DARKVIOLET
@@ -130,8 +119,8 @@ abstract class ComponentPin(val name: String): HBox() {
 
                 if(dragboard.hasContent(DragAndDropType.PIN)){
                     success = true
-                    (Core.dragAndDropObject as? ComponentPin)?.let { dragged ->
-                        if(dragged.component.inputPins.contains(dragged)){
+                    (dragAndDropObject as? ComponentPin)?.let { dragged ->
+                        if(dragged.editorComponent.inputPins.contains(dragged)){
                             dragged.connectWith(this@ComponentPin)
                         }else{
                             this@ComponentPin.connectWith(dragged)
@@ -147,16 +136,16 @@ abstract class ComponentPin(val name: String): HBox() {
     fun connectWith(connection: ComponentPin){
         if(this::class == connection::class){
             connections.add(connection)
-            component.conneectionsChanged.onNext(Unit)
+            editorComponent.conneectionsChanged.onNext(Unit)
         }
     }
 
     protected fun isInputPin(): Boolean {
-        return component.inputPins.contains(this)
+        return editorComponent.inputPins.contains(this)
     }
 
     protected fun isOutputPin(): Boolean {
-        return component.outputPins.contains(this)
+        return editorComponent.outputPins.contains(this)
     }
 
     open fun updateUI(){

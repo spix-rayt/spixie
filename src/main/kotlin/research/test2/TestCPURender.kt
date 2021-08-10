@@ -1,4 +1,4 @@
-package spixie.test2
+package research.test2
 
 import org.joml.Vector3d
 import spixie.static.calcLuminance

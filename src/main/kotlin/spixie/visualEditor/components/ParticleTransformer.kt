@@ -12,7 +12,7 @@ enum class TransformerType {
     Hue, Chroma, Luminance, Transparency, PositionX, PositionY, PositionZ, RotateX, RotateY, RotateZ, Scale, Size, Edge
 }
 
-class ParticleTransformer: Component() {
+class ParticleTransformer: EditorComponent() {
     private val inParticles = ComponentPinParticleArray("Particles")
 
     private val outParticles = ComponentPinParticleArray("Particles").apply {

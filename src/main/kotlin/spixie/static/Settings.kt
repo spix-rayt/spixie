@@ -15,7 +15,7 @@ data class Props(
             if(!settingsFile.exists()){
                 Files.write(settingsFile.toPath(), this::class.java.getResourceAsStream("/settings.json").readBytes())
             }
-            return Gson().fromJson<Props>(settingsFile.bufferedReader().use { it.readText() }, Props::class.java)
+            return Gson().fromJson(settingsFile.bufferedReader().use { it.readText() }, Props::class.java)
         }
     }
 }

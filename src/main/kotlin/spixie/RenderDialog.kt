@@ -18,7 +18,7 @@ import kotlin.math.roundToLong
 
 class RenderDialog(owner: Window): Stage() {
     init {
-        val motionBlurSlider = Slider(1.0, 20.0, 2.0).apply {
+        val motionBlurSlider = Slider(1.0, 200.0, 1.0).apply {
             isShowTickMarks = true
             majorTickUnit = 1.0
             minorTickCount = 0
@@ -27,13 +27,17 @@ class RenderDialog(owner: Window): Stage() {
         val progressBar = ProgressBar(0.0)
         val renderButton = Button("Render")
         val checkBoxAudio = CheckBox().apply { isSelected=true }
-        val checkBoxLowQuality = CheckBox()
+        val numberFps = NumberControl(24.0, "fps", 0.0).apply {
+            limitMin(1.0)
+            minNumberLineScale = 0.0
+            maxNumberLineScale = 0.0
+        }
         val remainingTimeLabel = Label("")
 
         val grid = GridPane()
         grid.add(
                 Label().apply {
-                    val textF = { v:Int -> "Motion Blur: ${if(v==1) "Off" else "x$v slower render"}" }
+                    val textF = { v:Int -> "Motion Blur: ${if(v==1) "Off" else "x$v"}" }
                     motionBlurSlider.valueProperty().addListener { _, _, newValue ->
                         text = textF(newValue.toInt())
                     }
@@ -44,8 +48,8 @@ class RenderDialog(owner: Window): Stage() {
         grid.add(motionBlurSlider, 1, 0)
         grid.add(Label("Audio"), 0, 1)
         grid.add(checkBoxAudio, 1, 1)
-        grid.add(Label("Low Quality"), 0, 2)
-        grid.add(checkBoxLowQuality, 1, 2)
+        grid.add(Label("fps"), 0, 2)
+        grid.add(numberFps, 1, 2)
         grid.add(progressBar,0, 3, 2, 1)
         grid.add(remainingTimeLabel, 0, 4)
         grid.add(renderButton, 0, 5, 2, 1)
@@ -57,38 +61,38 @@ class RenderDialog(owner: Window): Stage() {
             setOnAction {
                 progressBar.progress = 0.0
                 grid.isDisable = true
-                val selectedFrames = Core.arrangementWindow.getSelectedFrames()
+                val selectedBeats = timelineWindow.getSelectedBeats()
                 val lastFramesRenderTime = mutableListOf<Double>()
                 val dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
                 val zoneId = ZoneId.of("UTC")
                 val stopWatch = StopWatch.createStarted()
                 var lastRenderedFrame = 0
-                Core.renderManager.renderToFile(
-                        { currentFrame, framesCount ->
-                            progressBar.progress = currentFrame / framesCount.toDouble()
-                            val t = stopWatch.getTime(TimeUnit.MILLISECONDS) / 1000.0 / (currentFrame-lastRenderedFrame)
-                            stopWatch.reset()
-                            stopWatch.start()
-                            if(lastRenderedFrame != 0){
-                                lastFramesRenderTime.add(t)
-                                if(lastFramesRenderTime.size>10) {
-                                    lastFramesRenderTime.removeAt(0)
-                                    val average = lastFramesRenderTime.average()
-                                    val time = LocalDateTime.ofInstant(Instant.ofEpochMilli(((framesCount - currentFrame) * average * 1000.0).roundToLong()), zoneId)
-                                    remainingTimeLabel.text = "${dateTimeFormatter.format(time)} (${(average*1000.0).roundToInt()} ms / frame)"
-                                }
+                renderManager.renderToFile(
+                    { currentFrame, framesCount ->
+                        progressBar.progress = currentFrame / framesCount.toDouble()
+                        val t = stopWatch.getTime(TimeUnit.MILLISECONDS) / 1000.0 / (currentFrame-lastRenderedFrame)
+                        stopWatch.reset()
+                        stopWatch.start()
+                        if(lastRenderedFrame != 0){
+                            lastFramesRenderTime.add(t)
+                            if(lastFramesRenderTime.size>10) {
+                                lastFramesRenderTime.removeAt(0)
+                                val average = lastFramesRenderTime.average()
+                                val time = LocalDateTime.ofInstant(Instant.ofEpochMilli(((framesCount - currentFrame) * average * 1000.0).roundToLong()), zoneId)
+                                remainingTimeLabel.text = "${dateTimeFormatter.format(time)} (${(average*1000.0).roundToInt()} ms / frame)"
                             }
-                            lastRenderedFrame = currentFrame
-                        },
-                        {
-                            grid.isDisable = false
-                        },
-                        motionBlurSlider.value.toInt(),
-                        selectedFrames.first,
-                        selectedFrames.second,
-                        checkBoxAudio.isSelected,
-                        Core.renderManager.offset.value/Core.renderManager.bpm.value*60.0,
-                        checkBoxLowQuality.isSelected
+                        }
+                        lastRenderedFrame = currentFrame
+                    },
+                    {
+                        grid.isDisable = false
+                    },
+                    motionBlurSlider.value.toInt(),
+                    selectedBeats.first,
+                    selectedBeats.second,
+                    checkBoxAudio.isSelected,
+                    renderManager.offset.value / renderManager.bpm.value * 60.0,
+                    numberFps.value.roundToInt()
                 )
             }
             setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE)

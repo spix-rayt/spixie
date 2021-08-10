@@ -13,10 +13,11 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import java.util.*
+import kotlin.math.roundToInt
 
 class WorkWindow : BorderPane() {
     init {
-        val menuBar = ToolBar()
+        val topMenuBar = ToolBar()
         val importAudioButton = Button("Import audio").apply {
             setOnAction {
                 FileChooser().apply {
@@ -26,7 +27,7 @@ class WorkWindow : BorderPane() {
                             FileChooser.ExtensionFilter("All files", "*.*")
                     )
                     showOpenDialog(this@WorkWindow.scene.window)?.let { file->
-                        Core.audio.load(file)
+                        audio.load(file)
                     }
                     center.requestFocus()
                 }
@@ -43,29 +44,39 @@ class WorkWindow : BorderPane() {
             minorTickCount = 0
             isSnapToTicks = true
             valueProperty().addListener { _, _, newValue ->
-                Core.renderManager.scaleDown = 1 shl newValue.toInt()
+                renderManager.scaleDown = 1 shl newValue.toInt()
             }
             isFocusTraversable = false
         }
 
         val timeLabel = Label().apply {
-            Core.renderManager.time.timeChanges.subscribe { time ->
-                text = "Time: ${String.format("%.3f", Math.round(time*1000)/1000.0)}"
+            renderManager.timeHolder.timeChanges.subscribe { time ->
+                text = "Time: ${String.format("%.3f", (time * 1000).roundToInt() /1000.0)}"
             }
         }
 
         val lastRenderInfo = Label()
-        Core.renderManager.lastRenderInfoSubject.observeOn(JavaFxScheduler.platform()).subscribe {
+        renderManager.lastRenderInfoSubject.observeOn(JavaFxScheduler.platform()).subscribe {
             lastRenderInfo.text = it
         }
-        menuBar.items.addAll(importAudioButton, renderButton, slider, timeLabel, Core.renderManager.bpm, Core.renderManager.offset, Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) }, lastRenderInfo)
+        topMenuBar.items.addAll(
+            importAudioButton,
+            renderButton,
+            slider,
+            timeLabel,
+            renderManager.bpm,
+            renderManager.offset,
+            renderManager.samplesPerPixel,
+            Pane().apply { HBox.setHgrow(this, Priority.ALWAYS) },
+            lastRenderInfo
+        )
 
 //        menuBar.addEventHandler(KeyEvent.ANY){ event ->
 //            center.fireEvent(event.copyFor(center, center))
 //            event.consume()
 //        }
 
-        top = menuBar
+        top = topMenuBar
 
         setOnKeyPressed { event ->
             if(event.code == KeyCode.ESCAPE){

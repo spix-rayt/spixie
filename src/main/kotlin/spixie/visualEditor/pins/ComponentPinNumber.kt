@@ -1,22 +1,15 @@
 package spixie.visualEditor.pins
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import javafx.geometry.Pos
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import spixie.Core
 import spixie.NumberControl
-import spixie.visualEditor.Component
-import java.io.ObjectInput
-import java.io.ObjectOutput
+import spixie.renderManager
 
 class ComponentPinNumber(name: String, val valueControl: NumberControl?): ComponentPin(name) {
     var getValue: (() -> Double)? = null
 
     fun receiveValue(): Double{
         val values = connections
-                .sortedBy { it.component.layoutY }
+                .sortedBy { it.editorComponent.layoutY }
                 .mapNotNull { (it as? ComponentPinNumber)?.getValue?.invoke() }
         return if(values.isEmpty())
             valueControl?.value ?: 0.0
@@ -29,9 +22,7 @@ class ComponentPinNumber(name: String, val valueControl: NumberControl?): Compon
 
     init {
         valueControl?.changes?.subscribe {
-            GlobalScope.launch {
-                Core.renderManager.requestRender()
-            }
+            renderManager.requestRender()
         }
     }
 

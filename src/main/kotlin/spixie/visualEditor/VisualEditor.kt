@@ -5,9 +5,9 @@ import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.stage.Screen
 import spixie.WorkWindow
-import spixie.visualEditor.components.ImageResult
+import spixie.render.ImageCLBuffer
 import spixie.visualEditor.components.MoveRotate
-import spixie.visualEditor.components.Render
+import spixie.visualEditor.components.RenderComponent
 
 const val VE_GRID_CELL_SIZE = 20.0
 const val VE_PIN_WIDTH = VE_GRID_CELL_SIZE * 5
@@ -19,10 +19,7 @@ class VisualEditor: BorderPane(), WorkWindow.OpenableContent {
 
     val modules = arrayListOf(mainModule)
 
-    var time = 0.0
-        private set
-
-    var downscale = 1
+    var beats = 0.0
         private set
 
     init {
@@ -47,19 +44,15 @@ class VisualEditor: BorderPane(), WorkWindow.OpenableContent {
         }
 
         mainModule.apply {
-            val resultComponent = ImageResult()
-            addComponent(resultComponent)
-            val renderComponent = Render()
+            val renderComponent = RenderComponent()
             addComponent(renderComponent)
-            resultComponent.inputPins[0].connectWith(renderComponent.outputPins[0])
 
             val moveComponent = MoveRotate()
             addComponent(moveComponent)
-            moveComponent.changeZ(1000.0)
+            moveComponent.changeZ(20.0)
             renderComponent.inputPins[0].connectWith(moveComponent.outputPins[0])
 
             renderComponent.magneticRelocate(moveComponent.layoutX + moveComponent.width + VE_GRID_CELL_SIZE, moveComponent.layoutY + moveComponent.height - renderComponent.height)
-            resultComponent.magneticRelocate(renderComponent.layoutX+renderComponent.width + VE_GRID_CELL_SIZE, renderComponent.layoutY+renderComponent.height-resultComponent.height)
         }
 
         loadModule(mainModule)
@@ -71,15 +64,14 @@ class VisualEditor: BorderPane(), WorkWindow.OpenableContent {
         homeLayout()
     }
 
-    fun render(time:Double, downscale: Int): ImageFloatBuffer {
-        this.time = time
-        this.downscale = downscale
-        return mainModule.findResultComponent().getImage()
+    fun render(imageCLBuffer: ImageCLBuffer, beats: Double, samplesPerPixel: Int) {
+        this.beats = beats
+        mainModule.findRenderComponent().invoke(imageCLBuffer, samplesPerPixel)
     }
 
     private fun homeLayout(){
         val visualBounds = Screen.getPrimary().visualBounds
-        val resultComponent = mainModule.findResultComponentNode()
+        val resultComponent = mainModule.findFinalComponentNode()
         mainModule.content.layoutX = visualBounds.width/2 - resultComponent.layoutX
         mainModule.content.layoutY = visualBounds.height/2 - resultComponent.layoutY
     }

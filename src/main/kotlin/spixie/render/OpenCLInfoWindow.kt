@@ -1,4 +1,4 @@
-package spixie.opencl
+package spixie.render
 
 import com.jogamp.opencl.JoclVersion
 import javafx.scene.Scene

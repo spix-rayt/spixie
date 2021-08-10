@@ -1,4 +1,4 @@
-package spixie.arrangement
+package spixie.timeline
 
 import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.Group
@@ -17,14 +17,12 @@ import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.Duration
 import org.apache.commons.lang3.math.Fraction
-import spixie.Core
-import spixie.WorkWindow
+import spixie.*
 import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
-import spixie.visualEditor.VisualEditor
 import kotlin.math.roundToInt
 
-class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
+class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
     private val contentPane = Pane()
 
     private val content = Group()
@@ -34,8 +32,6 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
     private val grid = Group()
 
     private val graphCanvases = Group()
-
-    val visualEditor = VisualEditor()
 
     private val cursor = Line(-0.5, 0.0, -0.5, 10000.0)
 
@@ -70,7 +66,7 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
             }
         }
 
-    val spectrogram = Spectrogram(content)
+    val spectrogram by lazy { Spectrogram(content, this, renderManager, audio) }
 
     private val graphsTree = Pane().apply {
         style="-fx-background-color: #101B2CFF"
@@ -86,12 +82,12 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
 
     private var needUpdateGrid = false
 
-    fun perFrame(){
-        if(needRedrawAllGraphs){
+    fun doEveryFrame() {
+        if(needRedrawAllGraphs) {
             redrawGraph(null)
             needRedrawAllGraphs = false
         }
-        if(needUpdateGrid){
+        if(needUpdateGrid) {
             updateGrid()
             needUpdateGrid = false
         }
@@ -217,7 +213,7 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
 
         contentPane.initCustomPanning(content, false)
 
-        Core.renderManager.time.timeChanges.subscribe {
+        renderManager.timeHolder.timeChanges.subscribe {
             updateTimePointer()
         }
 
@@ -229,7 +225,7 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
             updateCursor(event)
             if(event.isControlDown){
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
-                Core.renderManager.time.time = calcTimeOfX(screenToLocal.x)
+                renderManager.timeHolder.beats = calcTimeOfX(screenToLocal.x)
             }
         }
 
@@ -249,23 +245,23 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
                 mousePressedCursorX?.let { pressedCursorX ->
                     mousePressedLine?.let { pressedLine ->
                         if(pressedCursorX == cursor.startX){
-                            val restartAudio = Core.audio.isPlaying()
+                            val restartAudio = audio.isPlaying()
                             if(restartAudio){
-                                Core.audio.pause()
+                                audio.pause()
                             }
-                            Core.renderManager.time.time = calcTimeOfX(cursor.startX-0.5)
+                            renderManager.timeHolder.beats = calcTimeOfX(cursor.startX-0.5)
                             if(restartAudio){
-                                Core.audio.play(Duration.seconds(Math.round((Core.renderManager.time.time- Core.renderManager.offset.value)*3600/ Core.renderManager.bpm.value)/60.0))
+                                audio.play(Duration.seconds(Math.round((renderManager.timeHolder.beats- renderManager.offset.value)*3600/ renderManager.bpm.value)/60.0))
                             }
                         }
                         val time1 = calcTimeOfX(cursor.startX-0.5)
                         val time2 = calcTimeOfX(pressedCursorX-0.5)
                         if(time1 < time2){
-                            selectionBlock.timeStart = Fraction.getFraction(time1)
-                            selectionBlock.timeEnd = Fraction.getFraction(time2)
+                            selectionBlock.beatStart = Fraction.getFraction(time1)
+                            selectionBlock.beatEnd = Fraction.getFraction(time2)
                         }else{
-                            selectionBlock.timeStart = Fraction.getFraction(time2)
-                            selectionBlock.timeEnd = Fraction.getFraction(time1)
+                            selectionBlock.beatStart = Fraction.getFraction(time2)
+                            selectionBlock.beatEnd = Fraction.getFraction(time1)
                         }
 
                         selectionBlock.line = pressedLine
@@ -343,7 +339,7 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
                     timePointerCentering = true
                 }
                 if(event.code == KeyCode.V){
-                    Core.workWindow.open(visualEditor)
+                    workWindow.open(visualEditor)
                 }
                 if(event.code == KeyCode.Q){
                     selectionBlock.buildGraph()
@@ -407,8 +403,8 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
         return x*64/100.0/zoom.value!!.toDouble()
     }
 
-    fun getSelectedFrames(): Pair<Int, Int>{
-        return (selectionBlock.timeStart.toDouble()*3600/ Core.renderManager.bpm.value).toInt() to (selectionBlock.timeEnd.toDouble()*3600/ Core.renderManager.bpm.value).toInt()
+    fun getSelectedBeats(): Pair<Double, Double> {
+        return selectionBlock.beatStart.toDouble() to selectionBlock.beatEnd.toDouble()
     }
 
     private fun updateCursor(event:MouseEvent){
@@ -419,7 +415,7 @@ class ArrangementWindow: BorderPane(), WorkWindow.OpenableContent {
     }
 
     private fun updateTimePointer(){
-        val x = Math.round(zoom.value!!.toDouble() / 64.0 * Core.renderManager.time.time * 100.0).toDouble()
+        val x = Math.round(zoom.value!!.toDouble() / 64.0 * renderManager.timeHolder.beats * 100.0).toDouble()
         timePointer.startX = x
         timePointer.endX = x
         if(timePointerCentering){

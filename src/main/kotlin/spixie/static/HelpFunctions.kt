@@ -1,6 +1,5 @@
 package spixie.static
 
-import com.jogamp.opencl.CLBuffer
 import javafx.application.Platform
 import javafx.scene.Group
 import javafx.scene.input.DataFormat
@@ -9,15 +8,10 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Pane
 import org.apache.commons.lang3.math.Fraction
-import spixie.Core
-import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.nio.FloatBuffer
 import java.util.concurrent.CountDownLatch
-import javax.imageio.IIOImage
-import javax.imageio.ImageIO
-import javax.imageio.plugins.jpeg.JPEGImageWriteParam
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     val nozerop0 = (p0 and  0x7FFFFFFFFFFFFFFF) + 1
@@ -56,8 +50,30 @@ fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     return ((x % 0xFFFFFFFFFFFFFFF).toFloat()/0xFFFFFFFFFFFFFFF)
 }
 
-fun frameToTime(frame:Int, bpm:Double): Double {
-    return bpm/3600*frame
+fun beatsToSeconds(beats: Double, bpm: Double): Double {
+    return (beats / bpm) * 60.0
+}
+
+fun secondsToFrame(seconds: Double, fps: Int): Int {
+    return (seconds * fps.toDouble()).roundToInt()
+}
+
+fun frameToSeconds(frame: Int, fps: Int): Double {
+    return frame.toDouble() / fps.toDouble()
+}
+
+fun secondsToBeats(seconds: Double, bpm: Double): Double {
+    return seconds / 60.0 * bpm
+}
+
+fun frameToBeats(frame: Int, bpm: Double, fps: Int): Double {
+    val seconds = frameToSeconds(frame, fps)
+    return secondsToBeats(seconds, bpm)
+}
+
+fun beatsToFrames(beats: Double, bpm: Double, fps: Int): Int {
+    val seconds = beatsToSeconds(beats, bpm)
+    return secondsToFrame(seconds, fps)
 }
 
 const val MAGIC = 0x5bd1e995
@@ -75,22 +91,6 @@ fun Double.raw():Long{
 
 fun Float.raw():Long{
     return this.toDouble().raw()
-}
-
-fun BufferedImage.toJPEGByteArray(quality: Float):ByteArray {
-    val byteArrayOutputStream = ByteArrayOutputStream()
-    ImageIO.getImageWritersByFormatName("jpg").next().run {
-        output = ImageIO.createImageOutputStream(byteArrayOutputStream)
-        write(
-                null,
-                IIOImage(this@toJPEGByteArray, null, null),
-                JPEGImageWriteParam(null).apply {
-                    compressionMode = JPEGImageWriteParam.MODE_EXPLICIT
-                    compressionQuality = quality
-                }
-        )
-    }
-    return byteArrayOutputStream.toByteArray()
 }
 
 fun InputStream.printAvailable(){
@@ -159,9 +159,9 @@ fun convertHueChromaLuminanceToRGB(h:Double, c:Double, l:Double, clampDesaturate
 
             val p = 2 * m - q
 
-            r = Math.pow(hue2rgb(p,q,h+1.0/3.0), 2.2)
-            g = Math.pow(hue2rgb(p,q,h), 2.2)
-            b = Math.pow(hue2rgb(p,q,h-1.0/3.0), 2.2)
+            r = hue2rgb(p, q, h + 1.0 / 3.0).pow(2.2)
+            g = hue2rgb(p, q, h).pow(2.2)
+            b = hue2rgb(p, q, h - 1.0 / 3.0).pow(2.2)
             if(calcLuminance(r,g,b)>l) {
                 rangeB = m
             } else {
@@ -179,12 +179,14 @@ fun convertHueChromaLuminanceToRGB(h:Double, c:Double, l:Double, clampDesaturate
         //Maxima
         //assume(l>0);
         //solve([l=0.2126*(r*k)^2.2+0.7152*(g*k)^2.2+0.0722*(b*k)^2.2], [k]);
-        val k = Math.pow(5000.0, 5.0/11.0)*Math.pow(l, 5.0/11.0)/Math.pow(1063.0*Math.pow(rn,11.0/5.0) + 3576.0*Math.pow(gn,11.0/5.0) + 361.0*Math.pow(bn,11.0/5.0),5.0/11.0)
+        val div5by11 = 5.0 / 11.0
+        val div11by5 = 11.0 / 5.0
+        val k = 5000.0.pow(div5by11) * l.pow(div5by11) / (1063.0 * rn.pow(div11by5) + 3576.0 * gn.pow(div11by5) + 361.0 * bn.pow(div11by5)).pow(div5by11)
 
         val r = rn * k
         val g = gn * k
         val b = bn * k
-        return Triple(Math.pow(r, 2.2), Math.pow(g, 2.2), Math.pow(b, 2.2))
+        return Triple(r.pow(2.2), g.pow(2.2), b.pow(2.2))
     }
 }
 
@@ -208,15 +210,6 @@ const val Pb = 0.0722
 
 fun calcLuminance(r:Double, g:Double, b:Double): Double{
     return r*Pr + g*Pg + b*Pb
-}
-
-fun CLBuffer<FloatBuffer>.toBufferedImage(width: Int, height: Int): BufferedImage {
-    val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
-    val forSave = Core.opencl.forSave(this, width, height)
-    this.release()
-    val floatArray = Core.opencl.readAndRelease(forSave)
-    bufferedImage.raster.setPixels(0, 0, width, height, floatArray)
-    return bufferedImage
 }
 
 fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
@@ -260,14 +253,12 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
     }
 }
 
+fun map(start: Float, end: Float, value: Float): Float {
+    return start + (end - start) * value
+}
+
 val F_100: Fraction = Fraction.getFraction(100.0)
 
 object DragAndDropType {
     val PIN = DataFormat("PIN")
-}
-
-//https://en.wikipedia.org/wiki/Field_of_view_in_video_games
-// Hfov -> Vfov
-fun Double.toVFov(width: Int, height: Int): Double {
-    return Math.toDegrees(2.0 * Math.atan(Math.tan(Math.toRadians(this) / 2.0) * height.toDouble() / width.toDouble()))
 }

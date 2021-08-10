@@ -10,17 +10,11 @@ import javafx.scene.paint.Color
 import javafx.scene.shape.CubicCurve
 import javafx.scene.shape.Rectangle
 import javafx.scene.shape.StrokeLineCap
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import spixie.Core
-import spixie.static.MAGIC
+import spixie.renderManager
 import spixie.static.initCustomPanning
-import spixie.static.mix
-import spixie.static.raw
-import spixie.visualEditor.components.ImageResult
 import spixie.visualEditor.components.ParticlesResult
+import spixie.visualEditor.components.RenderComponent
 import spixie.visualEditor.pins.ComponentPin
-import spixie.visualEditor.pins.ComponentPinNumber
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
 import kotlin.math.max
@@ -40,7 +34,7 @@ class Module {
         stroke = Color.BLACK
     }
 
-    var selectedComponents = arrayOf<Component>()
+    var selectedComponents = arrayOf<EditorComponent>()
         set(value) {
             selectedComponents.forEach { it.selected = false }
             field=value
@@ -65,7 +59,7 @@ class Module {
                 selectionRectangle.isVisible = true
 
                 val componentsUnderCursor = components.children
-                        .map { it as Component }
+                        .map { it as EditorComponent }
                         .filter { it.boundsInParent.intersects(selectionRectangle.boundsInLocal) }
                         .toTypedArray()
 
@@ -83,7 +77,7 @@ class Module {
                 selectionRectangle.width = max(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x) - min(selectionRectangleStartPoint.x, selectionRectangleEndPoint.x)
                 selectionRectangle.height = max(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y) - min(selectionRectangleStartPoint.y, selectionRectangleEndPoint.y)
                 selectedComponents = components.children
-                        .map { it as Component }
+                        .map { it as EditorComponent }
                         .filter { it.boundsInParent.intersects(selectionRectangle.boundsInLocal) }
                         .toTypedArray()
             }
@@ -115,7 +109,7 @@ class Module {
         }
     }
 
-    fun openComponentsList(point2D: Point2D, result: (component: Component) -> Unit) {
+    fun openComponentsList(point2D: Point2D, result: (editorComponent: EditorComponent) -> Unit) {
         ComponentsList(point2D.x, point2D.y, content.children) {
             result(it)
         }
@@ -125,18 +119,18 @@ class Module {
         components.children.clear()
     }
 
-    fun addComponent(component: Component){
-        components.children.add(component)
-        component.conneectionsChanged
+    fun addComponent(editorComponent: EditorComponent){
+        components.children.add(editorComponent)
+        editorComponent.conneectionsChanged
                 .startWith(Unit)
                 .debounce(17L, TimeUnit.MILLISECONDS)
                 .observeOn(JavaFxScheduler.platform())
                 .subscribe{
                     reconnectPins()
                 }
-        component.disconnectPinRequest.subscribe { pinForDisconnect->
+        editorComponent.disconnectPinRequest.subscribe { pinForDisconnect->
             components.children.forEach { component ->
-                if(component is Component){
+                if(component is EditorComponent){
                     component.inputPins.forEach { pin ->
                         if(pin == pinForDisconnect){
                             pin.connections.clear()
@@ -147,38 +141,33 @@ class Module {
                     }
                 }
             }
-            component.conneectionsChanged.onNext(Unit)
+            editorComponent.conneectionsChanged.onNext(Unit)
         }
-        component.relocateSelectedRequests.subscribe { (x, y)->
+        editorComponent.relocateSelectedRequests.subscribe { (x, y)->
             selectedComponents.forEach {
                 it.relativelyMagneticRelocate(x, y)
             }
         }
     }
 
-    fun removeComponent(component: Component){
-        components.children.remove(component)
+    fun removeComponent(editorComponent: EditorComponent){
+        components.children.remove(editorComponent)
     }
 
-    fun findResultComponent(): ImageResult {
-        val result = components.children.find { it is ImageResult } ?: throw Exception("Result component dont exist")
-        return result as ImageResult
+    fun findRenderComponent(): RenderComponent {
+        val result = components.children.find { it is RenderComponent } ?: throw Exception("Render component dont exist")
+        return result as RenderComponent
     }
 
-    fun findParticlesResultComponent(): ParticlesResult {
-        val result = components.children.find { it is ParticlesResult } ?: throw Exception("Result component dont exist")
-        return result as ParticlesResult
-    }
-
-    fun findResultComponentNode(): Node {
-        return components.children.find { it is ImageResult || it is ParticlesResult } ?: throw Exception("Result component dont exist")
+    fun findFinalComponentNode(): Node {
+        return components.children.find { it is RenderComponent || it is ParticlesResult } ?: throw Exception("Final component dont exist")
     }
 
     fun reconnectPins(){
         connects.children.clear()
         contentPane.layout()
         components.children.forEach { component ->
-            if(component is Component){
+            if(component is EditorComponent){
                 component.inputPins.forEach { pin1 ->
                     pin1.connections.forEach { pin2->
                         connectPins(pin2, pin1, Color.DARKVIOLET)
@@ -186,15 +175,13 @@ class Module {
                 }
             }
         }
-        GlobalScope.launch {
-            Core.renderManager.requestRender()
-        }
+        renderManager.requestRender()
     }
 
     private fun connectPins(outputPin: ComponentPin, inputPin: ComponentPin, color: Color){
         val cubicCurve = CubicCurve()
-        val aBounds = outputPin.component.localToParent(outputPin.component.content.localToParent(outputPin.localToParent(outputPin.circle.boundsInParent)))
-        val bBounds = inputPin.component.localToParent(inputPin.component.content.localToParent(inputPin.localToParent(inputPin.circle.boundsInParent)))
+        val aBounds = outputPin.editorComponent.localToParent(outputPin.editorComponent.content.localToParent(outputPin.localToParent(outputPin.circle.boundsInParent)))
+        val bBounds = inputPin.editorComponent.localToParent(inputPin.editorComponent.content.localToParent(inputPin.localToParent(inputPin.circle.boundsInParent)))
         cubicCurve.startX = (aBounds.minX + aBounds.maxX) / 2
         cubicCurve.startY = (aBounds.minY + aBounds.maxY) / 2
         cubicCurve.endX = (bBounds.minX + bBounds.maxX) / 2

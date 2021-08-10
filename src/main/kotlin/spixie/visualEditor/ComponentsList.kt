@@ -10,11 +10,11 @@ import javafx.scene.control.TextField
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
-import spixie.Core
-import spixie.arrangement.ArrangementGraphsContainer
+import spixie.timeline.ArrangementGraphsContainer
+import spixie.timelineWindow
 import spixie.visualEditor.components.*
 
-class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, private val result: (component: Component) -> Unit): BorderPane() {
+class ComponentsList(x: Double, y:Double, private val containerChildrens: ObservableList<Node>, private val result: (editorComponent: EditorComponent) -> Unit): BorderPane() {
     private val listView = ListView<Any>().apply {
         setOnMouseClicked {
             createSelected()
@@ -33,7 +33,6 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             ComponentListItem(Slice::class.java),
             ComponentListItem(ModFilter::class.java),
             ComponentListItem(LineTest::class.java),
-            ComponentListItem(Render::class.java),
             ComponentListItem(FuncLinear::class.java),
             ComponentListItem(FuncSin::class.java),
             ComponentListItem(FuncRandom::class.java),
@@ -64,7 +63,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
             )
 
             listView.items.addAll(
-                    *Core.arrangementWindow.graphs
+                    *timelineWindow.graphs
                             .filter { ("g"+it.name.value).toLowerCase().contains(filterRegex) }
                             .map { ComponentListGraphItem(it) }
                             .toTypedArray()
@@ -112,7 +111,7 @@ class ComponentsList(x: Double, y:Double, private val containerChildrens: Observ
     private fun createSelected(){
         val value = listView.selectionModel.selectedItem
         if (value is ComponentListItem) {
-            val component = value.clazz.newInstance() as @kotlin.ParameterName(name = "component") Component
+            val component = value.clazz.newInstance() as @kotlin.ParameterName(name = "component") EditorComponent
             result(component)
             containerChildrens.remove(this@ComponentsList)
         }

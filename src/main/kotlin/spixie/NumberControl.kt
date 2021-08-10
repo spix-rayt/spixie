@@ -1,26 +1,23 @@
 package spixie
 
-import com.google.common.primitives.Doubles
 import io.reactivex.subjects.PublishSubject
-import javafx.event.EventHandler
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Cursor
-import javafx.scene.Node
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import javafx.scene.effect.DropShadow
-import javafx.scene.input.*
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
+import javafx.scene.input.MouseButton
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Font
-import javafx.scene.text.Text
-import org.apache.commons.lang3.math.NumberUtils
-import java.awt.Robot
 import kotlin.math.floor
 import kotlin.math.log
+import kotlin.math.pow
 
 class NumberControl(initial: Double, val name: String, initialScale: Double = 0.0) : HBox() {
     private var mousePressedScreenX = 0.0
@@ -41,10 +38,13 @@ class NumberControl(initial: Double, val name: String, initialScale: Double = 0.
             redrawNumberLineCanvas()
         }
 
+    var minNumberLineScale = -700.0
+    var maxNumberLineScale = 300.0
+
     var numberLineScale = 0.0
         set(value) {
-            field = value.coerceIn(-700.0, 500.0)
-            valueMultiplier = Math.pow(10.0, field/100.0)
+            field = value.coerceIn(minNumberLineScale, maxNumberLineScale)
+            valueMultiplier = 10.0.pow(field / 100.0)
             redrawNumberLineCanvas()
         }
 
@@ -68,7 +68,7 @@ class NumberControl(initial: Double, val name: String, initialScale: Double = 0.
             clearRect(0.0, 0.0, w, h)
             strokeLine(w/2.0 + 0.5, 0.0, w/2.0 + 0.5, h)
             val log = log(valueMultiplier * w * 1.1, 10.0)
-            val step = Math.pow(10.0, floor(log))
+            val step = 10.0.pow(floor(log))
             val valueRounded = if(value > 0) {
                 value - (value % step)
             } else {
@@ -152,12 +152,12 @@ class NumberControl(initial: Double, val name: String, initialScale: Double = 0.
             if (event.button == MouseButton.PRIMARY) {
                 event.consume()
                 if(event.screenX != mousePressedScreenX || event.screenY != mousePressedScreenY) {
-                    Robot().mouseMove(mousePressedScreenX.toInt(), mousePressedScreenY.toInt())
+                    robot.mouseMove(mousePressedScreenX.toInt(), mousePressedScreenY.toInt())
                 }
                 numberLineScale += mousePressedScreenY - event.screenY
                 val delta = event.screenX - mousePressedScreenX
 
-                value = value+(delta*valueMultiplier)
+                value += delta * valueMultiplier
                 labelValue.cursor = Cursor.NONE
             }
         }

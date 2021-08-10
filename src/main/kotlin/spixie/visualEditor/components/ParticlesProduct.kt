@@ -1,11 +1,11 @@
 package spixie.visualEditor.components
 
-import spixie.visualEditor.Component
+import spixie.visualEditor.EditorComponent
 import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
 
-class ParticlesProduct: Component() {
+class ParticlesProduct: EditorComponent() {
     private val inParticlesA = ComponentPinParticleArray("ParticlesA")
     private val inParticlesB = ComponentPinParticleArray("ParticlesB")
 

@@ -1,10 +1,10 @@
-package spixie.arrangement
+package spixie.timeline
 
 import io.reactivex.subjects.BehaviorSubject
 import javafx.scene.layout.Region
 import org.apache.commons.lang3.math.Fraction
-import spixie.Core
 import spixie.static.F_100
+import spixie.timelineWindow
 import spixie.visualEditor.GraphData
 
 class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Region() {
@@ -22,24 +22,24 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
             maxHeight = value
         }
 
-    var timeStart: Fraction = Fraction.ZERO
+    var beatStart: Fraction = Fraction.ZERO
         set(value) {
             field = value
             updateLayout()
-            Core.arrangementWindow.graphBuilderGroup.children.clear()
+            timelineWindow.graphBuilderGroup.children.clear()
         }
-    var timeEnd: Fraction = Fraction.ZERO
+    var beatEnd: Fraction = Fraction.ZERO
         set(value) {
             field = value
             updateLayout()
-            Core.arrangementWindow.graphBuilderGroup.children.clear()
+            timelineWindow.graphBuilderGroup.children.clear()
         }
 
     var line = 0
         set(value) {
             field = value
             layoutY = value*100.0
-            Core.arrangementWindow.graphBuilderGroup.children.clear()
+            timelineWindow.graphBuilderGroup.children.clear()
         }
 
     var graph: ArrangementGraph? = null
@@ -52,35 +52,35 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
     }
 
     private fun updateLayout(){
-        strictWidth = Fraction.getFraction(100, 64).multiplyBy(timeEnd.subtract(timeStart)).multiplyBy(zoom.value!!).toDouble()
-        layoutX = Fraction.getFraction(100, 64).multiplyBy(timeStart).multiplyBy(zoom.value!!).toDouble()
+        strictWidth = Fraction.getFraction(100, 64).multiplyBy(beatEnd.subtract(beatStart)).multiplyBy(zoom.value!!).toDouble()
+        layoutX = Fraction.getFraction(100, 64).multiplyBy(beatStart).multiplyBy(zoom.value!!).toDouble()
     }
 
     fun buildGraph(){
         graph?.let { graph->
-            val start = timeStart.multiplyBy(F_100).toInt()
-            val end = timeEnd.multiplyBy(F_100).toInt()
+            val start = beatStart.multiplyBy(F_100).toInt()
+            val end = beatEnd.multiplyBy(F_100).toInt()
             val graphBuilder = GraphBuilder(start, if (end > start) end else start + 1, graph)
             val subscribe = zoom.subscribe {
                 graphBuilder.layoutX = layoutX
                 graphBuilder.layoutY = layoutY + height + 10.0
             }
             graphBuilder.parentProperty().addListener { _, _, newValue -> if(newValue == null) subscribe.dispose() }
-            Core.arrangementWindow.graphBuilderGroup.children.setAll(graphBuilder)
+            timelineWindow.graphBuilderGroup.children.setAll(graphBuilder)
         }
     }
 
     fun editGraph(){
         graph?.let { graph->
-            val start = timeStart.multiplyBy(F_100).toInt()
-            val end = timeEnd.multiplyBy(F_100).toInt()
+            val start = beatStart.multiplyBy(F_100).toInt()
+            val end = beatEnd.multiplyBy(F_100).toInt()
             val graphEditor = GraphEditor(start, if (end > start) end else start + 1, graph)
             val subscribe = zoom.subscribe {
                 graphEditor.layoutX = layoutX
                 graphEditor.layoutY = layoutY + height + 10.0
             }
             graphEditor.parentProperty().addListener { _, _, newValue -> if(newValue == null) subscribe.dispose() }
-            Core.arrangementWindow.graphBuilderGroup.children.setAll(graphEditor)
+            timelineWindow.graphBuilderGroup.children.setAll(graphEditor)
         }
     }
 
@@ -89,47 +89,47 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
 
     fun copy(){
         graph?.let { graph ->
-            copyData = graph.data.copy(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            copyStart = timeStart.multiplyBy(F_100).toInt()
+            copyData = graph.data.copy(beatStart.multiplyBy(F_100).toInt(), beatEnd.multiplyBy(F_100).toInt())
+            copyStart = beatStart.multiplyBy(F_100).toInt()
         }
     }
 
     fun paste(){
         graph?.let { graph->
-            val offset = timeStart.multiplyBy(F_100).toInt() - copyStart
+            val offset = beatStart.multiplyBy(F_100).toInt() - copyStart
             copyData.forEach {
                 graph.data.add(GraphData.Fragment(it.start+offset, it.data.clone()))
             }
-            Core.arrangementWindow.needRedrawAllGraphs = true
+            timelineWindow.needRedrawAllGraphs = true
         }
     }
 
     fun del() {
         graph?.let { graph ->
-            graph.data.delete(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            Core.arrangementWindow.needRedrawAllGraphs = true
+            graph.data.delete(beatStart.multiplyBy(F_100).toInt(), beatEnd.multiplyBy(F_100).toInt())
+            timelineWindow.needRedrawAllGraphs = true
         }
     }
 
     fun duplicate(){
         graph?.let { graph->
-            val p = graph.data.copy(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            val pStart = timeStart.multiplyBy(F_100).toInt()
-            val l = timeEnd.subtract(timeStart)
-            timeEnd = timeEnd.add(l)
-            timeStart = timeStart.add(l)
-            val offset = timeStart.multiplyBy(F_100).toInt() - pStart
+            val p = graph.data.copy(beatStart.multiplyBy(F_100).toInt(), beatEnd.multiplyBy(F_100).toInt())
+            val pStart = beatStart.multiplyBy(F_100).toInt()
+            val l = beatEnd.subtract(beatStart)
+            beatEnd = beatEnd.add(l)
+            beatStart = beatStart.add(l)
+            val offset = beatStart.multiplyBy(F_100).toInt() - pStart
             p.forEach {
                 graph.data.add(GraphData.Fragment(it.start+offset, it.data.clone()))
             }
-            Core.arrangementWindow.needRedrawAllGraphs = true
+            timelineWindow.needRedrawAllGraphs = true
         }
     }
 
     fun reverse(){
         graph?.let { graph->
-            graph.data.reverse(timeStart.multiplyBy(F_100).toInt(), timeEnd.multiplyBy(F_100).toInt())
-            Core.arrangementWindow.needRedrawAllGraphs = true
+            graph.data.reverse(beatStart.multiplyBy(F_100).toInt(), beatEnd.multiplyBy(F_100).toInt())
+            timelineWindow.needRedrawAllGraphs = true
         }
     }
 }

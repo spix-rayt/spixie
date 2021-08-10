@@ -1,14 +1,14 @@
-package spixie.arrangement
+package spixie.timeline
 
 import io.reactivex.Observable
 import javafx.scene.control.Button
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
-import spixie.Core
 import spixie.NumberControl
 import spixie.static.linearInterpolate
 import spixie.static.rand
+import spixie.timelineWindow
 import spixie.visualEditor.GraphData
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
@@ -110,7 +110,7 @@ class GraphBuilder(private val start:Int, private val end:Int, private val graph
         graph.data.add(fragment)
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {
             processData(fragment)
-            Core.arrangementWindow.redrawGraph(graph)
+            timelineWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })
     }

@@ -12,6 +12,7 @@ import java.io.DataInputStream
 import java.io.EOFException
 import java.io.File
 import javax.sound.sampled.AudioSystem
+import kotlin.concurrent.thread
 
 class Audio {
     @Volatile private var play = false
@@ -61,8 +62,8 @@ class Audio {
         mediaPlayer?.stop()
         mediaPlayer = null
         spectra = listOf()
-        Core.arrangementWindow.spectrogram.requestRedraw()
-        Thread(Runnable {
+        timelineWindow.spectrogram.requestRedraw()
+        thread {
             val exitValue = if (file.canonicalPath == File("audio.aiff").canonicalPath) {
                 0
             } else {
@@ -124,7 +125,7 @@ class Audio {
                         }
                     }.toDoubleArray()
                 }
-                Core.arrangementWindow.spectrogram.requestRedraw()
+                timelineWindow.spectrogram.requestRedraw()
 
 
                 try {
@@ -147,6 +148,6 @@ class Audio {
                     e.printStackTrace()
                 }
             }
-        }).start()
+        }
     }
 }

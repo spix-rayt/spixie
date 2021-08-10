@@ -2,7 +2,7 @@ package spixie
 
 import java.io.RandomAccessFile
 
-object Cache {
+object DiskCache {
     private val file = RandomAccessFile("cache", "rw")
     private var free = 0L
 
@@ -15,8 +15,8 @@ object Cache {
     }
 
     fun read(longRange: LongRange): ByteArray {
-        file.seek(longRange.start)
-        val byteArray = ByteArray((longRange.endInclusive - longRange.start+1).toInt())
+        file.seek(longRange.first)
+        val byteArray = ByteArray((longRange.last - longRange.first + 1).toInt())
         file.read(byteArray)
         return byteArray
     }

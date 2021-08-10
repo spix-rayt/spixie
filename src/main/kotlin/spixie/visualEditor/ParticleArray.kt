@@ -1,9 +1,7 @@
 package spixie.visualEditor
 
-import spixie.Cache
 import spixie.static.MAGIC
 import spixie.static.mix
-import java.nio.ByteBuffer
 
 class ParticleArray(val array: List<Particle>, val decimalSize: Float) {
     val hash = array.fold(MAGIC.toLong()) { acc, particle ->

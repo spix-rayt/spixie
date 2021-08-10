@@ -3,14 +3,13 @@ package spixie.visualEditor.components
 import javafx.collections.FXCollections
 import javafx.scene.control.ChoiceBox
 import javafx.scene.control.Label
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import spixie.Core
-import spixie.arrangement.ArrangementGraphsContainer
-import spixie.visualEditor.Component
+import spixie.renderManager
+import spixie.timeline.ArrangementGraphsContainer
+import spixie.visualEditor
+import spixie.visualEditor.EditorComponent
 import spixie.visualEditor.pins.ComponentPinNumber
 
-class Graph: Component() {
+class Graph: EditorComponent() {
     var graph = ArrangementGraphsContainer()
         set(value) {
             field = value
@@ -25,7 +24,7 @@ class Graph: Component() {
     }
 
     private val label = Label("")
-    private val parameterMode = ChoiceBox<Mode>(FXCollections.observableArrayList(Mode.values().toList()))
+    private val parameterMode = ChoiceBox(FXCollections.observableArrayList(Mode.values().toList()))
 
     init {
         parameters.add(parameterMode)
@@ -33,10 +32,10 @@ class Graph: Component() {
             getValue = {
                 when (parameterMode.value!!) {
                     Mode.Value -> {
-                        graph.getValue(Core.arrangementWindow.visualEditor.time)
+                        graph.getValue(visualEditor.beats)
                     }
                     Mode.Sum -> {
-                        graph.getSum(Core.arrangementWindow.visualEditor.time)
+                        graph.getSum(visualEditor.beats)
                     }
                 }
             }
@@ -46,9 +45,7 @@ class Graph: Component() {
         content.children.addAll(label)
         parameterMode.selectionModel.select(0)
         parameterMode.selectionModel.selectedItemProperty().addListener { _, _, _ ->
-            GlobalScope.launch {
-                Core.renderManager.requestRender()
-            }
+            renderManager.requestRender()
         }
     }
 }

@@ -1,13 +1,13 @@
-package spixie.arrangement
+package spixie.timeline
 
 import io.reactivex.Observable
 import javafx.scene.control.Button
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
-import spixie.Core
 import spixie.NumberControl
 import spixie.static.linearInterpolate
+import spixie.timelineWindow
 import spixie.visualEditor.GraphData
 import java.util.concurrent.TimeUnit
 
@@ -62,7 +62,7 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
             data.forEach {
                 graph.data.add(it)
             }
-            Core.arrangementWindow.redrawGraph(graph)
+            timelineWindow.redrawGraph(graph)
         }
         children.addAll(VBox().apply { children.addAll(valueControls) })
     }

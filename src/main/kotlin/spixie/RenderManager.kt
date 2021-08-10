@@ -1,40 +1,44 @@
 package spixie
 
 import io.reactivex.Observable
-import io.reactivex.functions.BiFunction
 import io.reactivex.subjects.BehaviorSubject
-import io.reactivex.subjects.Subject
 import javafx.application.Platform
 import javafx.embed.swing.SwingFXUtils
-import javafx.scene.image.Image
 import kotlinx.coroutines.*
-import org.apache.commons.collections4.map.ReferenceMap
 import org.apache.commons.lang3.time.StopWatch
-import spixie.raymarching.Splat
-import spixie.raymarching.SplatRenderer
 import spixie.static.*
 import java.awt.image.BufferedImage
-import java.io.ByteArrayInputStream
-import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
-import kotlin.concurrent.thread
 import kotlin.math.roundToInt
-import kotlin.random.Random
 
-@ObsoleteCoroutinesApi
 class RenderManager {
-    val bpm = NumberControl(160.0, "BPM")
+    val bpm = NumberControl(160.0, "BPM", 0.0).apply {
+        minNumberLineScale = 0.0
+        maxNumberLineScale = 0.0
+        limitMin(60.0)
+        limitMax(999.0)
+    }
 
-    val time = TimeProperty(bpm)
+    val fps = NumberControl(24.0, "FPS")
 
     val offset = NumberControl(0.0, "Offset").apply {
         changes.subscribe {
-            Core.arrangementWindow.spectrogram.requestRedraw()
+            timelineWindow.spectrogram.requestRedraw()
         }
     }
 
-    private val frameCache = ReferenceMap<Int, ByteArray>()
+    val timeHolder = TimeHolder(bpm, fps, offset)
+
+    val samplesPerPixel = NumberControl(20.0, "SPP", 0.0).apply {
+        limitMin(1.0)
+        limitMax(5000.0)
+        minNumberLineScale = 0.0
+        maxNumberLineScale = 0.0
+        changes.subscribe {
+            requestRender()
+        }
+    }
 
     @Volatile var autoRenderNextFrame = false
 
@@ -47,77 +51,62 @@ class RenderManager {
     var scaleDown:Int = 2
         set(value) {
             field = value
-            GlobalScope.launch {
-                Core.renderManager.requestRender()
-            }
+            requestRender()
         }
 
+    private val frameCache = FrameCache()
+
     init {
-        Gamepad.start()
         bpm.apply {
-            limitMin(60.0)
-            limitMax(999.0)
             changes.subscribe { _->
-                Core.arrangementWindow.spectrogram.requestRedraw()
+                timelineWindow.spectrogram.requestRedraw()
             }
 
-            Observable.zip(changes, changes.skip(1), BiFunction { previous: Double, current: Double -> previous to current }).subscribe { pair ->
-                val t = time.time - offset.value
+            Observable.zip(changes, changes.skip(1)) { previous: Double, current: Double -> previous to current }
+                .subscribe { pair ->
+                val t = timeHolder.beats - offset.value
                 offset.value -= t*(pair.second/pair.first)-t
+            }
+        }
+        renderStart()
+    }
+
+    fun doEveryFrame() {
+        if(audio.isPlaying()) {
+            val seconds = audio.getTime()
+            timeHolder.seconds = seconds
+            Platform.runLater {
+                frameCache.getImageOrNUll(timeHolder.beats)?.let {
+                    FXApplication.instance?.updateImage(it)
+                }
             }
         }
     }
 
-    var perFrame = {  }
-
-    fun renderStart(images: Subject<Image>) {
-        perFrame = {
-            if(Core.audio.isPlaying()){
-                val seconds = Core.audio.getTime()
-                time.time = (frameToTime((seconds*60).roundToInt(), Core.renderManager.bpm.value) + offset.value).coerceAtLeast(0.0)
-                frameCache[time.frame/3*3]?.let {
-                    val byteArrayInputStream = ByteArrayInputStream(it)
-                    images.onNext(Image(byteArrayInputStream))
-                }
-            }
-        }
-
+    private fun renderStart() {
         GlobalScope.launch(renderCoroutineDispatcher) {
             while(true) {
                 if(needRender) {
                     try {
-                        val frame = Math.round(time.time * 3600.0 / bpm.value).toInt()
-                        if (!Core.audio.isPlaying()) {
+                        if (!audio.isPlaying()) {
                             val stopWatch = StopWatch.createStarted()
-                            val image = Core.arrangementWindow.visualEditor.render(time.time, scaleDown)
-//                            val splats = arrayListOf<Splat>()
-
-//                            for (i in 0..20000) {
-//                                splats.add(
-//                                    Splat().apply {
-//                                        x = Random.nextDouble(-30.0, 30.0)
-//                                        y = Random.nextDouble(-30.0, 30.0)
-//                                        z = Random.nextDouble(-100.0, -10.0)
-//                                        size = 0.2
-//                                        r = Random.nextDouble(0.0, 0.4)
-//                                        g = Random.nextDouble(0.0, 0.7)
-//                                        b = Random.nextDouble(0.0, 0.4)
-//                                    }
-//                                )
-//                            }
-//                            val image = SplatRenderer.render(splats, scaleDown)
-                            val bufferedImage = image.toBufferedImageAndRelease()
+                            val imageCLBuffer = openCLApi.createImageCLBuffer((1920 / scaleDown).roundUp(2), (1080 / scaleDown).roundUp(2))
+                            visualEditor.render(imageCLBuffer, timeHolder.beats, samplesPerPixel.value.roundToInt())
+                            val bufferedImage = openCLApi.imageCLBufferToBufferedImage(imageCLBuffer)
                             stopWatch.stop()
-                            lastRenderInfoSubject.onNext("${image.particlesCount.toString().padStart(8, ' ')} particles ${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
-                            images.onNext(SwingFXUtils.toFXImage(bufferedImage, null))
+                            //lastRenderInfoSubject.onNext("${imageFloatBuffer.particlesCount.toString().padStart(8, ' ')} particles ${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
+                            lastRenderInfoSubject.onNext("${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
+                            Platform.runLater {
+                                FXApplication.instance?.updateImage(SwingFXUtils.toFXImage(bufferedImage, null))
+                            }
 
                             launch {
-                                frameCache[frame] = bufferedImage.toJPEGByteArray(0.7f)
+                                frameCache.putImage(bufferedImage, timeHolder.beats)
                             }
 
                             if(autoRenderNextFrame){
                                 Platform.runLater {
-                                    time.frame = time.frame/3*3+3
+                                    timeHolder.frame = timeHolder.frame + 1
                                 }
                             }
                         }
@@ -133,25 +122,25 @@ class RenderManager {
             }
         }
 
-        time.timeChanges.distinctUntilChanged().subscribe {
-            GlobalScope.launch {
-                Core.renderManager.requestRender()
-            }
+        timeHolder.timeChanges.distinctUntilChanged().subscribe {
+            requestRender()
         }
     }
 
-    suspend fun requestRender() = withContext(renderCoroutineDispatcher) {
+    fun requestRender() = GlobalScope.launch(renderCoroutineDispatcher) {
         needRender = true
     }
 
-    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, startFrame: Int, endFrame: Int, audio: Boolean, offsetAudio: Double, lowQuality: Boolean) {
-        thread {
-            val downscale = if (lowQuality) 2 else 1
-            val fpsskip = if (lowQuality) 3 else 1
-            val w = 1920 / downscale
-            val h = 1080 / downscale
-            val fps = 60 / fpsskip
-            val countFrames = endFrame - startFrame + 1
+    fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, beatStart: Double, beatEnd: Double, audio: Boolean, offsetAudio: Double, fps: Int) {
+        GlobalScope.launch(Dispatchers.IO) {
+            val selectedFrames = IntRange(
+                beatsToFrames(beatStart, bpm.value, fps),
+                beatsToFrames(beatEnd, bpm.value, fps)
+            )
+
+            val w = 1920
+            val h = 1080
+            val countFrames = selectedFrames.count()
             val ifAudio = { v: String -> if (audio) v else null }
             val processBuilder = ProcessBuilder(
                 listOfNotNull(
@@ -162,12 +151,12 @@ class RenderManager {
                     "-i", "-",
                     ifAudio("-itsoffset"), ifAudio(offsetAudio.toString()),
                     ifAudio("-i"), ifAudio("audio.aiff"),
-                    "-ss", "${startFrame / fps.toDouble()}",
+                    "-ss", "${selectedFrames.start / fps.toDouble()}",
                     "-c:v", "h264",
                     "-g", "1",
                     ifAudio("-c:a"), ifAudio("aac"),
                     "-shortest",
-                    "out.avi"
+                    "out.mkv"
                 )
             )
             val process = processBuilder.start()
@@ -178,42 +167,38 @@ class RenderManager {
             try {
                 run {
                     val bufferedImage1 = BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR)
-                    for (frame in 0 until startFrame step fpsskip) {
+                    for (frame in 0 until selectedFrames.first) {
                         ImageIO.write(bufferedImage1, "png", outputStream)
                     }
                 }
 
-                for (frame in startFrame..endFrame step fpsskip) {
+                for (frame in selectedFrames) {
                     if (!process.isAlive) {
                         break
                     }
                     val bufferedImage = runBlocking(renderCoroutineDispatcher) {
-                        (0 until motionBlurIterations)
-                            .map { k ->
-                                Core.arrangementWindow.visualEditor.render(
-                                    linearInterpolate(
-                                        frameToTime(frame - fpsskip, bpm.value),
-                                        frameToTime(frame, bpm.value),
-                                        (k + 1) / motionBlurIterations.toDouble()
-                                    ),
-                                    downscale
-                                ).buffer
-                            }
-                            .map { buffer ->
-                                Core.opencl.brightPixelsToWhite(buffer, w, h).also { buffer.release() }
-                            }
-                            .reduce { accum, pixelsBuffer ->
-                                Core.opencl.pixelSum(accum, pixelsBuffer, w, h, 1.0f / motionBlurIterations)
-                                pixelsBuffer.release()
-                                accum
-                            }.toBufferedImage(w, h)
+                        val imageFloatBuffer = openCLApi.createImageCLBuffer(w, h)
+                        for(k in 0 until motionBlurIterations) {
+                            val t = linearInterpolate(
+                                frameToBeats(frame - 1, bpm.value, fps),
+                                frameToBeats(frame, bpm.value, fps),
+                                (k + 1) / motionBlurIterations.toDouble()
+                            )
+                            visualEditor.render(
+                                imageFloatBuffer,
+                                t,
+                                samplesPerPixel.value.roundToInt()
+                            )
+                        }
+                        val clBuffer = openCLApi.brightPixelsToWhite(imageFloatBuffer.buffer, w, h, 1.0f / motionBlurIterations).also { imageFloatBuffer.buffer.release() }
+                        openCLApi.clBufferToBufferedImage(clBuffer, w, h)
                     }
 
                     ImageIO.write(bufferedImage, "png", outputStream)
                     inputStream.printAvailable()
                     errorStream.printAvailable()
 
-                    Platform.runLater { frameRenderedToFileEventHandler(frame - startFrame + 1, countFrames) }
+                    Platform.runLater { frameRenderedToFileEventHandler(frame - selectedFrames.first + 1, countFrames) }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -229,13 +214,6 @@ class RenderManager {
             }
 
             Platform.runLater { renderToFileCompleted() }
-        }
-    }
-
-    fun clearCache() {
-        GlobalScope.launch(renderCoroutineDispatcher) {
-            frameCache.clear()
-            requestRender()
         }
     }
 }

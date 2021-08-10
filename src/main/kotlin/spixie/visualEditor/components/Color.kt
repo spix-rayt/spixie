@@ -1,11 +1,11 @@
 package spixie.visualEditor.components
 
 import spixie.NumberControl
-import spixie.visualEditor.Component
+import spixie.visualEditor.EditorComponent
 import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 
-class Color: Component() {
+class Color: EditorComponent() {
     private val inParticles = ComponentPinParticleArray("Particles")
 
     private val inHue = ComponentPinNumber("Hue", NumberControl(2.0, "", -300.0))

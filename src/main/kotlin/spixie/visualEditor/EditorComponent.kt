@@ -5,22 +5,17 @@ import javafx.geometry.Point2D
 import javafx.geometry.Pos
 import javafx.scene.Group
 import javafx.scene.Node
-import javafx.scene.control.ContextMenu
 import javafx.scene.control.Label
-import javafx.scene.control.MenuItem
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
-import spixie.Core
+import spixie.timelineWindow
+import spixie.visualEditor
 import spixie.visualEditor.pins.ComponentPin
-import spixie.visualEditor.pins.ComponentPinNumber
-import java.io.Externalizable
-import java.io.ObjectInput
-import java.io.ObjectOutput
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-abstract class Component:Region() {
+abstract class EditorComponent: Region() {
     val parameters = arrayListOf<Node>()
 
     val inputPins = arrayListOf<ComponentPin>()
@@ -78,9 +73,9 @@ abstract class Component:Region() {
     }
 
     fun deleteComponent() {
-        Core.arrangementWindow.visualEditor.mainModule.removeComponent(this)
-        this@Component.inputPins.forEach { disconnectPinRequest.onNext(it) }
-        this@Component.outputPins.forEach { disconnectPinRequest.onNext(it) }
+        visualEditor.mainModule.removeComponent(this)
+        this@EditorComponent.inputPins.forEach { disconnectPinRequest.onNext(it) }
+        this@EditorComponent.outputPins.forEach { disconnectPinRequest.onNext(it) }
     }
 
     fun magneticRelocate(x: Double, y:Double){

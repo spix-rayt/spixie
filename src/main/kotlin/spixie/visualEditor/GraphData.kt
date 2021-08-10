@@ -1,20 +1,19 @@
 package spixie.visualEditor
 
-import spixie.NoArg
 import spixie.static.linearInterpolate
 
 class GraphData {
-    val values = arrayListOf<Fragment>()
+    private val values = arrayListOf<Fragment>()
 
     fun getValue(time: Double): Double {
-        val x = time*100.0
+        val x = time * 100.0
         val xi = x.toInt()
-        val t = (x%1)
+        val t = (x % 1)
         val rightValue = getRightValue(xi)
         val leftValue = getLeftValue(xi + 1)
-        return if(rightValue.isNaN() || leftValue.isNaN()){
+        return if(rightValue.isNaN() || leftValue.isNaN()) {
             Double.NaN
-        }else{
+        } else {
             linearInterpolate(rightValue.toDouble(), leftValue.toDouble(), t)
         }
     }
@@ -25,18 +24,19 @@ class GraphData {
         values.forEach {
             val start = it.start
             val end = it.start + it.data.lastIndex
-            if(index in start..end){
-                if(index==start){
+            if(index in start..end) {
+                if(index==start) {
                     right = it.data[index-start]
-                }else{
+                } else {
                     result = it.data[index-start]
                 }
             }
         }
-        return if (result.isNaN())
+        return if (result.isNaN()) {
             right
-        else
+        } else {
             result
+        }
     }
 
     fun getRightValue(index: Int): Float {
@@ -53,10 +53,11 @@ class GraphData {
                 }
             }
         }
-        return if (result.isNaN())
+        return if (result.isNaN()) {
             left
-        else
+        } else {
             result
+        }
     }
 
     fun add(fragment: Fragment){
@@ -78,17 +79,17 @@ class GraphData {
                     else -> null
                 }
             }
-        }else{
+        } else {
             listOf()
         }
     }
 
     fun delete(deleteStart: Int, deleteEnd:Int){
-        if(deleteStart<deleteEnd){
+        if(deleteStart<deleteEnd) {
             val newValues = values.flatMap {
                 val start = it.start
                 val end = it.start + it.data.lastIndex
-                when{
+                when {
                     deleteStart<=start && deleteEnd>=end -> listOf()
                     deleteEnd<=start -> listOf(it)
                     deleteStart>=end -> listOf(it)
@@ -113,6 +114,5 @@ class GraphData {
         }
     }
 
-    @NoArg
     class Fragment(val start: Int, var data: FloatArray)
 }
