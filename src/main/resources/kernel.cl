@@ -1,4 +1,6 @@
-float linearstep(float start, float end, float value){
+#define INTEROCULAR_DISTANCE 63.0f
+
+float linearstep(float start, float end, float value) {
     return clamp((value - start) / (end - start), 0.0f, 1.0f);
 }
 
@@ -10,7 +12,7 @@ float mod(float a, float b) {
     return fmod(fmod(a, b) + b, b);
 }
 
-float hue2rgb(float p, float q, float t){
+float hue2rgb(float p, float q, float t) {
     if(t<0.0f) t+=1.0f;
     if(t>1.0f) t-=1.0f;
     if(t<1.0f/6.0f) return p+(q-p)*6.0*t;
@@ -19,21 +21,21 @@ float hue2rgb(float p, float q, float t){
     else return p;
 }
 
-float calcLuminance(float r, float g, float b){
+float calcLuminance(float r, float g, float b) {
     float Pr = 0.2126;
     float Pg = 0.7152;
     float Pb = 0.0722;
     return r*Pr + g*Pg + b*Pb;
 }
 
-float3 convertHueChromaLuminanceToRGB(float h, float c, float l){
+float3 convertHueChromaLuminanceToRGB(float h, float c, float l) {
     float rangeA = 0.0f;
     float rangeB = 1.0f;
     float r = 0.0f;
     float g = 0.0f;
     float b = 0.0f;
 
-    for(int i=0;i<20;i++){
+    for(int i = 0; i < 20; i++) {
         float m = (rangeA+rangeB)/2.0f;
         float q;
         if(m<0.5f) q=m*(1+c);
@@ -43,9 +45,9 @@ float3 convertHueChromaLuminanceToRGB(float h, float c, float l){
         r = pow(hue2rgb(p,q,h+1.0f/3.0), 2.2f);
         g = pow(hue2rgb(p,q,h), 2.2f);
         b = pow(hue2rgb(p,q,h-1.0f/3.0), 2.2f);
-        if(calcLuminance(r,g,b)>l){
+        if(calcLuminance(r,g,b)>l) {
             rangeB = m;
-        }else{
+        } else {
             rangeA = m;
         }
     }
@@ -53,19 +55,19 @@ float3 convertHueChromaLuminanceToRGB(float h, float c, float l){
     return (float3)(r,g,b);
 }
 
-float2 convertRGBToHueChroma(float r, float g, float b){
+float2 convertRGBToHueChroma(float r, float g, float b) {
     float max = fmax(r,fmax(g,b));
     float min = fmin(r,fmin(g,b));
     float h = (max + min)/2.0f;
     float d = max-min;
     float s = d/(max+min);
-    if(max == r){
+    if(max == r) {
         h = (g-b)/d + (g<b ? 6.0f : 0.0f);
     }
-    if(max == g){
+    if(max == g) {
         h = (b-r)/d+2.0f;
     }
-    if(max == b){
+    if(max == b) {
         h = (r-g)/d+4.0f;
     }
     return (float2)(h/6.0f, s);
@@ -85,7 +87,7 @@ float3 cameraShiftVector(int id, int sample, int samplesPerPixel) {
     return (float3)(x, y, 0.0f);
 }
 
-__kernel void brightPixelsToWhite(__global float *inputImage, int size, float k, __global float *outputImage){
+__kernel void brightPixelsToWhite(__global float *inputImage, int size, float k, __global float *outputImage) {
     int workId = get_global_id(0);
     if(workId >= size) return;
 
@@ -109,7 +111,7 @@ __kernel void brightPixelsToWhite(__global float *inputImage, int size, float k,
     outputImage[workId * 3 + 2] = clamp(rgb.z, 0.0f, 1.0f);
 }
 
-__kernel void prepareForSave(__global float *inputImage, int size, __global float *outputImage){
+__kernel void prepareForSave(__global float *inputImage, int size, __global float *outputImage) {
     int workId = get_global_id(0);
     if(workId >= size) return;
 
@@ -117,7 +119,7 @@ __kernel void prepareForSave(__global float *inputImage, int size, __global floa
     outputImage[workId] = clamp(pow(color, 1.0f/2.2f)*255.0f, 0.0f, 255.0f);
 }
 
-__kernel void zeroBuffer(__global float *buffer, int size){
+__kernel void zeroBuffer(__global float *buffer, int size) {
     int workId = get_global_id(0);
     if(workId >= size) return;
     buffer[workId] = 0.0f;
@@ -149,9 +151,9 @@ __kernel void render(__global float *objects, int objectsCount, int width, int h
             float3 rayOrigin = (float3)(0.0f, 0.0f, 0.0f);
             if(vr) {
                 if(left) {
-                    rayOrigin.x -= 0.063f / 2.0f;
+                    rayOrigin.x -= INTEROCULAR_DISTANCE / 2.0f;
                 } else {
-                    rayOrigin.x += 0.063f / 2.0f;
+                    rayOrigin.x += INTEROCULAR_DISTANCE / 2.0f;
                 }
             }
             float3 rayDirection;

@@ -34,7 +34,7 @@ class OpenCLApi {
         program = context.createProgram(resourceAsStream).build()
     }
 
-    val splatsFloatArray by lazy { context.createFloatBuffer(7000, CLMemory.Mem.READ_ONLY) }
+    val splatsFloatArray by lazy { context.createFloatBuffer(700000, CLMemory.Mem.READ_ONLY) }
 
     val kernelBrightPixelsToWhite by lazy { program.createCLKernel("brightPixelsToWhite") }
     val kernelPrepareForSave by lazy { program.createCLKernel("prepareForSave") }
@@ -96,7 +96,6 @@ class OpenCLApi {
             return
         }
         val sortedSplats = splats.sortedBy { it.x * it.x + it.y * it.y + it.z * it.z }
-        val splatsCountList = arrayListOf<Int>()
         for(chunkY in 0..imageCLBuffer.height step CHUNK_SIZE) {
             for(chunkX in 0..imageCLBuffer.width step CHUNK_SIZE) {
                 val filteredSplats = filterSplatsForChunk(imageCLBuffer, sortedSplats, renderParameters, chunkX, chunkY)
@@ -113,13 +112,10 @@ class OpenCLApi {
                     splatsFloatArray.buffer.put(splat.g)
                     splatsFloatArray.buffer.put(splat.b)
                 }
-                splatsCountList.add(splatsCount)
                 splatsFloatArray.buffer.rewind()
                 chunkRenderSplats(imageCLBuffer, splatsCount, renderParameters, chunkX, chunkY)
             }
         }
-
-        println("Splats stat: avg=${splatsCountList.average()} min=${splatsCountList.minOrNull()} max=${splatsCountList.maxOrNull()}")
     }
 
     private fun filterSplatsForChunk(imageCLBuffer: ImageCLBuffer, sortedSplats: List<Splat>, renderParameters: RenderParameters, chunkX: Int, chunkY: Int): Sequence<Splat> {
@@ -150,7 +146,7 @@ class OpenCLApi {
             val dist = projection.sub(pos).length()
             val resolutionFactor = max(1920.0 / imageCLBuffer.width, 1080.0 / imageCLBuffer.height)
             dist < splat.size + 0.0065f * dt * 4.5f * resolutionFactor //FIXME: improve calculations
-        }.take(1000)
+        }.take(100000)
     }
 
     private fun chunkRenderSplats(imageCLBuffer: ImageCLBuffer, splatsCount: Int, renderParameters: RenderParameters, chunkX: Int, chunkY: Int) {

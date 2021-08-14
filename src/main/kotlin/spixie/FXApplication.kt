@@ -1,5 +1,6 @@
 package spixie
 
+import com.badlogic.gdx.Game
 import io.reactivex.rxkotlin.Observables
 import io.reactivex.subjects.BehaviorSubject
 import javafx.animation.AnimationTimer
@@ -70,17 +71,17 @@ class FXApplication : Application() {
 
         setWindowsMode(WindowsMode.SINGLE)
 
-        workWindow.open(timelineWindow)
+        projectWindow.open(timelineWindow)
         val windowOpacity = BehaviorSubject.createDefault(0.0)
         val windowHide = BehaviorSubject.createDefault(false)
         Observables.combineLatest(windowOpacity, windowHide) { opacity, hide ->
-            workWindow.opacity = if(hide) 0.0 else opacity
+            projectWindow.opacity = if(hide) 0.0 else opacity
         }.subscribe()
 
         var playStartTime = 0.0
 
         firstStageRoot.onKeyPressed = EventHandler { event ->
-            if(event.isControlDown && !event.isAltDown && !event.isShiftDown){
+            if(event.isControlDown && !event.isAltDown && !event.isShiftDown) {
                 if (event.code == KeyCode.DIGIT1 && event.isControlDown) {
                     windowOpacity.onNext(1.0)
                 }
@@ -101,37 +102,37 @@ class FXApplication : Application() {
                 }
             }
 
-            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
+            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown) {
                 if (event.code == KeyCode.TAB) {
                     windowHide.onNext(true)
                 }
 
-                if(event.code == KeyCode.A){
-                    renderManager.timeHolder.frame = (renderManager.timeHolder.frame-1).coerceAtLeast(0)
+                if(event.code == KeyCode.A) {
+                    projectWindow.timeHolder.frame = (projectWindow.timeHolder.frame-1).coerceAtLeast(0)
                 }
-                if(event.code == KeyCode.D){
-                    renderManager.timeHolder.frame += 1
+                if(event.code == KeyCode.D) {
+                    projectWindow.timeHolder.frame += 1
                 }
-                if(event.code == KeyCode.P){
+                if(event.code == KeyCode.P) {
                     if(!renderManager.autoRenderNextFrame) {
                         renderManager.autoRenderNextFrame = true
-                        renderManager.timeHolder.frame = renderManager.timeHolder.frame
+                        projectWindow.timeHolder.frame = projectWindow.timeHolder.frame
                         renderManager.requestRender()
                     }
                 }
-                if(event.code == KeyCode.SPACE){
-                    if(audio.isPlaying()){
+                if(event.code == KeyCode.SPACE) {
+                    if(audio.isPlaying()) {
                         audio.pause()
-                        Platform.runLater { renderManager.timeHolder.beats = playStartTime }
-                    }else{
-                        playStartTime = renderManager.timeHolder.beats
-                        audio.play(Duration.seconds(((playStartTime - renderManager.offset.value) * 3600 / renderManager.bpm.value).roundToLong() / 60.0))
+                        Platform.runLater { projectWindow.timeHolder.beats = playStartTime }
+                    } else {
+                        playStartTime = projectWindow.timeHolder.beats
+                        audio.play(Duration.seconds(((playStartTime - projectWindow.offset.value) * 3600 / projectWindow.bpm.value).roundToLong() / 60.0))
                     }
                 }
-                if(event.code == KeyCode.F2){
+                if(event.code == KeyCode.F2) {
                     OpenCLInfoWindow(firstStage.scene.window)
                 }
-                if(event.code == KeyCode.F8){
+                if(event.code == KeyCode.F8) {
                     if(!File("screenshots/").exists()) File("screenshots/").mkdir()
                     ImageIO.write(SwingFXUtils.fromFXImage(imageView.image, null), "png", File("screenshots/${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.png"))
                 }
@@ -142,51 +143,44 @@ class FXApplication : Application() {
             if (event.code == KeyCode.TAB) {
                 windowHide.onNext(false)
             }
-            if(event.code == KeyCode.P){
+            if(event.code == KeyCode.P) {
                 renderManager.autoRenderNextFrame = false
             }
         }
 
         firstStage.onCloseRequest = EventHandler {
-//            val bytes = arrangementWindow.serialize()
-//            if(!File("save/").exists()) File("save/").mkdir()
-//            if(File("save/save.spixie").exists()){
-//                Files.move(Paths.get("save/save.spixie"), Paths.get("save/save${SimpleDateFormat("yyyy-MM-dd_HHmmss").format(Calendar.getInstance().time)}.spixie"), StandardCopyOption.REPLACE_EXISTING)
-//            }
-//            Files.write(Paths.get("save/save.spixie"), bytes)
+            projectWindow.saveProject()
+            renderManager.renderCoroutineDispatcher.close()
+            Gamepad.gamepadCoroutineDispatcher.close()
             Platform.exit()
         }
 
-//        File("save/save.spixie").let {
-//            if(it.exists()){
-//                arrangementWindow.deserializeAndLoad(it.inputStream())
-//            }
-//        }
+        projectWindow.loadLastProject()
 
         object : AnimationTimer() {
             override fun handle(now: Long) {
                 renderManager.doEveryFrame()
-                if(workWindow.opacity != 0.0){
+                if(projectWindow.opacity != 0.0) {
                     timelineWindow.doEveryFrame()
                 }
             }
         }.start()
 
-        /*if(File("audio.aiff").exists()) {
-            audio.load(File("audio.aiff"))
-        }*/
+//        if(File("audio.aiff").exists()) {
+//            audio.load(File("audio.aiff"))
+//        }
     }
 
     fun setWindowsMode(windowsMode: WindowsMode) {
         when(windowsMode) {
             WindowsMode.SINGLE -> {
-                workWindow.prefWidthProperty().bind(firstStage.scene.widthProperty())
-                workWindow.prefHeightProperty().bind(firstStage.scene.heightProperty())
-                firstStageRoot.children.addAll(workWindow)
+                projectWindow.prefWidthProperty().bind(firstStage.scene.widthProperty())
+                projectWindow.prefHeightProperty().bind(firstStage.scene.heightProperty())
+                firstStageRoot.children.addAll(projectWindow)
 
                 firstStage.scene.focusOwnerProperty().addListener { _, _, newValue ->
-                    if(newValue == null){
-                        workWindow.center.requestFocus()
+                    if(newValue == null) {
+                        projectWindow.center.requestFocus()
                     }
                 }
 
@@ -196,19 +190,19 @@ class FXApplication : Application() {
                 if(secondStage == null) {
                     val stage = Stage()
                     secondStage = stage
-                    firstStageRoot.children.remove(workWindow)
+                    firstStageRoot.children.remove(projectWindow)
 
                     stage.scene = Scene(secondStageRoot, 100.0, 100.0)
                     stage.scene.stylesheets.add("style.css")
                     stage.scene.focusOwnerProperty().addListener { _, _, newValue ->
                         if(newValue == null) {
-                            workWindow.center.requestFocus()
+                            projectWindow.center.requestFocus()
                         }
                     }
 
-                    workWindow.prefWidthProperty().bind(stage.scene.widthProperty())
-                    workWindow.prefHeightProperty().bind(stage.scene.heightProperty())
-                    secondStageRoot.children.addAll(workWindow)
+                    projectWindow.prefWidthProperty().bind(stage.scene.widthProperty())
+                    projectWindow.prefHeightProperty().bind(stage.scene.heightProperty())
+                    secondStageRoot.children.addAll(projectWindow)
 
                     val screen = Screen.getScreens().getOrNull(1)
                     if(screen != null) {

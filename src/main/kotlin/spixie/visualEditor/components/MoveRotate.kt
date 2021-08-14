@@ -1,11 +1,11 @@
 package spixie.visualEditor.components
 
 import spixie.NumberControl
-import spixie.visualEditor.EditorComponent
+import spixie.visualEditor.Component
 import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 
-class MoveRotate: EditorComponent() {
+class MoveRotate: Component() {
     private val inParticles = ComponentPinParticleArray("Particles")
 
     private val inX = ComponentPinNumber("X", NumberControl(0.0, ""))
@@ -23,28 +23,23 @@ class MoveRotate: EditorComponent() {
     private val outParticles = ComponentPinParticleArray("Particles").apply {
         getValue = {
             val particles = inParticles.receiveValue()
-            val mx = inX.receiveValue()
-            val my = inY.receiveValue()
-            val mz = inZ.receiveValue()
-            val rx = inRotateX.receiveValue()
-            val ry = inRotateY.receiveValue()
-            val rz = inRotateZ.receiveValue()
 
-            particles.array.forEach {
-                it.apply {
-                    matrix
-                            .rotateLocalX((rx * Math.PI * 2).toFloat())
-                            .rotateLocalY((ry * Math.PI * 2).toFloat())
-                            .rotateLocalZ((rz * Math.PI * 2).toFloat())
-                            .translateLocal(mx.toFloat(), my.toFloat(), mz.toFloat())
-                }
+            particles.forEachWithGradient { t, particle ->
+                val mx = inX.receiveValue(t)
+                val my = inY.receiveValue(t)
+                val mz = inZ.receiveValue(t)
+                val rx = inRotateX.receiveValue(t)
+                val ry = inRotateY.receiveValue(t)
+                val rz = inRotateZ.receiveValue(t)
+
+                particle.matrix
+                    .rotateLocalX((rx * Math.PI * 2).toFloat())
+                    .rotateLocalY((ry * Math.PI * 2).toFloat())
+                    .rotateLocalZ((rz * Math.PI * 2).toFloat())
+                    .translateLocal(mx.toFloat(), my.toFloat(), mz.toFloat())
             }
             particles
         }
-    }
-
-    fun changeZ(value:Double){
-        inZ.valueControl?.value = value
     }
 
     init {

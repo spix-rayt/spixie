@@ -7,22 +7,22 @@ import java.nio.FloatBuffer
 import kotlin.math.absoluteValue
 
 class Particle {
-    var hue:Float = Float.NaN
-        set(value){
-            if(value>=0){
-                field = value.rem(6.0f)
-            }else{
-                field = 6.0f - value.absoluteValue.rem(6.0f)
+    var hue: Float = Float.NaN
+        set(value) {
+            field = if(value>=0) {
+                value.rem(6.0f)
+            } else {
+                6.0f - value.absoluteValue.rem(6.0f)
             }
         }
 
-    var chroma:Float = 1.0f
+    var chroma: Float = 1.0f
 
-    var luminance:Float = 1.0f
+    var luminance: Float = 1.0f
 
-    var transparency:Float = 1.0f
+    var transparency: Float = 1.0f
 
-    var size:Float = 1.0f
+    var size: Float = 1.0f
 
     var edge: Float = 0.0f
 
@@ -30,18 +30,6 @@ class Particle {
 
     fun hasColor(): Boolean {
         return !hue.isNaN()
-    }
-
-    fun moveX(x: Float) {
-        matrix.translateLocal(x, 0.0f, 0.0f)
-    }
-
-    fun moveY(y: Float) {
-        matrix.translateLocal(0.0f, y, 0.0f)
-    }
-
-    fun moveZ(z:Float) {
-        matrix.translateLocal(0.0f, 0.0f, z)
     }
 
     fun copy(): Particle {
@@ -103,7 +91,7 @@ class Particle {
         floatBuffer.put(matrix.m33())
     }
 
-    fun loadFrom(floatBuffer: FloatBuffer){
+    fun loadFrom(floatBuffer: FloatBuffer) {
         hue = floatBuffer.get()
         chroma = floatBuffer.get()
         luminance = floatBuffer.get()
@@ -125,9 +113,5 @@ class Particle {
         matrix.m31(floatBuffer.get())
         matrix.m32(floatBuffer.get())
         matrix.m33(floatBuffer.get())
-    }
-
-    companion object {
-        const val PARTICLE_FLOATS = 21
     }
 }

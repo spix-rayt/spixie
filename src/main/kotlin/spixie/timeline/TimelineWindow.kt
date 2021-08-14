@@ -22,7 +22,7 @@ import spixie.static.initCustomPanning
 import spixie.static.runInUIAndWait
 import kotlin.math.roundToInt
 
-class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
+class TimelineWindow: BorderPane(), ProjectWindow.OpenableContent {
     private val contentPane = Pane()
 
     private val content = Group()
@@ -61,12 +61,12 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
     var timePointerCentering = false
         set(value) {
             field = value
-            if(value){
+            if(value) {
                 updateTimePointer()
             }
         }
 
-    val spectrogram by lazy { Spectrogram(content, this, renderManager, audio) }
+    val spectrogram by lazy { Spectrogram(content, this, audio) }
 
     private val graphsTree = Pane().apply {
         style="-fx-background-color: #101B2CFF"
@@ -74,7 +74,7 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
 
     val graphs = arrayListOf<ArrangementGraphsContainer>()
 
-    private fun updateGrid(){
+    private fun updateGrid() {
         contentPane.style = "-fx-background-color: #FFFFFFFF, linear-gradient(from ${content.layoutX+0.5}px 0px to ${content.layoutX+200.5}px 0px, repeat, #00000066 0.26%, transparent 0.26%), linear-gradient(from ${content.layoutX+100.5}px 0px to ${content.layoutX+300.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+200.5}px 0px to ${content.layoutX+400.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from ${content.layoutX+300.5}px 0px to ${content.layoutX+500.5}px 0px, repeat, #00000019 0.26%, transparent 0.26%),linear-gradient(from 0px ${content.layoutY-49.5}px to 0px ${content.layoutY+50.5}px, repeat, #00000010 50.5%, transparent 50.5%);"
     }
 
@@ -93,7 +93,7 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
         }
     }
 
-    fun redrawGraph(only: ArrangementGraph?){
+    fun redrawGraph(only: ArrangementGraph?) {
         val newGraphsLayoutX = -content.layoutX - 100
         val startTime = calcTimeOfX(-content.layoutX - 100)
         val endTime = calcTimeOfX(-content.layoutX + width + 100)
@@ -122,7 +122,7 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
         } else {
             runInUIAndWait {
                 graphs.forEach {
-                    if(it.expanded){
+                    if(it.expanded) {
                         it.list.forEach {
                             redraw(it)
                         }
@@ -132,20 +132,21 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
         }
     }
 
-    private fun updateGraphTree(){
+    private fun updateGraphTree() {
         graphCanvases.children.clear()
         val graphsTreeContent = graphsTree.children[0] as Pane
         graphsTreeContent.children.clear()
         layout()
-        var i = 3
+        var y = spectrogram.height
         graphs.forEach { graphContainter->
             graphsTreeContent.children.add(Pane().apply {
                 style="-fx-background-color: #FFFFFFFF;"
                 setMinSize(graphsTree.width-1, 100.0)
-                layoutY = i*100.0
+                layoutY = y
+                y += 100.0
                 children.add(graphContainter.name)
                 setOnMouseClicked { event->
-                    if(event.button == MouseButton.PRIMARY){
+                    if(event.button == MouseButton.PRIMARY) {
                         graphContainter.expanded = !graphContainter.expanded
                         updateGraphTree()
                     }
@@ -170,14 +171,14 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
                     event.consume()
                 }
             })
-            i++
 
-            if(graphContainter.expanded){
+            if(graphContainter.expanded) {
                 graphContainter.list.forEach { graph->
                     graphsTreeContent.children.add(Pane().apply {
                         style="-fx-background-color: #FFFFFFFF;"
                         setMinSize(graphsTree.width-1, 100.0)
-                        layoutY = i*100.0
+                        layoutY = y
+                        y += 100.0
                         children.add(
                                 VBox(
                                         graph.rangeMaxControl, graph.rangeMinControl
@@ -196,8 +197,8 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
                         }
                     })
                     graphCanvases.children.add(graph.canvas)
-                    graph.canvas.layoutY = i*100.0
-                    i++
+                    graph.canvas.layoutY = y
+                    y += 100.0
                 }
             }
         }
@@ -213,7 +214,7 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
 
         contentPane.initCustomPanning(content, false)
 
-        renderManager.timeHolder.timeChanges.subscribe {
+        projectWindow.timeHolder.timeChanges.subscribe {
             updateTimePointer()
         }
 
@@ -223,9 +224,9 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
 
         contentPane.addEventFilter(MouseEvent.MOUSE_DRAGGED) { event ->
             updateCursor(event)
-            if(event.isControlDown){
+            if(event.isControlDown) {
                 val screenToLocal = content.screenToLocal(event.screenX, event.screenY)
-                renderManager.timeHolder.beats = calcTimeOfX(screenToLocal.x)
+                projectWindow.timeHolder.beats = calcTimeOfX(screenToLocal.x)
             }
         }
 
@@ -233,41 +234,40 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
         var mousePressedLine:Int? = null
         contentPane.addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
             if(event.isConsumed) return@addEventHandler
-            if(event.button == MouseButton.PRIMARY){
+            if(event.button == MouseButton.PRIMARY) {
                 mousePressedCursorX = cursor.startX
-                mousePressedLine = (content.screenToLocal(event.screenX, event.screenY).y/100.0).toInt()
+                mousePressedLine = ((content.screenToLocal(event.screenX, event.screenY).y - spectrogram.height) / 100.0).toInt()
             }
             requestFocus()
         }
 
         contentPane.addEventHandler(MouseEvent.MOUSE_RELEASED) { event ->
-            if(event.button == MouseButton.PRIMARY){
+            if(event.button == MouseButton.PRIMARY) {
                 mousePressedCursorX?.let { pressedCursorX ->
                     mousePressedLine?.let { pressedLine ->
-                        if(pressedCursorX == cursor.startX){
+                        if(pressedCursorX == cursor.startX) {
                             val restartAudio = audio.isPlaying()
-                            if(restartAudio){
+                            if(restartAudio) {
                                 audio.pause()
                             }
-                            renderManager.timeHolder.beats = calcTimeOfX(cursor.startX-0.5)
-                            if(restartAudio){
-                                audio.play(Duration.seconds(Math.round((renderManager.timeHolder.beats- renderManager.offset.value)*3600/ renderManager.bpm.value)/60.0))
+                            projectWindow.timeHolder.beats = calcTimeOfX(cursor.startX-0.5)
+                            if(restartAudio) {
+                                audio.play(Duration.seconds(Math.round((projectWindow.timeHolder.beats- projectWindow.offset.value)*3600/ projectWindow.bpm.value)/60.0))
                             }
                         }
                         val time1 = calcTimeOfX(cursor.startX-0.5)
                         val time2 = calcTimeOfX(pressedCursorX-0.5)
-                        if(time1 < time2){
+                        if(time1 < time2) {
                             selectionBlock.beatStart = Fraction.getFraction(time1)
                             selectionBlock.beatEnd = Fraction.getFraction(time2)
-                        }else{
+                        } else {
                             selectionBlock.beatStart = Fraction.getFraction(time2)
                             selectionBlock.beatEnd = Fraction.getFraction(time1)
                         }
 
-                        selectionBlock.line = pressedLine
-                        selectionBlock.graph = graphs.mapNotNull {
-                            it.list.find { it.canvas.layoutY==selectionBlock.layoutY }
-                        }.firstOrNull()
+                        selectionBlock.layoutY = spectrogram.height + pressedLine * 100.0
+                        println(pressedLine)
+                        selectionBlock.graph = graphs.flatMap { it.list }.getOrNull(pressedLine)
                         mousePressedCursorX = null
                         mousePressedLine = null
                     }
@@ -277,9 +277,9 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
         }
 
         setOnScroll { event ->
-            if(event.isControlDown){
-                if(event.deltaY<0){
-                    if(zoom.value!!.compareTo(Fraction.ONE) != 0){
+            if(event.isControlDown) {
+                if(event.deltaY<0) {
+                    if(zoom.value!!.compareTo(Fraction.ONE) != 0) {
                         val cursorTime = calcTimeOfX(cursor.startX-0.5)
                         zoom.onNext(zoom.value!!.divideBy(Fraction.getFraction(2.0)))
                         var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
@@ -297,8 +297,8 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
 
                     }
                 }
-                if(event.deltaY>0){
-                    if(zoom.value!!.compareTo(Fraction.getFraction(4096.0)) != 0){
+                if(event.deltaY>0) {
+                    if(zoom.value!!.compareTo(Fraction.getFraction(4096.0)) != 0) {
                         val cursorTime = calcTimeOfX(cursor.startX-0.5)
                         zoom.onNext(zoom.value!!.multiplyBy(Fraction.getFraction(2.0)))
                         var cursorNewX = cursorTime*zoom.value!!.toDouble()*100.0/64 + 0.5
@@ -320,41 +320,41 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
         }
 
         setOnKeyPressed { event ->
-            if(event.isControlDown && !event.isAltDown && !event.isShiftDown){
-                if(event.code == KeyCode.C){
+            if(event.isControlDown && !event.isAltDown && !event.isShiftDown) {
+                if(event.code == KeyCode.C) {
                     selectionBlock.copy()
                 }
-                if(event.code == KeyCode.V){
+                if(event.code == KeyCode.V) {
                     selectionBlock.paste()
                 }
-                if(event.code == KeyCode.D){
+                if(event.code == KeyCode.D) {
                     selectionBlock.duplicate()
                 }
-                if(event.code == KeyCode.R){
+                if(event.code == KeyCode.R) {
                     selectionBlock.reverse()
                 }
             }
-            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown){
-                if(event.code == KeyCode.C){
+            if(!event.isControlDown && !event.isAltDown && !event.isShiftDown) {
+                if(event.code == KeyCode.C) {
                     timePointerCentering = true
                 }
-                if(event.code == KeyCode.V){
-                    workWindow.open(visualEditor)
+                if(event.code == KeyCode.V) {
+                    projectWindow.open(visualEditor)
                 }
-                if(event.code == KeyCode.Q){
+                if(event.code == KeyCode.Q) {
                     selectionBlock.buildGraph()
                 }
-                if(event.code == KeyCode.E){
+                if(event.code == KeyCode.E) {
                     selectionBlock.editGraph()
                 }
-                if(event.code == KeyCode.DELETE){
+                if(event.code == KeyCode.DELETE) {
                     selectionBlock.del()
                 }
             }
         }
 
         setOnKeyReleased { event ->
-            if(event.code == KeyCode.C){
+            if(event.code == KeyCode.C) {
                 timePointerCentering = false
             }
         }
@@ -407,18 +407,18 @@ class TimelineWindow: BorderPane(), WorkWindow.OpenableContent {
         return selectionBlock.beatStart.toDouble() to selectionBlock.beatEnd.toDouble()
     }
 
-    private fun updateCursor(event:MouseEvent){
+    private fun updateCursor(event:MouseEvent) {
         val sceneToLocal = content.sceneToLocal(event.sceneX, event.sceneY)
         val x = Math.round(sceneToLocal.x/6.25)*6.25 + 0.5
         cursor.startX = x
         cursor.endX = x
     }
 
-    private fun updateTimePointer(){
-        val x = Math.round(zoom.value!!.toDouble() / 64.0 * renderManager.timeHolder.beats * 100.0).toDouble()
+    private fun updateTimePointer() {
+        val x = Math.round(zoom.value!!.toDouble() / 64.0 * projectWindow.timeHolder.beats * 100.0).toDouble()
         timePointer.startX = x
         timePointer.endX = x
-        if(timePointerCentering){
+        if(timePointerCentering) {
             content.layoutX = (-(timePointer.startX - width/5)).coerceAtMost(0.0)
         }
     }

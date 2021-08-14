@@ -1,6 +1,6 @@
 package spixie.visualEditor.components
 
-import spixie.visualEditor.EditorComponent
+import spixie.visualEditor.Component
 
-open class Func : EditorComponent() {
+abstract class Func : Component() {
 }

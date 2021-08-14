@@ -10,9 +10,9 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.scene.shape.Circle
+import spixie.DragAndDropType
 import spixie.dragAndDropObject
-import spixie.static.DragAndDropType
-import spixie.visualEditor.EditorComponent
+import spixie.visualEditor.Component
 import spixie.visualEditor.VE_GRID_CELL_SIZE
 import spixie.visualEditor.VE_PIN_WIDTH
 
@@ -21,9 +21,9 @@ abstract class ComponentPin(val name: String): HBox() {
 
     private val selectionCircle = Circle(VE_GRID_CELL_SIZE /2, VE_GRID_CELL_SIZE /2, 1.0, Color.WHITE)
 
-    val editorComponent: EditorComponent
+    val component: Component
         get() {
-            return this.parent.parent as EditorComponent
+            return this.parent.parent as Component
         }
 
     var typeString = ""
@@ -47,10 +47,6 @@ abstract class ComponentPin(val name: String): HBox() {
             }
         }
         items.add(unconnectAllItem)
-    }
-
-    fun unconnectAll() {
-        editorComponent.disconnectPinRequest.onNext(this)
     }
 
     init {
@@ -85,7 +81,7 @@ abstract class ComponentPin(val name: String): HBox() {
             }
 
             setOnDragDetected { event ->
-                if(event.button == MouseButton.PRIMARY){
+                if(event.button == MouseButton.PRIMARY && isInputPin()) {
                     val startDragAndDrop = startDragAndDrop(TransferMode.LINK)
                     startDragAndDrop.setContent(mapOf(DragAndDropType.PIN to ""))
                     dragAndDropObject = this@ComponentPin
@@ -95,10 +91,10 @@ abstract class ComponentPin(val name: String): HBox() {
             }
 
             setOnDragOver { event ->
-                if(event.gestureSource != this && event.dragboard.hasContent(DragAndDropType.PIN)){
+                if(event.gestureSource != this && event.dragboard.hasContent(DragAndDropType.PIN)) {
                     (dragAndDropObject as? ComponentPin)?.let { dragged ->
-                        if(dragged.editorComponent != this@ComponentPin.editorComponent && dragged::class == this@ComponentPin::class){
-                            if(dragged.isInputPin() && this@ComponentPin.isOutputPin() || dragged.isOutputPin() && this@ComponentPin.isInputPin()){
+                        if(dragged.component != this@ComponentPin.component && dragged::class == this@ComponentPin::class) {
+                            if(dragged.isInputPin() && this@ComponentPin.isOutputPin() || dragged.isOutputPin() && this@ComponentPin.isInputPin()) {
                                 event.acceptTransferModes(TransferMode.LINK)
                                 selectionCircle.fill = Color.DARKVIOLET
                             }
@@ -117,12 +113,12 @@ abstract class ComponentPin(val name: String): HBox() {
                 val dragboard = event.dragboard
                 var success = false
 
-                if(dragboard.hasContent(DragAndDropType.PIN)){
+                if(dragboard.hasContent(DragAndDropType.PIN)) {
                     success = true
                     (dragAndDropObject as? ComponentPin)?.let { dragged ->
-                        if(dragged.editorComponent.inputPins.contains(dragged)){
+                        if(dragged.component.inputPins.contains(dragged)) {
                             dragged.connectWith(this@ComponentPin)
-                        }else{
+                        } else {
                             this@ComponentPin.connectWith(dragged)
                         }
                     }
@@ -133,28 +129,35 @@ abstract class ComponentPin(val name: String): HBox() {
         }
     }
 
-    fun connectWith(connection: ComponentPin){
-        if(this::class == connection::class){
-            connections.add(connection)
-            editorComponent.conneectionsChanged.onNext(Unit)
-        }
+    fun connectWith(componentPin: ComponentPin) {
+        connections.add(componentPin)
+        component.connectionsChanged.onNext(Unit)
+    }
+
+    fun disconnectWith(componentPin: ComponentPin) {
+        connections.remove(componentPin)
+        component.connectionsChanged.onNext(Unit)
+    }
+
+    fun unconnectAll() {
+        component.disconnectPinRequest.onNext(this)
     }
 
     protected fun isInputPin(): Boolean {
-        return editorComponent.inputPins.contains(this)
+        return component.inputPins.contains(this)
     }
 
     protected fun isOutputPin(): Boolean {
-        return editorComponent.outputPins.contains(this)
+        return component.outputPins.contains(this)
     }
 
-    open fun updateUI(){
-        if(isInputPin()){
+    open fun updateUI() {
+        if(isInputPin()) {
             label.alignment = Pos.CENTER_LEFT
             children.setAll(circle, label)
         }
 
-        if(isOutputPin()){
+        if(isOutputPin()) {
             label.alignment = Pos.CENTER_RIGHT
             children.setAll(label, circle)
         }

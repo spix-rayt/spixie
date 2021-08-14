@@ -45,10 +45,10 @@ class GraphData {
         values.forEach {
             val start = it.start
             val end = it.start + it.data.lastIndex
-            if(index in start..end){
-                if(index==end){
+            if(index in start..end) {
+                if(index==end) {
                     left = it.data[index-start]
-                }else{
+                } else {
                     result = it.data[index-start]
                 }
             }
@@ -60,12 +60,12 @@ class GraphData {
         }
     }
 
-    fun add(fragment: Fragment){
+    fun add(fragment: Fragment) {
         values.add(fragment)
     }
 
     fun copy(from: Int, to:Int): List<Fragment> {
-        return if(from<to){
+        return if(from<to) {
             values.mapNotNull {
                 val start = it.start
                 val end = it.start + it.data.lastIndex
@@ -84,7 +84,7 @@ class GraphData {
         }
     }
 
-    fun delete(deleteStart: Int, deleteEnd:Int){
+    fun delete(deleteStart: Int, deleteEnd:Int) {
         if(deleteStart<deleteEnd) {
             val newValues = values.flatMap {
                 val start = it.start
@@ -104,10 +104,10 @@ class GraphData {
         }
     }
 
-    fun reverse(from: Int, to: Int){
-        if(from<to){
+    fun reverse(from: Int, to: Int) {
+        if(from<to) {
             values.forEach {
-                for(i in (from-it.start).coerceAtLeast(0)..(to-it.start).coerceAtMost(it.data.lastIndex)){
+                for(i in (from-it.start).coerceAtLeast(0)..(to-it.start).coerceAtMost(it.data.lastIndex)) {
                     it.data[i] = 1.0f - it.data[i]
                 }
             }

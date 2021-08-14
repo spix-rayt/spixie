@@ -1,5 +1,9 @@
 package spixie.static
 
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import javafx.application.Platform
 import javafx.scene.Group
 import javafx.scene.input.DataFormat
@@ -8,6 +12,10 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Pane
 import org.apache.commons.lang3.math.Fraction
+import spixie.visualEditor.Component
+import spixie.visualEditor.pins.ComponentPin
+import spixie.visualEditor.pins.ComponentPinFunc
+import spixie.visualEditor.pins.ComponentPinNumber
 import java.io.InputStream
 import java.util.concurrent.CountDownLatch
 import kotlin.math.pow
@@ -21,7 +29,7 @@ fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     val nozerop4 = (p4 and  0x7FFFFFFFFFFFFFFF) + 1
     val nozerop5 = (p5 and  0x7FFFFFFFFFFFFFFF) + 1
 
-    var x:Long = Long.MAX_VALUE
+    var x: Long = Long.MAX_VALUE
     x = x * nozerop0 * nozerop0 + 7046029254386353087L
     x = x xor (x shl 21)
     x = x xor (x ushr 35)
@@ -47,7 +55,7 @@ fun rand(p0:Long, p1:Long, p2:Long, p3:Long, p4:Long, p5:Long): Float {
     x = x xor (x ushr 35)
     x = x xor (x shl 4)
     x = x and 0x7FFFFFFFFFFFFFFF
-    return ((x % 0xFFFFFFFFFFFFFFF).toFloat()/0xFFFFFFFFFFFFFFF)
+    return ((x % 0xFFFFFFFFFFFFFFF).toFloat() / 0xFFFFFFFFFFFFFFF)
 }
 
 fun beatsToSeconds(beats: Double, bpm: Double): Double {
@@ -93,19 +101,19 @@ fun Float.raw():Long{
     return this.toDouble().raw()
 }
 
-fun InputStream.printAvailable(){
+fun InputStream.printAvailable() {
     val available = this.available()
-    if(available>0){
+    if(available>0) {
         val byteArray = ByteArray(available)
         this.read(byteArray)
         System.out.write(byteArray)
     }
 }
 
-fun runInUIAndWait(work: () -> Unit){
-    if(Platform.isFxApplicationThread()){
+fun runInUIAndWait(work: () -> Unit) {
+    if(Platform.isFxApplicationThread()) {
         work()
-    }else{
+    } else {
         val latch = CountDownLatch(1)
         Platform.runLater {
             work()
@@ -117,9 +125,9 @@ fun runInUIAndWait(work: () -> Unit){
 
 fun Int.roundUp(multiplicity: Int): Int{
     val r = this % multiplicity
-    return if(r == 0){
+    return if(r == 0) {
         this
-    }else{
+    } else {
         this + multiplicity - r
     }
 }
@@ -196,7 +204,7 @@ fun convertRGBToHueChroma(r:Double, g:Double, b:Double): Pair<Double, Double> {
     var h=(max+min)/2.0
     val d=  max-min
     val s = d/(max+min)
-    when(max){
+    when(max) {
         r-> h=(g-b)/d+(if(g<b) 6.0 else 0.0)
         g-> h=(b-r)/d+2.0
         b->h=(r-g)/d+4.0
@@ -212,14 +220,14 @@ fun calcLuminance(r:Double, g:Double, b:Double): Double{
     return r*Pr + g*Pg + b*Pb
 }
 
-fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
+fun Pane.initCustomPanning(content:Group, allDirections: Boolean) {
     var mouseXOnStartDrag = 0.0
     var mouseYOnStartDrag = 0.0
     var layoutXOnStartDrag = 0.0
     var layoutYOnStartDrag = 0.0
 
     addEventHandler(MouseEvent.MOUSE_PRESSED) { event->
-        if(event.button == MouseButton.MIDDLE){
+        if(event.button == MouseButton.MIDDLE || event.button == MouseButton.SECONDARY) {
             mouseXOnStartDrag = event.screenX
             mouseYOnStartDrag = event.screenY
             layoutXOnStartDrag = content.layoutX
@@ -229,11 +237,11 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
     }
 
     addEventFilter(MouseEvent.MOUSE_DRAGGED) { event ->
-        if(event.isMiddleButtonDown){
-            if(allDirections){
+        if(event.isMiddleButtonDown || event.isSecondaryButtonDown) {
+            if(allDirections) {
                 content.layoutX = layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag)
                 content.layoutY = layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag)
-            }else{
+            } else {
                 content.layoutX = minOf(layoutXOnStartDrag + (event.screenX - mouseXOnStartDrag), 0.0)
                 content.layoutY = minOf(layoutYOnStartDrag + (event.screenY - mouseYOnStartDrag), 0.0)
             }
@@ -241,11 +249,11 @@ fun Pane.initCustomPanning(content:Group, allDirections: Boolean){
     }
 
     addEventHandler(ScrollEvent.SCROLL) { event ->
-        if(!event.isControlDown){
-            if(allDirections){
+        if(!event.isControlDown) {
+            if(allDirections) {
                 content.layoutX = content.layoutX + event.deltaX
                 content.layoutY = content.layoutY + event.deltaY
-            }else{
+            } else {
                 content.layoutX = minOf(content.layoutX + event.deltaX, 0.0)
                 content.layoutY = minOf(content.layoutY + event.deltaY, 0.0)
             }
@@ -259,6 +267,18 @@ fun map(start: Float, end: Float, value: Float): Float {
 
 val F_100: Fraction = Fraction.getFraction(100.0)
 
-object DragAndDropType {
-    val PIN = DataFormat("PIN")
+fun Iterable<JsonElement>.toJsonArray(): JsonArray {
+    val result = JsonArray()
+    forEach { result.add(it) }
+    return result
+}
+
+fun Iterable<ComponentPin>.pickFirstConnectableByType(clazz: Class<out ComponentPin>): ComponentPin? {
+    return firstOrNull { pin ->
+        when {
+            pin::class.java == clazz -> true
+            clazz == ComponentPinNumber::class.java && pin::class.java == ComponentPinFunc::class.java -> true
+            else -> false
+        }
+    }
 }

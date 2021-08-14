@@ -73,7 +73,7 @@ class RenderDialog(owner: Window): Stage() {
                         val t = stopWatch.getTime(TimeUnit.MILLISECONDS) / 1000.0 / (currentFrame-lastRenderedFrame)
                         stopWatch.reset()
                         stopWatch.start()
-                        if(lastRenderedFrame != 0){
+                        if(lastRenderedFrame != 0) {
                             lastFramesRenderTime.add(t)
                             if(lastFramesRenderTime.size>10) {
                                 lastFramesRenderTime.removeAt(0)
@@ -91,7 +91,7 @@ class RenderDialog(owner: Window): Stage() {
                     selectedBeats.first,
                     selectedBeats.second,
                     checkBoxAudio.isSelected,
-                    renderManager.offset.value / renderManager.bpm.value * 60.0,
+                    projectWindow.offset.value / projectWindow.bpm.value * 60.0,
                     numberFps.value.roundToInt()
                 )
             }

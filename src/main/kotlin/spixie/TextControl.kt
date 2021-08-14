@@ -25,9 +25,9 @@ class TextControl(initial: String, val name: String) : HBox() {
     }
 
     init {
-        if(name.isNotEmpty()){
+        if(name.isNotEmpty()) {
             labelName.text = "$name: "
-        }else{
+        } else {
             labelName.text = ""
         }
 
@@ -52,7 +52,7 @@ class TextControl(initial: String, val name: String) : HBox() {
         }
 
         textFieldValue.addEventHandler(KeyEvent.KEY_PRESSED) { event ->
-            if(event.code == KeyCode.ESCAPE || event.code == KeyCode.ENTER){
+            if(event.code == KeyCode.ESCAPE || event.code == KeyCode.ENTER) {
                 children.remove(textFieldValue)
                 event.consume()
             }

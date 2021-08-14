@@ -35,13 +35,6 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
             timelineWindow.graphBuilderGroup.children.clear()
         }
 
-    var line = 0
-        set(value) {
-            field = value
-            layoutY = value*100.0
-            timelineWindow.graphBuilderGroup.children.clear()
-        }
-
     var graph: ArrangementGraph? = null
 
     init {
@@ -51,12 +44,12 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         strictHeight = 100.0
     }
 
-    private fun updateLayout(){
+    private fun updateLayout() {
         strictWidth = Fraction.getFraction(100, 64).multiplyBy(beatEnd.subtract(beatStart)).multiplyBy(zoom.value!!).toDouble()
         layoutX = Fraction.getFraction(100, 64).multiplyBy(beatStart).multiplyBy(zoom.value!!).toDouble()
     }
 
-    fun buildGraph(){
+    fun buildGraph() {
         graph?.let { graph->
             val start = beatStart.multiplyBy(F_100).toInt()
             val end = beatEnd.multiplyBy(F_100).toInt()
@@ -70,7 +63,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         }
     }
 
-    fun editGraph(){
+    fun editGraph() {
         graph?.let { graph->
             val start = beatStart.multiplyBy(F_100).toInt()
             val end = beatEnd.multiplyBy(F_100).toInt()
@@ -87,14 +80,14 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
     private var copyData = listOf<GraphData.Fragment>()
     private var copyStart = 0
 
-    fun copy(){
+    fun copy() {
         graph?.let { graph ->
             copyData = graph.data.copy(beatStart.multiplyBy(F_100).toInt(), beatEnd.multiplyBy(F_100).toInt())
             copyStart = beatStart.multiplyBy(F_100).toInt()
         }
     }
 
-    fun paste(){
+    fun paste() {
         graph?.let { graph->
             val offset = beatStart.multiplyBy(F_100).toInt() - copyStart
             copyData.forEach {
@@ -111,7 +104,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         }
     }
 
-    fun duplicate(){
+    fun duplicate() {
         graph?.let { graph->
             val p = graph.data.copy(beatStart.multiplyBy(F_100).toInt(), beatEnd.multiplyBy(F_100).toInt())
             val pStart = beatStart.multiplyBy(F_100).toInt()
@@ -126,7 +119,7 @@ class ArrangementSelectionBlock(private val zoom:BehaviorSubject<Fraction>): Reg
         }
     }
 
-    fun reverse(){
+    fun reverse() {
         graph?.let { graph->
             graph.data.reverse(beatStart.multiplyBy(F_100).toInt(), beatEnd.multiplyBy(F_100).toInt())
             timelineWindow.needRedrawAllGraphs = true

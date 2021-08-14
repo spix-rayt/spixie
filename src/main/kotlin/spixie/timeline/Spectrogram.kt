@@ -8,11 +8,13 @@ import javafx.embed.swing.SwingFXUtils
 import javafx.scene.Group
 import javafx.scene.canvas.Canvas
 import spixie.Audio
-import spixie.RenderManager
+import spixie.projectWindow
 import java.awt.image.BufferedImage
+import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
-class Spectrogram(val content: Group, timelineWindow: TimelineWindow, renderManager: RenderManager, audio: Audio): Canvas(1.0, 300.0) {
+class Spectrogram(val content: Group, timelineWindow: TimelineWindow, audio: Audio): Canvas(1.0, 1080.0 / 2.0) {
     private val redrawSpectrogram = PublishSubject.create<Unit>()
     fun requestRedraw() {
         redrawSpectrogram.onNext(Unit)
@@ -24,37 +26,29 @@ class Spectrogram(val content: Group, timelineWindow: TimelineWindow, renderMana
                 .map {
                     val newWaveformLayoutX = -content.layoutX - 100
 
-                    val startTime = timelineWindow.calcTimeOfX(newWaveformLayoutX) - renderManager.offset.value
-                    val endTime = timelineWindow.calcTimeOfX(newWaveformLayoutX + width) - renderManager.offset.value
+                    val startTime = timelineWindow.calcTimeOfX(newWaveformLayoutX) - projectWindow.offset.value
+                    val endTime = timelineWindow.calcTimeOfX(newWaveformLayoutX + width) - projectWindow.offset.value
 
-                    val startSecond = startTime * 3600 / renderManager.bpm.value / 60
-                    val endSecond = endTime * 3600 / renderManager.bpm.value / 60
+                    val startSecond = startTime * 3600 / projectWindow.bpm.value / 60
+                    val endSecond = endTime * 3600 / projectWindow.bpm.value / 60
 
                     val secondsInPixel = (endSecond - startSecond) / this.width
 
                     val bufferedImage = BufferedImage(this.width.toInt(), this.height.toInt(), BufferedImage.TYPE_3BYTE_BGR)
                     val pixelArray = IntArray(bufferedImage.width * bufferedImage.height * 3)
 
-                    val spectra = audio.spectra
+
                     for (x in 0 until bufferedImage.width) {
-                        val time = ((startSecond + x * secondsInPixel) * 100).roundToInt()
-                        var prevT = 0
+                        val time = startSecond + x * secondsInPixel
                         for (y in 0 until bufferedImage.height) {
                             val offset = (y * bufferedImage.width + x) * 3
-                            if (time >= 0 && time < spectra.size && spectra.size > 2) {
-                                //val t = ((1.0 - (y.toDouble() / bufferedImage.height)).pow(1.7) * 0.99 + 0.01).coerceIn(0.0, 1.0) * (spectra[0].size - 2)
-                                val t = (Math.pow(2.0, (60+((299-y)/299.0*74.0)) / 12.0) / (44100 / 8192.0)).roundToInt()
-                                val v = spectra[time].slice(t..prevT).maxOrNull() ?: 0.0
-                                val vv = ((1.0 - v).coerceIn(0.0, 1.0)*20).toInt()/20.0
-                                pixelArray[offset    ] = (vv*(255-16) + 16).toInt()
-                                pixelArray[offset + 1] = (vv*(255-27) + 27).toInt()
-                                pixelArray[offset + 2] = (vv*(255-44) + 44).toInt()
-                                prevT = t
-                            } else {
-                                pixelArray[offset    ] = 255
-                                pixelArray[offset + 1] = 255
-                                pixelArray[offset + 2] = 255
-                            }
+                            val lowestNoteFrequency = 440.0 / 2.0 / 2.0 / 2.0 / 2.0
+                            val n = 80.0 * (1.0 - (y.toDouble() / bufferedImage.height.toDouble()))
+                            val frequency = lowestNoteFrequency * (2.0.pow(n / 12.0))
+                            val amplitude = audio.getAmplitude(time, frequency)
+                            pixelArray[offset    ] = ((1.0 - amplitude) * 255).toInt()
+                            pixelArray[offset + 1] = ((1.0 - amplitude) * 255).toInt()
+                            pixelArray[offset + 2] = ((1.0 - amplitude) * 255).toInt()
                         }
                     }
 

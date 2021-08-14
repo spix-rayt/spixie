@@ -36,13 +36,13 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
         val endHeightValue = NumberControl(1.0, "EndHeight").limitMin(0.0).limitMax(1.0)
         val endShiftValue = NumberControl(0.0, "EndShift").limitMin(0.0).limitMax(1.0)
 
-        mode(start, end, listOf(startHeightValue, startShiftValue, endHeightValue, endShiftValue)){ data ->
+        mode(start, end, listOf(startHeightValue, startShiftValue, endHeightValue, endShiftValue)) { data ->
             val startHeight = startHeightValue.value
             val startShift = startShiftValue.value
             val endHeight = endHeightValue.value
             val endShift = endShiftValue.value
             data.forEach { fragment->
-                for(i in 0..fragment.data.lastIndex){
+                for(i in 0..fragment.data.lastIndex) {
                     val t = (i+fragment.start-start) / (end-start).toDouble()
                     val height = linearInterpolate(startHeight, endHeight, t)
                     val shift = linearInterpolate(startShift, endShift, t)
@@ -52,7 +52,7 @@ class GraphEditor(private val start:Int, private val end:Int, private val graph:
         }
     }
 
-    private inline fun mode(start: Int, end: Int, valueControls: List<NumberControl>, crossinline processData: (copy: List<GraphData.Fragment>) -> Unit){
+    private inline fun mode(start: Int, end: Int, valueControls: List<NumberControl>, crossinline processData: (copy: List<GraphData.Fragment>) -> Unit) {
         children.clear()
         val copy = graph.data.copy(start, end)
         Observable.merge(valueControls.map { it.changes }.plus(Observable.just(Unit))).sample(16, TimeUnit.MILLISECONDS).subscribe {

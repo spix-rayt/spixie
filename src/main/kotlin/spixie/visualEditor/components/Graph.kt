@@ -6,10 +6,10 @@ import javafx.scene.control.Label
 import spixie.renderManager
 import spixie.timeline.ArrangementGraphsContainer
 import spixie.visualEditor
-import spixie.visualEditor.EditorComponent
+import spixie.visualEditor.Component
 import spixie.visualEditor.pins.ComponentPinNumber
 
-class Graph: EditorComponent() {
+class Graph: Component() {
     var graph = ArrangementGraphsContainer()
         set(value) {
             field = value

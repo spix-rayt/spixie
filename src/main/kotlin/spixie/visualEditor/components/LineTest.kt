@@ -1,12 +1,12 @@
 package spixie.visualEditor.components
 
 import org.joml.Vector3f
-import spixie.visualEditor.EditorComponent
+import spixie.visualEditor.Component
 import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.Particle
 import spixie.visualEditor.ParticleArray
 
-class LineTest: EditorComponent() {
+class LineTest: Component() {
     private val inParticlesA = ComponentPinParticleArray("ParticlesA")
     private val inParticlesB = ComponentPinParticleArray("ParticlesB")
 

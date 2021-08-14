@@ -8,43 +8,15 @@ import kotlinx.coroutines.*
 import org.apache.commons.lang3.time.StopWatch
 import spixie.static.*
 import java.awt.image.BufferedImage
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
 class RenderManager {
-    val bpm = NumberControl(160.0, "BPM", 0.0).apply {
-        minNumberLineScale = 0.0
-        maxNumberLineScale = 0.0
-        limitMin(60.0)
-        limitMax(999.0)
-    }
-
-    val fps = NumberControl(24.0, "FPS")
-
-    val offset = NumberControl(0.0, "Offset").apply {
-        changes.subscribe {
-            timelineWindow.spectrogram.requestRedraw()
-        }
-    }
-
-    val timeHolder = TimeHolder(bpm, fps, offset)
-
-    val samplesPerPixel = NumberControl(20.0, "SPP", 0.0).apply {
-        limitMin(1.0)
-        limitMax(5000.0)
-        minNumberLineScale = 0.0
-        maxNumberLineScale = 0.0
-        changes.subscribe {
-            requestRender()
-        }
-    }
-
     @Volatile var autoRenderNextFrame = false
 
-    val lastRenderInfoSubject = BehaviorSubject.createDefault("0 particles - 0 ms").toSerialized()
-
-    val renderCoroutineDispatcher = newSingleThreadContext("render-thread")
+    val renderCoroutineDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
 
     var needRender = true
 
@@ -57,15 +29,15 @@ class RenderManager {
     private val frameCache = FrameCache()
 
     init {
-        bpm.apply {
+        projectWindow.bpm.apply {
             changes.subscribe { _->
                 timelineWindow.spectrogram.requestRedraw()
             }
 
             Observable.zip(changes, changes.skip(1)) { previous: Double, current: Double -> previous to current }
                 .subscribe { pair ->
-                val t = timeHolder.beats - offset.value
-                offset.value -= t*(pair.second/pair.first)-t
+                val t = projectWindow.timeHolder.beats - projectWindow.offset.value
+                projectWindow.offset.value -= t*(pair.second/pair.first)-t
             }
         }
         renderStart()
@@ -74,9 +46,9 @@ class RenderManager {
     fun doEveryFrame() {
         if(audio.isPlaying()) {
             val seconds = audio.getTime()
-            timeHolder.seconds = seconds
+            projectWindow.timeHolder.seconds = seconds
             Platform.runLater {
-                frameCache.getImageOrNUll(timeHolder.beats)?.let {
+                frameCache.getImageOrNUll(projectWindow.timeHolder.beats)?.let {
                     FXApplication.instance?.updateImage(it)
                 }
             }
@@ -91,22 +63,23 @@ class RenderManager {
                         if (!audio.isPlaying()) {
                             val stopWatch = StopWatch.createStarted()
                             val imageCLBuffer = openCLApi.createImageCLBuffer((1920 / scaleDown).roundUp(2), (1080 / scaleDown).roundUp(2))
-                            visualEditor.render(imageCLBuffer, timeHolder.beats, samplesPerPixel.value.roundToInt())
+                            visualEditor.render(imageCLBuffer, projectWindow.timeHolder.beats, projectWindow.samplesPerPixel.value.roundToInt())
                             val bufferedImage = openCLApi.imageCLBufferToBufferedImage(imageCLBuffer)
                             stopWatch.stop()
                             //lastRenderInfoSubject.onNext("${imageFloatBuffer.particlesCount.toString().padStart(8, ' ')} particles ${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
-                            lastRenderInfoSubject.onNext("${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms")
+                            val renderInfo = "${stopWatch.getTime(TimeUnit.MILLISECONDS).toString().padStart(8, ' ')} ms"
                             Platform.runLater {
+                                projectWindow.lastRenderInfo.text = renderInfo
                                 FXApplication.instance?.updateImage(SwingFXUtils.toFXImage(bufferedImage, null))
                             }
 
                             launch {
-                                frameCache.putImage(bufferedImage, timeHolder.beats)
+                                frameCache.putImage(bufferedImage, projectWindow.timeHolder.beats)
                             }
 
-                            if(autoRenderNextFrame){
+                            if(autoRenderNextFrame) {
                                 Platform.runLater {
-                                    timeHolder.frame = timeHolder.frame + 1
+                                    projectWindow.timeHolder.frame = projectWindow.timeHolder.frame + 1
                                 }
                             }
                         }
@@ -122,7 +95,7 @@ class RenderManager {
             }
         }
 
-        timeHolder.timeChanges.distinctUntilChanged().subscribe {
+        projectWindow.timeHolder.timeChanges.distinctUntilChanged().subscribe {
             requestRender()
         }
     }
@@ -134,8 +107,8 @@ class RenderManager {
     fun renderToFile(frameRenderedToFileEventHandler: (currentFrame: Int, framesCount: Int) -> Unit, renderToFileCompleted: () -> Unit, motionBlurIterations: Int, beatStart: Double, beatEnd: Double, audio: Boolean, offsetAudio: Double, fps: Int) {
         GlobalScope.launch(Dispatchers.IO) {
             val selectedFrames = IntRange(
-                beatsToFrames(beatStart, bpm.value, fps),
-                beatsToFrames(beatEnd, bpm.value, fps)
+                beatsToFrames(beatStart, projectWindow.bpm.value, fps),
+                beatsToFrames(beatEnd, projectWindow.bpm.value, fps)
             )
 
             val w = 1920
@@ -180,14 +153,14 @@ class RenderManager {
                         val imageFloatBuffer = openCLApi.createImageCLBuffer(w, h)
                         for(k in 0 until motionBlurIterations) {
                             val t = linearInterpolate(
-                                frameToBeats(frame - 1, bpm.value, fps),
-                                frameToBeats(frame, bpm.value, fps),
+                                frameToBeats(frame - 1, projectWindow.bpm.value, fps),
+                                frameToBeats(frame, projectWindow.bpm.value, fps),
                                 (k + 1) / motionBlurIterations.toDouble()
                             )
                             visualEditor.render(
                                 imageFloatBuffer,
                                 t,
-                                samplesPerPixel.value.roundToInt()
+                                projectWindow.samplesPerPixel.value.roundToInt()
                             )
                         }
                         val clBuffer = openCLApi.brightPixelsToWhite(imageFloatBuffer.buffer, w, h, 1.0f / motionBlurIterations).also { imageFloatBuffer.buffer.release() }

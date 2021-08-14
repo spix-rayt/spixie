@@ -1,11 +1,14 @@
 package spixie.visualEditor.components
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import spixie.NumberControl
-import spixie.visualEditor.EditorComponent
+import spixie.gson
+import spixie.visualEditor.Component
 import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 
-class Color: EditorComponent() {
+class Color: Component() {
     private val inParticles = ComponentPinParticleArray("Particles")
 
     private val inHue = ComponentPinNumber("Hue", NumberControl(2.0, "", -300.0))
@@ -14,28 +17,21 @@ class Color: EditorComponent() {
 
     private val inLuminance = ComponentPinNumber("Luminance", NumberControl(1.0, "", -300.0).limitMin(0.0))
 
-    private val inTransparency = ComponentPinNumber("Transparency", NumberControl(1.0, "", -300.0).limitMin(0.0).limitMax(1.0))
-
     private val outParticles = ComponentPinParticleArray("Particles").apply {
         getValue = {
             val particles = inParticles.receiveValue()
-            val hue = inHue.receiveValue().toFloat()
-            val chroma = inChroma.receiveValue().toFloat()
-            val luminance = inLuminance.receiveValue().toFloat()
-            val transparency = inTransparency.receiveValue().toFloat()
 
-            particles.array.forEach {
-                it.hue = hue
-                it.chroma = chroma
-                it.luminance = luminance
-                it.transparency = transparency
+            particles.forEachWithGradient { t, particle ->
+                particle.hue = inHue.receiveValue(t).toFloat()
+                particle.chroma = inChroma.receiveValue(t).toFloat()
+                particle.luminance = inLuminance.receiveValue(t).toFloat()
             }
             particles
         }
     }
 
     init {
-        inputPins.addAll(arrayListOf(inParticles, inHue, inChroma, inLuminance, inTransparency))
+        inputPins.addAll(arrayListOf(inParticles, inHue, inChroma, inLuminance))
         outputPins.add(outParticles)
         updateUI()
     }

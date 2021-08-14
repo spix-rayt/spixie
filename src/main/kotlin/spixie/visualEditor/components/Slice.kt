@@ -3,12 +3,12 @@ package spixie.visualEditor.components
 import org.apache.commons.lang3.math.Fraction
 import spixie.NumberControl
 import spixie.static.F_100
-import spixie.visualEditor.EditorComponent
+import spixie.visualEditor.Component
 import spixie.visualEditor.pins.ComponentPinNumber
 import spixie.visualEditor.pins.ComponentPinParticleArray
 import spixie.visualEditor.ParticleArray
 
-class Slice: EditorComponent() {
+class Slice: Component() {
     private val inParticles = ComponentPinParticleArray("Particles")
     private val inStart = ComponentPinNumber("Start", NumberControl(0.0, "").limitMin(0.0).limitMax(100.0))
     private val inEnd = ComponentPinNumber("End", NumberControl(100.0, "").limitMin(0.0).limitMax(100.0))

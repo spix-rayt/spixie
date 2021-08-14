@@ -7,17 +7,27 @@ import spixie.renderManager
 class ComponentPinNumber(name: String, val valueControl: NumberControl?): ComponentPin(name) {
     var getValue: (() -> Double)? = null
 
-    fun receiveValue(): Double{
-        val values = connections
-                .sortedBy { it.editorComponent.layoutY }
+    fun receiveValue(): Double {
+        return receiveValue(null)
+    }
+
+    fun receiveValue(t: Double?): Double {
+        val numberValues = connections
                 .mapNotNull { (it as? ComponentPinNumber)?.getValue?.invoke() }
-        return if(values.isEmpty())
+        val funcValues = if(t != null) {
+            connections.mapNotNull { (it as? ComponentPinFunc)?.getValue?.invoke(t) }
+        } else {
+            emptyList()
+        }
+        return if(numberValues.isEmpty() && funcValues.isEmpty()) {
             valueControl?.value ?: 0.0
-        else
-            if(valueControl != null)
-                values.sum().coerceIn(valueControl.min, valueControl.max)
-            else
-                values.sum()
+        } else {
+            if(valueControl != null) {
+                (numberValues.sum() + funcValues.sum()).coerceIn(valueControl.min, valueControl.max)
+            } else {
+                numberValues.sum() + funcValues.sum()
+            }
+        }
     }
 
     init {
@@ -26,13 +36,13 @@ class ComponentPinNumber(name: String, val valueControl: NumberControl?): Compon
         }
     }
 
-    override fun updateUI(){
-        if(isInputPin()){
+    override fun updateUI() {
+        if(isInputPin()) {
             label.alignment = Pos.CENTER_LEFT
             children.setAll(circle, label, valueControl)
         }
 
-        if(isOutputPin()){
+        if(isOutputPin()) {
             label.alignment = Pos.CENTER_RIGHT
             children.setAll(label, circle)
         }

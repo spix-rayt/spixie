@@ -128,9 +128,9 @@ class NumberControl(initial: Double, val name: String, initialScale: Double = 0.
     }
 
     init {
-        if(name.isNotEmpty()){
+        if(name.isNotEmpty()) {
             labelName.text = "$name: "
-        }else{
+        } else {
             labelName.text = ""
         }
 
@@ -192,7 +192,7 @@ class NumberControl(initial: Double, val name: String, initialScale: Double = 0.
         }
 
         textFieldValue.addEventHandler(KeyEvent.KEY_PRESSED) { event ->
-            if(event.code == KeyCode.ESCAPE || event.code == KeyCode.ENTER){
+            if(event.code == KeyCode.ESCAPE || event.code == KeyCode.ENTER) {
                 children.remove(textFieldValue)
                 event.consume()
             }

@@ -3,12 +3,12 @@ package spixie.visualEditor.components
 import spixie.openCLApi
 import spixie.render.Splat
 import spixie.static.convertHueChromaLuminanceToRGB
-import spixie.visualEditor.EditorComponent
+import spixie.visualEditor.Component
 import spixie.render.ImageCLBuffer
 import spixie.render.RenderParameters
 import spixie.visualEditor.pins.ComponentPinParticleArray
 
-class RenderComponent: EditorComponent() {
+class RenderComponent: Component() {
     private val inParticles = ComponentPinParticleArray("Particles")
 
     fun invoke(imageCLBuffer: ImageCLBuffer, samplesPerPixel: Int) {
